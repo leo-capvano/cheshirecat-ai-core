@@ -66,7 +66,7 @@ class EmbedderOpenAICompatibleConfig(EmbedderSettings):
             "humanReadableName": "OpenAI-compatible API embedder",
             "description": "Configuration for OpenAI-compatible API embeddings",
             "link": "",
-            "model: "",
+            "model": "",
         }
     )
 
