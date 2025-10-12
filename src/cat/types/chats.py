@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 from .messages import Message
 from .contexts import Context
-from .__types_adapter import TextContent
+from ..protocols.model_context.type_wrappers import TextContent
 
 
 class ChatRequest(BaseModel):

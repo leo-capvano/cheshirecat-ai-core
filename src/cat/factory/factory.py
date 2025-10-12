@@ -37,11 +37,11 @@ class Factory:
                 keep_default=True,
                 at_least_one=True
             ),
-            #"mcp" : FactoryCategory(
-            #    default = None,
-            #    keep_default=False,
-            #    at_least_one=False
-            #),
+            "mcp" : FactoryCategory(
+                default = None,
+                keep_default=False,
+                at_least_one=False
+            ),
         }
 
     async def load_objects(self, mad_hatter):
@@ -61,5 +61,3 @@ class Factory:
 
     def get_default(self, category_name: str):
         return self.categories[category_name].default
-
-

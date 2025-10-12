@@ -8,7 +8,7 @@ from langchain_core.messages import (
     ToolMessage
 )
 
-from .__types_adapter import TextContent, ContentBlock
+from ..protocols.model_context.type_wrappers import TextContent, ContentBlock
 
 
 class Message(BaseModel):

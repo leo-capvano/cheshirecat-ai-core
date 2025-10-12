@@ -347,7 +347,6 @@ class StrayCat:
             CatTool.from_fastmcp(t, self.mcp.call_tool)
             for t in mcp_tools
         ]
-        log.warning(self.mad_hatter.tools)
         return mcp_tools + self.mad_hatter.tools
     
 
@@ -406,21 +405,31 @@ class StrayCat:
         )
         if fast_reply != {}: # TODOV2: dunno if this breaks pydantic validation on the output
             return fast_reply
+        
+        #return self._ccat.mcp_clients.get_user_client(
+        #    self.user_id, config
+        #)
+        async with self._ccat.mcp_clients.get_user_client(self) as mcp_client:
+            
+            # store reference for easy access
+            self.mcp = mcp_client
 
-        # hook to modify/enrich user input
-        # TODOV2: shuold be compatible with the old `user_message_json`
-        self.chat_request = self.mad_hatter.execute_hook(
-            "before_cat_reads_message", self.chat_request, cat=self
-        )
+            # hook to modify/enrich user input
+            # TODOV2: shuold be compatible with the old `user_message_json`
+            self.chat_request = self.mad_hatter.execute_hook(
+                "before_cat_reads_message", self.chat_request, cat=self
+            )
 
-        # run agent(s). They will populate the ChatResponse
-        requested_agent = self.chat_request.agent
-        await self.execute_agent(requested_agent)
+            # run agent(s). They will populate the ChatResponse
+            requested_agent = self.chat_request.agent
+            await self.execute_agent(requested_agent)
 
-        # run final response through plugins
-        self.chat_response = self.mad_hatter.execute_hook(
-            "before_cat_sends_message", self.chat_response, cat=self
-        )
+            # run final response through plugins
+            self.chat_response = self.mad_hatter.execute_hook(
+                "before_cat_sends_message", self.chat_response, cat=self
+            )
+
+            self.mcp = None
 
         # save working memory to DB
         await self._save_working_memory()
@@ -647,11 +656,7 @@ Allowed classes are:
 
         Obtain plugin settings
         >>> cat.mad_hatter.get_plugin().load_settings()
-        {"num_cats": 44, "rows": 6, "remainder": 0}
+        {"num_cats": 44, "rows": 6, "remainder": 2}
         """
         return self._ccat.mad_hatter
-    
-    @property
-    def mcp(self):
-        """Gives access to the MCP client."""
-        return self._ccat.mcp_clients[self.user_id]
+        

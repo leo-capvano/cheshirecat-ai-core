@@ -1,4 +1,4 @@
-from .__types_adapter import (
+from cat.protocols.model_context.type_wrappers import (
     Resource,
     ContentBlock,
     TextContent,

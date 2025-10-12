@@ -1,20 +1,15 @@
 from enum import Enum
-from typing import Dict, List, Literal
+from typing import Dict, List
 
 from fastapi import Depends
 from cat.utils import BaseModelDict
 
-
-AuthLit = Literal["a", "b", "c"]
-
-AuthLit
 
 class AuthResource(str, Enum):
     """Enum of core authorization resources. Can be extended via plugin."""
     CHAT = "CHAT"
     SETTING = "SETTING"
     PLUGIN = "PLUGIN"
-    CONNECTOR = "CONNECTOR"
     STATIC = "STATIC"
 
 

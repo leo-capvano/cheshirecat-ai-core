@@ -10,14 +10,14 @@ from tortoise.models import Model
 ########################## ###
 
 class SettingDB(Model):
-    name = fields.CharField(pk=True, max_length=1000)
+    name = fields.CharField(primary_key=True, max_length=1000)
     value = fields.JSONField()
     class Meta:
         table = "ccat_global_settings"
 
 """
 class PluginDB(Model):
-    name = fields.CharField(pk=True, max_length=1000)
+    name = fields.CharField(primary_key=True, max_length=1000)
     active = fields.BooleanField(default=True)
     settings = fields.JSONField()
     class Meta:
@@ -29,7 +29,7 @@ class PluginDB(Model):
 ##########################
 
 class UserScopedModelDB(Model):
-    id = fields.UUIDField(pk=True, default=uuid4)
+    id = fields.UUIDField(primary_key=True, default=uuid4)
     name = fields.CharField(max_length=1000)
     updated_at = fields.DatetimeField(auto_now=True)
     user_id = fields.UUIDField(db_index=True)
@@ -41,18 +41,10 @@ class UserSettingDB(UserScopedModelDB):
     class Meta:
         table = "ccat_settings"
 
-class ConnectorDB(UserScopedModelDB):
-    url = fields.CharField(max_length=1000)
-    active = fields.BooleanField(default=True)
-    secret = fields.JSONField() # TODOV2: should be encrypted, also plugin settings
-    manifest = fields.JSONField(default={})
-
-    class Meta:
-        table = "ccat_connectors"
-
 class ContextDB(UserScopedModelDB):
     instructions = fields.TextField()
     resources = fields.JSONField()
+    mcps = fields.JSONField()
 
     class Meta:
         table = "ccat_contexts"

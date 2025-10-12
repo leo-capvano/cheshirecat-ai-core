@@ -18,7 +18,7 @@ class FactoryStatusResponse(BaseModel):
     llms: List[str]
     embedders: List[str]
     agents: List[str]
-    #mcps: List[str]
+    mcps: List[str]
 
 
 @router.get("")
@@ -49,7 +49,7 @@ async def factory_status(
         llms=ccat.llms.keys(),
         embedders=ccat.embedders.keys(),
         agents=ccat.agents.keys(),
-        #mcps=ccat.mcps.keys()
+        mcps=ccat.mcps.keys()
     )
 
 
