@@ -44,6 +44,6 @@ class MCPClients():
     def get_user_client(self, cat):
         # TODOV2: check also server config did not change
         if cat.user_id not in self.clients:
-            self.clients[cat.user_id] = MCPClient(cat)
+            self.clients[cat.user_id] = MCPClient(cat) # open context and save it in the cache
         return self.clients[cat.user_id]
     

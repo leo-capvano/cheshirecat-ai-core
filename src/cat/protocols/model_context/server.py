@@ -21,7 +21,7 @@ class MCPServer(BaseModel):
                 scopes=self.scopes,
                 client_name="Cheshire Cat AI",
                 additional_client_metadata=self.additional_client_metadata,
-                token_storage_cache_dir = utils.get_data_path(),
+                token_storage_cache_dir = utils.get_data_path(), # should be per user
                 callback_port = 1866, # TODOV2: remember to open it in the docker
             )
         else:
