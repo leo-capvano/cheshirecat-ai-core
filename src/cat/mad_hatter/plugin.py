@@ -227,7 +227,6 @@ class Plugin:
                     f"Loading plugin {self._path} metadata, defaulting to generated values"
                 )
 
-        json_file_data["id"] = self.id
         if "name" not in json_file_data:
             json_file_data["name"] = self.id
         return PluginManifest(**json_file_data)

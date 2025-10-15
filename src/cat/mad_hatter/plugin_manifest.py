@@ -3,8 +3,7 @@ from pydantic import BaseModel
 
 
 class PluginManifest(BaseModel):
-    id: str
-    name: str = "Unknown"
+    name: str
     version: str = "0.0.0"
     thumb: str = None
     tags: str = "Unknown"
@@ -18,5 +17,4 @@ class PluginManifest(BaseModel):
     plugin_url: str = "Unknown"
     min_cat_version: str = "Unknown"
     max_cat_version: str = "Unknown"
-    local_info: Dict = {} # store here installed plugin info
 

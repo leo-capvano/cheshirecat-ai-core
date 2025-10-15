@@ -38,7 +38,7 @@ class MadHatter:
         # callback out of the hook system to notify other components about a refresh
         self.on_refresh_callbacks: List[Callable] = []
 
-    async def install_plugin(self, package_plugin):
+    async def install_plugin(self, package_plugin) -> Plugin:
         # extract zip/tar file into plugin folder
         extractor = PluginExtractor(package_plugin)
         plugin_path = extractor.extract(utils.get_plugins_path())
@@ -57,7 +57,7 @@ class MadHatter:
         # activate it
         self.plugins[plugin.id] = plugin
         await self.toggle_plugin(plugin.id)
-        return self.plugins[plugin.id].manifest
+        return self.plugins[plugin.id]
 
     async def uninstall_plugin(self, plugin_id):
 

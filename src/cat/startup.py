@@ -11,11 +11,11 @@ from cat.routes import (
     home,
     auth,
     settings,
-    plugins,
     chats,
     contexts,
     status
 )
+from cat.routes.plugins import plugins
 from cat.routes.websocket import websocket
 from cat.routes.static import static
 from cat.routes.openapi import get_openapi_configuration_function

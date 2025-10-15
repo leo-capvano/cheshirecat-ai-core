@@ -108,6 +108,8 @@
   ```python
   from cat.types import Message, Resource # and all other types
   ```
+- core DB is a simple SQL (supports both sqlite and postgres) and it is used to store settings, chats, contexts and plugin settings. No more `metadata.json`, no `qdrant` in core.
+- factory explanation XXX
 
 ## Hooks
 
@@ -144,7 +146,7 @@ Auth system semplifications (TODO review):
 - If you are calling the cat machine-to-machine, use `CCAT_API_KEY`, for both http and ws. Websocket in a machine-to-machine settings supports headers, so you can follow the same schema (query parameter `?token=` is not supported anymore). TODO: still active just for dev v2
 - If you are calling the cat form an unsecure client (a browser), use *only* jwt auth.
 - You need to authenticate also to see `/docs` and there is a little form to do it in the page
-- it is now possible to have `@endpoint` with custom resource and permissions. They can be defined on the endpoint and must be matched by user permissions (which can be set via AuthHandler or users REST API)
+- it is now possible to have `@endpoint` with custom resource and permissions. They can be defined on the endpoint and must be matched by user permissions (which can be assigned via AuthHandler)
 - A new installation by default only recognizes one superuser with full permissions, with name `admin` and pass `admin`. To change these credentials use env variable `CCAT_ADMIN_CREDENTIALS` in this format:
   ```bash
     CCAT_ADMIN_CREDENTIALS=username:password
@@ -175,11 +177,8 @@ Auth system semplifications (TODO review):
 ## TODO
 
 - update core plugins so they attach to hooks exposed by core and provide their own hooks for other plugins
-- statelessness is paramount to avoid side effects and scalability. Just working_memory and settings should be saved, as a simple JSON or in a DB. Plugins will deal with long term memories
-- which DB to use internally? easiest route is to go `sql_alchemy` and ship with a default `sqlite`, that can be changed to a `postgres` for scalability and statelessness
 - `qdrant_vector_memory` should deal with embedder changes, maybe reactivating the snapshot
 - security must be always ON, also on a fresh installation, with a default jwt secret and API key. Pages in `/docs` should allow logging in
-- model selection should be possible to do directly via message, i.e. `"model": "openai:gpt-5" or "ollama:qwen:7b"`. If model is not passed, a default model chosen by admin in the settings will be used. Admin still decides which models are available to end users. Still to determine how to adapt the permissions system to this.
 - `StrayCat.__call_` should be an async generator using `yield` to send tokens and notifications. Those yielded result are then managed at the transport layer (websocket or http/streaming/sse). Cat internals should know absolutely nothing about network protocols.
 - core tests should only deal with core (also because plugin install dependencies is mocked!!!)
 - allow plugin settings with conditionals and subpages with json schema primitives `if`, `oneOf`, etc.
@@ -188,8 +187,9 @@ Auth system semplifications (TODO review):
 - intenral user_id, to avoid throwing around email, could be a uuid5 (based on namespace installation_id)
 - some packages used by core occupy a lot of space and do basically nothing (find alts)
   `du -h .venv/lib/python3.13/site-packages --max-depth=1 | sort -hr`
-- `@hook` decorator should support autocomplete for the hooks nemas, and allow custom strings
+- `@hook` decorator should support autocomplete for the hooks names, and allow custom strings
 - check for memory leaks (see Luca Gobbi's setup for locust)
+- recover core plugins as they are all broken
 
 ## Questions
 

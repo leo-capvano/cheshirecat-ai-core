@@ -1,13 +1,15 @@
 import time
 from uuid import uuid4
 from inspect import signature
+from dataclasses import asdict
 from typing import Callable, List, Dict
 from functools import wraps
 
 from langchain_core.tools import StructuredTool
 from fastmcp.tools.tool import FunctionTool, ParsedFunction
-
+from fastmcp.client.client import CallToolResult
 from ag_ui.core.events import EventType # take away after they fix the bug
+
 from cat.protocols.agui import events
 from cat.types import Message, TextContent
 from cat.utils import run_sync_or_async
@@ -107,35 +109,42 @@ class CatTool:
         # execute the tool
         if self.is_internal:
             # internal tool
-            tool_output = await run_sync_or_async(
+            tool_result: str = await run_sync_or_async(
                 self.func, **tool_call["args"], cat=cat
             )
         else:
             # MCP tool
             async with cat.mcp:
-                tool_output = await self.func(self.name, tool_call["args"])
+                tool_result: CallToolResult = await self.func(self.name, tool_call["args"])
         
         # Standardize output
-        tool_output = self.standardize_output(tool_call, tool_output) 
+        tool_result = self.standardize_output(tool_call, tool_result) 
         
         # Emit AGUI events
-        await self.emit_agui_tool_end_events(cat, tool_call, tool_output)
+        await self.emit_agui_tool_end_events(cat, tool_call, tool_result)
 
         # TODOV2: should return something analogous to:
         #   https://modelcontextprotocol.info/specification/2024-11-05/server/tools/#tool-result
         #   Only supporting text for now
-        return tool_output
+        return tool_result
 
-    def standardize_output(self, tool_call, tool_output):
+    def standardize_output(self, tool_call, tool_result):
+
+        # legacy tools
+        if isinstance(tool_result, str):
+            tool_result = CallToolResult(
+                content = [
+                    TextContent(
+                        text=tool_result
+                    )
+                ],
+                structured_content=None
+            )
 
         text = ""
-
-        if isinstance(tool_output, str):
-            text = tool_output
-        elif hasattr(tool_output, "content"):
-            text += tool_output.content[0].text # TODO: many content blocks here of different types, also embedded resources
-        else:
-            raise Exception("Cannot convert tool output")
+        for c in tool_result.content:
+            if c.type == "text":
+                text += c.text + "\n" # TODO: many content blocks here of different types, also embedded resources
         
         return Message(
             role="tool",
@@ -143,7 +152,7 @@ class CatTool:
                 text=text,
                 tool={
                     "in": tool_call,
-                    "out": tool_output
+                    "out": asdict(tool_result) # it's a dataclass
                 }
             )
         )
@@ -186,7 +195,8 @@ class CatTool:
                 timestamp=int(time.time()),
                 message_id=str(uuid4()), # shold be the id of the last user message
                 tool_call_id=str(tool_call["id"]),
-                content=str(tool_output)
+                content=tool_output.content.text,
+                raw_event=tool_output.model_dump()
             )
         )
 
