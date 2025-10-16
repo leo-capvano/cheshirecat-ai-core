@@ -10,7 +10,7 @@ def get_supported_env_variables():
         "CCAT_ADMIN_CREDENTIALS": "admin:admin",
         "CCAT_API_KEY": "meow",
         "CCAT_DEBUG": "true",
-        "CCAT_LOG_LEVEL": "INFO",
+        "CCAT_LOG_LEVEL": "WARNING",
         "CCAT_CORS_ALLOWED_ORIGINS": None,
         "CCAT_SQL": "sqlite:///data/sqlite/core.db", # TODOV2: db could be encrypted by default # postgresql+asyncpg://user:password@localhost/dbname
         "CCAT_JWT_SECRET": "meow_jwt",
