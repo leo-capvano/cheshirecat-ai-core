@@ -1,6 +1,6 @@
 import pytest
 
-from cat.auth.permissions import AuthUserInfo
+from cat.auth.permissions import User
 from cat.types import ChatResponse, ChatRequest
 from cat.looking_glass.stray_cat import StrayCat
 from cat.memory.working_memory import WorkingMemory
@@ -10,11 +10,11 @@ from tests.utils import get_chat_request
 
 @pytest.fixture(scope="function")
 def stray_cat(async_client):
-    user_data = AuthUserInfo(
+    user = User(
         id="Alice",
         name="Alice" # TODOV2: user_id should be unique, user name anything
     )
-    yield StrayCat(user_data)
+    yield StrayCat(user)
 
 
 def test_stray_initialization(stray_cat):

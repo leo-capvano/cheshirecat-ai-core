@@ -1,11 +1,12 @@
-from typing import Any, Dict, Literal
+from typing import Any, Dict
+from pydantic import BaseModel
+
 from cat.factory.defaults import (
     AuthHandlerDefault, LLMDefault, EmbedderDefault, AgentDefault
 )
-from cat.utils import BaseModelDict
 
 
-class FactoryCategory(BaseModelDict):
+class FactoryCategory(BaseModel):
     default: Any
     keep_default: bool
     at_least_one: bool

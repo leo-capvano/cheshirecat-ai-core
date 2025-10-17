@@ -3,7 +3,7 @@ from fastapi.responses import RedirectResponse
 
 from cat.looking_glass.stray_cat import StrayCat
 from cat.auth.permissions import (
-    AuthUserInfo,
+    User,
     AuthPermission, AuthResource,
     check_permissions
 )
@@ -28,7 +28,7 @@ async def login(r: Request, name: str) -> RedirectResponse:
 @router.get("/me")
 async def get_user_info(
     cat: StrayCat = check_permissions(AuthResource.CHAT, AuthPermission.READ),
-) -> AuthUserInfo:
+) -> User:
     """Returns user information."""
-    return cat.user_data.model_dump()
+    return cat.user.model_dump()
 

@@ -5,14 +5,10 @@ from uuid import uuid4
 from collections.abc import AsyncGenerator
 from typing import Literal, get_args, List, Dict, Union, Any, Callable
 
-from langchain_core.runnables import RunnableConfig, RunnableLambda
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.prompts.chat import SystemMessagePromptTemplate
-
 from cat.protocols.agui import events
-from cat.auth.permissions import AuthUserInfo
+from cat.auth.permissions import User
 from cat.looking_glass.cheshire_cat import CheshireCat
-from cat.looking_glass.callbacks import NewTokenHandler
+from cat.protocols.future.llm_wrapper import LLMWrapper
 from cat.memory.working_memory import WorkingMemory
 from cat.types import Message, ChatRequest, ChatResponse
 from cat.mad_hatter.decorators import CatTool
@@ -32,8 +28,9 @@ class StrayCat:
 
     Parameters
     ----------
-    user_data : AuthUserInfo
-        User data object containing user information.
+    user : User
+        User object.
+    
     """
 
     chat_request: ChatRequest | None = None
@@ -63,20 +60,19 @@ class StrayCat:
 
     def __init__(
         self,
-        user_data: AuthUserInfo,
+        user: User,
         ccat: CheshireCat
     ):
 
         # user data
-        self.__user_id = user_data.id
-        self.__user_data = user_data
+        self.user = user
 
         # pointer to CheshireCat instance
         self._ccat = ccat
 
 
     def __repr__(self):
-        return f"StrayCat(user_id={self.user_id}, user_name={self.user_data.name})"
+        return f"StrayCat(user_id={self.user_id}, user_name={self.user.name})"
 
     # TODOV2: method should be one and should be `send_message`.
     #         Stray should not know about websockets or anything network related
@@ -221,17 +217,14 @@ class StrayCat:
     async def agui_event(self, event: events.BaseEvent):
         await self.__send_ws_json(dict(event))
     
-    # TODOV2: keep .llm sync as it was, for retrocompatibility (returned a string, also)
-    #           add an async method for the chain with tools
     async def llm(
             self,
             system_prompt: str,
-            messages: list[Message] = [],
             model: str | None = None,
+            messages: list[Message] = [],
             tools: list[CatTool] = [],
-            stream: bool = False,
-            execution_name: str = "prompt"
-        ) -> Message: # TODOV2: does not return a string anymore
+            stream: bool = False
+        ) -> Message:
         """Generate a response using the Large Language Model.
 
         Parameters
@@ -248,8 +241,6 @@ class StrayCat:
             If None, uses default LLM as in the settings.
         stream : bool
             Whether to stream the tokens via websocket or not.
-        execution_name : str
-            Name of this LLM run, for logging purposes.
 
         Returns
         -------
@@ -267,51 +258,21 @@ class StrayCat:
         >>> cat.llm("Tell me which way to go?", stream=True)
         "It doesn't matter which way you go"
         """
-
-        # should we stream the tokens?
-        callbacks = []
-        if stream:
-            # token handler (will emit token events)
-            callbacks.append(NewTokenHandler(self))
-            # TODOV2: tool choice tokens are not streamed
-
-        # Add callbacks from plugins
-        self.mad_hatter.execute_hook(
-            "llm_callbacks", callbacks, cat=self
-        )
-
-        # here we deal with motherfucking langchain
-        prompt = ChatPromptTemplate(
-            messages=[
-                SystemMessagePromptTemplate.from_template(
-                    template=system_prompt
-                )
-            ] + [m.langchainfy() for m in messages]
-        )
         
         if model:
-            llm_with_tools = self._ccat.llms[model]
+            _llm = self._ccat.llms[model]
         else:
-            llm_with_tools = self._llm
-        if hasattr(self._llm, "bind_tools"):
-            llm_with_tools = self._llm.bind_tools([
-                t.langchainfy() for t in tools
-            ])
+            _llm = self._llm
 
-        chain = (
-            prompt
-            | RunnableLambda(lambda x: log.langchain_log_prompt(x, execution_name)) # TODOV2: should be done via langchain handler
-            | llm_with_tools # TODOV2: make configurable via init_chat_model
-            | RunnableLambda(lambda x: log.langchain_log_output(x, execution_name))
+        new_mex: Message = await LLMWrapper.invoke(
+            self,
+            model=_llm,
+            system_prompt=system_prompt,
+            messages=messages,
+            tools=tools,
+            stream=stream
         )
-
-        langchain_msg = await chain.ainvoke(
-            {},
-            config=RunnableConfig(callbacks=callbacks)
-        )
-
-        return Message.from_langchain(langchain_msg)
-        # TODOV2: have a couple of try/except to manage LLM crashes
+        return new_mex
     
 
     async def execute_hook(self, hook_name, default_value):
@@ -573,32 +534,20 @@ Allowed classes are:
 
         return best_label if score < score_threshold else None
     
-
     @property
     def user_id(self) -> str:
-        """The user's id.
+        """The user's id. Complete user object is under `cat.user`.
         
         Returns
         -------
         user_id : str
             Current user's id.
         """
-        return self.__user_id
-    
-    @property
-    def user_data(self) -> AuthUserInfo:
-        """`AuthUserInfo` object containing user data.
+        return self.user.id
 
-        Returns
-        -------
-        user_data : AuthUserInfo
-            Current user's data.
-        """
-        return self.__user_data
-    
     @property
     def agent(self):
-        """Instance of the requested agent.
+        """Instance of the agent invoked via endpoint.
         """
         slug = self.chat_request.agent
         if slug not in self._ccat.agents:
@@ -607,8 +556,9 @@ Allowed classes are:
 
     @property
     def _llm(self):
-        """Instance of langchain `LLM`.
-        Only use it if you directly want to deal with langchain, prefer method `cat.llm(prompt)` otherwise.
+        """
+        Low level LLM instance.
+        Only use it if you know what you are doing, prefer method `cat.llm(prompt)` otherwise.
         """
         slug = self.chat_request.model
         if slug not in self._ccat.llms:
@@ -617,20 +567,8 @@ Allowed classes are:
 
     @property
     def _embedder(self):
-        """Langchain `Embeddings` object.
-
-        Returns
-        -------
-        embedder : langchain `Embeddings`
-            Langchain embedder to turn text into a vector.
-
-
-        Examples
-        --------
-        >>> cat.embedder.embed_query("Oh dear!")
-        [0.2, 0.02, 0.4, ...]
-        >>> await cat.embedder.aembed_query("Oh dear!")
-        [0.2, 0.02, 0.4, ...]
+        """
+        Low level embedder instance. Use `cat.embed` instead.
         """
         slug = self.chat_request.embedder
         if slug not in self._ccat.embedders:
@@ -655,7 +593,7 @@ Allowed classes are:
         /app/cat/plugins/my_plugin
 
         Obtain plugin settings
-        >>> cat.mad_hatter.get_plugin().load_settings()
+        >>> await cat.mad_hatter.get_plugin().load_settings()
         {"num_cats": 44, "rows": 6, "remainder": 2}
         """
         return self._ccat.mad_hatter

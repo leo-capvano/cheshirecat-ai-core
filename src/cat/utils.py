@@ -4,12 +4,10 @@ import os
 import inspect
 from datetime import timedelta
 from urllib.parse import urlparse
-from typing import Dict, Tuple, Any
+from typing import Any
 from pydantic import BaseModel, ConfigDict
 
 from rapidfuzz.distance import Levenshtein
-from langchain_core.output_parsers import JsonOutputParser
-from langchain_core.prompts import PromptTemplate
 
 import cat
 from cat.log import log
@@ -168,56 +166,19 @@ def levenshtein_distance(prediction: str, reference: str) -> int:
     res = Levenshtein.normalized_distance(prediction, reference)
     return res
 
-def parse_json(json_string: str, pydantic_model: BaseModel = None) -> dict:
-    # instantiate parser
-    parser = JsonOutputParser(pydantic_object=pydantic_model)
 
-    # clean to help small LLMs
-    replaces = {
-        "\\_": "_",
-        "\\-": "-",
-        "None": "null",
-        "{{": "{",
-        "}}": "}",
-    }
-    for k, v in replaces.items():
-        json_string = json_string.replace(k, v)
-
-    # first "{" occurrence (required by parser)
-    start_index = json_string.index("{")
-
-    # parse
-    parsed = parser.parse(json_string[start_index:])
-
-    if pydantic_model:
-        return pydantic_model(**parsed)
-    return parsed
-
-
-def match_prompt_variables(
-        prompt_variables: Dict,
-        prompt_template: str
-    ) -> Tuple[Dict, str]:
-    """Ensure prompt variables and prompt placeholders map, so there are no issues on mismatches"""
-
-    tmp_prompt = PromptTemplate.from_template(
-        template=prompt_template
-    )
-
-    # outer set difference
-    prompt_mismatches = set(prompt_variables.keys()) ^ set(tmp_prompt.input_variables)
-
-    # clean up
-    for m in prompt_mismatches:
-        if m in prompt_variables.keys():
-            log.debug(f"Prompt variable '{m}' not found in prompt template, removed")
-            del prompt_variables[m]
-        if m in tmp_prompt.input_variables:
-            prompt_template = \
-                prompt_template.replace("{" + m + "}", "")
-            log.debug(f"Placeholder '{m}' not found in prompt variables, removed")
-
-    return prompt_variables, prompt_template
+def parse_json(
+        json_string: str,
+        pydantic_model: BaseModel = None
+    ) -> dict | BaseModel:
+    """
+    Parse a JSON string produced by an LLM in an actual dictionary.
+    Optionally provide a pydantic BaseModel to get an instance.
+    """
+    
+    # to avoid circular imports
+    from cat.protocols.future.llm_wrapper import LLMWrapper
+    return LLMWrapper.parse_json(json_string, pydantic_model)
 
 
 def get_caller_info(skip=2, return_short=True, return_string=True):

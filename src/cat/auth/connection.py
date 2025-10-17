@@ -19,7 +19,7 @@ from fastapi.security.api_key import APIKeyHeader
 from cat.auth.permissions import (
     AuthPermission,
     AuthResource,
-    AuthUserInfo,
+    User,
 )
 from cat.looking_glass.stray_cat import StrayCat
 from cat.log import log
@@ -51,7 +51,7 @@ class BaseAuth(ABC):
     ) -> AsyncGenerator[StrayCat | None, None]:
         
         for ah in connection.app.state.ccat.auth_handlers.values():
-            user: AuthUserInfo = await ah.authorize_user_from_credential(
+            user: User = await ah.authorize_user_from_credential(
                 credential, self.resource, self.permission
             )
             if user:

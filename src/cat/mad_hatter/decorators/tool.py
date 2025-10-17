@@ -5,7 +5,6 @@ from dataclasses import asdict
 from typing import Callable, List, Dict
 from functools import wraps
 
-from langchain_core.tools import StructuredTool
 from fastmcp.tools.tool import FunctionTool, ParsedFunction
 from fastmcp.client.client import CallToolResult
 from ag_ui.core.events import EventType # take away after they fix the bug
@@ -16,7 +15,7 @@ from cat.utils import run_sync_or_async
 
 
 class CatTool:
-    """All @tool decorated functions in plugins and MCP tools become a CatTool."""
+    """Cat tool uniforming @tool decorated functions in plugins and MCP tools."""
 
     def __init__(
         self,
@@ -144,7 +143,7 @@ class CatTool:
         text = ""
         for c in tool_result.content:
             if c.type == "text":
-                text += c.text + "\n" # TODO: many content blocks here of different types, also embedded resources
+                text += c.text # TODO: many content blocks here of different types, also embedded resources
         
         return Message(
             role="tool",
@@ -155,14 +154,6 @@ class CatTool:
                     "out": asdict(tool_result) # it's a dataclass
                 }
             )
-        )
-    
-    def langchainfy(self):
-        """Convert CatTool to a langchain compatible StructuredTool object"""
-        return StructuredTool(
-            name=self.name.strip().replace(" ", "_"),
-            description=self.description,
-            args_schema=self.input_schema,
         )
 
     async def emit_agui_tool_start_events(self, cat, tool_call):

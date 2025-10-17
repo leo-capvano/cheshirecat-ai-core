@@ -58,7 +58,7 @@
 - Most core functionality has been moved to plugins (still to be fixed and published). The vision is for a super slim core and more advanced plugins.
 - There are many changes and most plugins need to be adjusted (will provide a dedicated guide). The old admin still works with v2 via core plugin `legacy_v1`.
 - The cat vector memory can be completely deactivated, or some of it, and can be replaced/extended for example with a graph memory. See plugin `qdrant_vector_memory`
-- Due to difficulties in keeping up with langchain, core only depends on `langchain_core`. All LLM and embedder vendors are now packed in a dedicated `langchain_models_pack` plugin so they are isolated and more easily maintained.
+- Due to difficulties in keeping up with langchain, core only depends on `langchain_core`. All LLM and embedder vendors are now packed in a dedicated `langchain_models_pack` plugin so they are isolated and more easily maintained. All langchain imports and all conversions between langchain and cat types happen in a single folder under `cat.protocols.future` waiting for a standard protocol for all LLM services, if ever. Ditching langchain alltogether is possible.
 - plugins can contain tests inside a folder names `tests`. This folder will be ignored by the cat at runtime but tests will be run by `pytest`
 
 
@@ -160,10 +160,11 @@ Auth system semplifications (TODO review):
 - this offers amazing opportunities for integration, as tens of thousands of MCP servers are now available. There are still just a few MCP clients, and the Cat is the furriest one.
 - you can access the MCP client directly from the `StrayCat`:
   ```python
-      tools = await cat.mcp.list_tools()
-      prompts = await cat.mcp.list_prompts()
-      resources = await cat.mcp.list_resources()
+      tools = await cat.list_tools()
+      prompts = await cat.list_prompts()
+      resources = await cat.list_resources()
   ```
+  Note `list_tools` gives a list of `CatTool` objects, which uniform both intenral plugin tools and MCP tools.
 - you can connect to the cat only MCP servers that have http transport. Do not even try to ask me to run stdio based servers inside the cat. Use a proper proxy and aggregator for your local stuff, for example [MetaMCP](https://docs.metamcp.com/en).
 
 
@@ -184,12 +185,14 @@ Auth system semplifications (TODO review):
 - allow plugin settings with conditionals and subpages with json schema primitives `if`, `oneOf`, etc.
 - AG-UI should send `event: {xxx}`, leave `data: {xxx}` for the legacy messaging style 
 - static files ownership in DB table or via route checks, i.e `static/me`
-- intenral user_id, to avoid throwing around email, could be a uuid5 (based on namespace installation_id)
+- internal user_id, to avoid throwing around email, could be a uuid5 (based on namespace installation_id)
 - some packages used by core occupy a lot of space and do basically nothing (find alts)
   `du -h .venv/lib/python3.13/site-packages --max-depth=1 | sort -hr`
 - `@hook` decorator should support autocomplete for the hooks names, and allow custom strings
 - check for memory leaks (see Luca Gobbi's setup for locust)
 - recover core plugins as they are all broken
+- `cat` argument in hooks and tools should be optional
+- update to langchain v1
 
 ## Questions
 

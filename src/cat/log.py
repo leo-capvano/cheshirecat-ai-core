@@ -183,7 +183,6 @@ class CatLogEngine:
         color_str = colors[color]
         return f"\u001b[{color_str}m\033[1;3m{text}\u001b[0m"
 
-
     def log_examples(self):
         """Log examples for the log engine."""
 
@@ -201,40 +200,6 @@ class CatLogEngine:
             intentional_error()
         except Exception:
             self.error("This error is just for demonstration purposes.")
-
-    def langchain_log_prompt(self, langchain_prompt, title):
-    
-        if(get_env("CCAT_DEBUG") == "true"):
-            print("\n")
-            print(self.colored_text(f"===== {title} INPUT =====", "green"))
-            for m in langchain_prompt.messages:
-                print(self.colored_text(type(m).__name__, "green"))
-                if isinstance(m.content, list):
-                    for sub_m in m.content:
-                        if sub_m.get("type") == "text":
-                            print(sub_m["text"])
-                        elif sub_m.get("type") == "image_url":
-                            print("(image)")
-                        else:
-                            print(" -- Could not log content:", sub_m.keys())
-                else:
-                    print(m.content)
-            print(self.colored_text("========================================", "green"))
-        
-        return langchain_prompt
-
-    def langchain_log_output(self, langchain_output, title):
-        if(get_env("CCAT_DEBUG") == "true"):
-            print("\n")
-            print(self.colored_text(f"===== {title} OUTPUT =====", "blue"))
-            if hasattr(langchain_output, 'tool_calls') and len(langchain_output.tool_calls) > 0:
-                for t in langchain_output.tool_calls:
-                    print(f"Calling tool {t["name"]} with input {t["args"]}")
-            else:
-                print(langchain_output.content)
-            print(self.colored_text("========================================", "blue"))
-        return langchain_output
-            
 
 # logger instance
 log = CatLogEngine()

@@ -4,7 +4,7 @@ from cat.env import get_env
 from cat.log import log
 from cat.auth.base_auth_handler import BaseAuthHandler
 from cat.auth.permissions import (
-    AuthUserInfo, AuthPermission, AuthResource, get_full_permissions
+    User, AuthPermission, AuthResource, get_full_permissions
 )
 
 
@@ -16,13 +16,13 @@ class AuthHandlerDefault(BaseAuthHandler):
         token: str,
         auth_resource: AuthResource,
         auth_permission: AuthPermission
-    ) -> AuthUserInfo | None:
+    ) -> User | None:
             
         # decode token
         payload = self.decode_jwt(token)
 
         if payload:
-            return AuthUserInfo(
+            return User(
                 id=payload["sub"],
                 name=payload["username"],
                 permissions=get_full_permissions()
@@ -34,10 +34,10 @@ class AuthHandlerDefault(BaseAuthHandler):
             key: str,
             auth_resource: AuthResource,
             auth_permission: AuthPermission,
-    ) -> AuthUserInfo | None: 
+    ) -> User | None: 
         
         ########## tmp #######
-        return AuthUserInfo(
+        return User(
                 id=str(uuid5(NAMESPACE_DNS, "admin")),
                 name="admin",
                 permissions=get_full_permissions()
@@ -47,7 +47,7 @@ class AuthHandlerDefault(BaseAuthHandler):
         # allow access with full permissions
         if key == get_env("CCAT_API_KEY"):
             username = get_env("CCAT_ADMIN_CREDENTIALS").split(":")[0]
-            return AuthUserInfo(
+            return User(
                 id=str(uuid5(NAMESPACE_DNS, username)),
                 name=username,
                 permissions=get_full_permissions()

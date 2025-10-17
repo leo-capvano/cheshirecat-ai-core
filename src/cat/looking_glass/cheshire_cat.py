@@ -64,6 +64,8 @@ class CheshireCat:
             log.error("Error during CheshireCat bootstrap. Exiting.")
             sys.exit()
 
+        print("Ready ^._.^")
+
     async def populate_db(self):
         """Force minimal settings into core DB."""
 

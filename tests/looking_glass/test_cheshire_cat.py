@@ -1,6 +1,6 @@
 import pytest
 
-from langchain_core.language_models.llms import BaseLLM
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.embeddings import Embeddings
 
 
@@ -21,7 +21,7 @@ def test_main_modules_loaded(cheshire_cat):
         cheshire_cat.mad_hatter, MadHatter
     )
     assert isinstance(cheshire_cat.memory, LongTermMemory)
-    assert isinstance(cheshire_cat._llm, BaseLLM)
+    assert isinstance(cheshire_cat._llm, BaseChatModel)
     assert isinstance(cheshire_cat.embedder, Embeddings)
 
 

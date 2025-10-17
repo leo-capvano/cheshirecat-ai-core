@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from cat.looking_glass.stray_cat import StrayCat
-from cat.auth.permissions import AuthUserInfo
+from cat.auth.permissions import User
 from cat.mad_hatter.plugin import Plugin
 import cat.utils
 
@@ -133,13 +133,13 @@ def just_installed_plugin(client, admin_headers):
 # fixture to have available an instance of StrayCat
 @pytest.fixture(scope="function")
 def stray(async_client):
-    user_data = AuthUserInfo(
+    user = User(
         id="Alice",
         name="Alice"
     )
-    stray_cat = StrayCat(user_data)
+    stray_cat = StrayCat(user)
     # TODOV2: update to new data structure
-    stray_cat.working_memory.user_message_json = {"user_id": user_data.id, "text": "meow"}
+    stray_cat.working_memory.user_message_json = {"user_id": user.id, "text": "meow"}
     yield stray_cat
 
 

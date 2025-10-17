@@ -1,6 +1,6 @@
 from .auth_handler import AuthHandlerDefault
-from .llm import LLMDefault
-from .embedder import EmbedderDefault
+from ...protocols.future.llm import LLMDefault
+from ...protocols.future.embedder import EmbedderDefault
 from .agent import AgentDefault
 
 __all__ = [

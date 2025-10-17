@@ -1,18 +1,17 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 
-from typing import Literal
 from pytz import utc
 import jwt
 from jwt.exceptions import InvalidTokenError
 
 from cat.auth.permissions import (
-    AuthPermission, AuthResource, AuthUserInfo, get_full_permissions
+    AuthPermission, AuthResource, User
 )
 from cat.env import get_env
 from cat.log import log
 
-class BaseAuthHandler(ABC):  # TODOAUTH: pydantic model?
+class BaseAuthHandler(ABC):
     """
     Base class to build custom Auth systems.
     """
@@ -28,7 +27,7 @@ class BaseAuthHandler(ABC):  # TODOAUTH: pydantic model?
         except InvalidTokenError:
             return False
 
-    def issue_jwt(self, user: AuthUserInfo) -> str | None:
+    def issue_jwt(self, user: User) -> str | None:
         
         # TODOAUTH: expiration with timezone needs to be tested
         # using seconds for easier testing
@@ -65,7 +64,7 @@ class BaseAuthHandler(ABC):  # TODOAUTH: pydantic model?
         credential: str,
         auth_resource: AuthResource,
         auth_permission: AuthPermission,
-    ) -> AuthUserInfo | None:
+    ) -> User | None:
 
         if self.is_jwt(credential):
             # JSON Web Token auth
@@ -84,7 +83,7 @@ class BaseAuthHandler(ABC):  # TODOAUTH: pydantic model?
         token: str,
         auth_resource: AuthResource,
         auth_permission: AuthPermission
-    ) -> AuthUserInfo | None:
+    ) -> User | None:
         pass
 
     @abstractmethod
@@ -93,5 +92,5 @@ class BaseAuthHandler(ABC):  # TODOAUTH: pydantic model?
         api_key: str,
         auth_resource: AuthResource,
         auth_permission: AuthPermission
-    ) -> AuthUserInfo | None:
+    ) -> User | None:
         pass

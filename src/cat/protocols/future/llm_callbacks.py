@@ -2,11 +2,13 @@ from uuid import UUID, uuid4
 import time
 from langchain_core.callbacks.base import BaseCallbackHandler
 from cat.protocols.agui import events
+from cat.env import get_env
+from cat.log import log
+
 
 class NewTokenHandler(BaseCallbackHandler):
 
     def __init__(self, cat):
-        # cat could be an instance of CheshireCat or StrayCat
         self.cat = cat
 
     async def on_chat_model_start(self, *args, **kwargs):
@@ -37,6 +39,3 @@ class NewTokenHandler(BaseCallbackHandler):
                 timestamp=int(time.time())
             )
         )
-
-
-

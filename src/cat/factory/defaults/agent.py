@@ -14,8 +14,6 @@ class AgentDefault:
                 tools=await cat.list_tools(),
                 # whether to stream or not
                 stream=cat.chat_request.stream,
-                # give a name to LLM execution for logging purposes
-                execution_name="DEFAULT AGENT"
             )
 
             cat.chat_response.messages.append(llm_mex)

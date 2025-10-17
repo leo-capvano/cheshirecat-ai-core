@@ -4,7 +4,7 @@ from typing import List, Type
 from langchain_core.embeddings import FakeEmbeddings
 
 from cat.mad_hatter.decorators import hook
-from cat.factory.defaults.embedder import EmbedderSettings
+from cat.protocols.future.embedder import EmbedderSettings
 
 
 class EmbedderTestConfig(EmbedderSettings):

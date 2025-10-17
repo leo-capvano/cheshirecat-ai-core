@@ -4,7 +4,7 @@ from typing import List, Type
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
 
 from cat.mad_hatter.decorators import hook
-from cat.factory.defaults.llm import LLMSettings
+from cat.protocols.future.llm import LLMSettings
 
 class TestLLMConfig(LLMSettings):
     """Fake LLM for testing purposes."""
@@ -15,6 +15,6 @@ class TestLLMConfig(LLMSettings):
     
 
 @hook
-def factory_allowed_llms(allowed, cat) -> List:
-    allowed.append(TestLLMConfig)
-    return allowed
+def factory_allowed_llms(models, cat) -> List:
+    models["test"] = TestLLMConfig()
+    return models
