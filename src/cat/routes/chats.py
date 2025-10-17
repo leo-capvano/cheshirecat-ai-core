@@ -24,6 +24,7 @@ router = create_crud(
     tag="Chats",
     auth_resource=AuthResource.CHAT,
     restrict_by_user_id=True,
+    search_fields=["name", "messages"],
     select_schema=ChatSelect,
     create_schema=ChatCreateUpdate,
     update_schema=ChatCreateUpdate

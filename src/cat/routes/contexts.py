@@ -21,6 +21,7 @@ router = create_crud(
     tag="Contexts",
     auth_resource=AuthResource.CHAT,
     restrict_by_user_id=True,
+    search_fields=["name", "instructions", "resources"],
     select_schema=ContextSelect,
     create_schema=ContextCreateUpdate,
     update_schema=ContextCreateUpdate

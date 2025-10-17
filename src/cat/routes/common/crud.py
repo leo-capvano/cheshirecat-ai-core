@@ -1,5 +1,6 @@
 from typing import List, Optional, Tuple, Generic, TypeVar
 from uuid import uuid4
+import json
 
 from pydantic import BaseModel, create_model
 
@@ -45,7 +46,8 @@ def create_crud(
     select_schema: BaseModel,
     create_schema: BaseModel,
     update_schema: BaseModel,
-    restrict_by_user_id: bool = False
+    restrict_by_user_id: bool = False,
+    search_fields: List[str] = [],
 ) -> APIRouter:
 
     DBModel = db_model
@@ -71,12 +73,25 @@ def create_crud(
             q = DBModel.filter(user_id=cat.user_id)
         else:
             q = DBModel.all()
-        objs = await q.order_by("-updated_at").limit(10)
+        
+        q = q.order_by("-updated_at")
 
-        #if search:
-            # TODOV2: DBModel has no .body, find a more general way to search
-            # no vectors like in the 90s
-        #    stmt = stmt.where(func.lower(func.cast(DBModel.body, text)).ilike(f"%{search.lower()}%"))
+        if search:
+            # TODOV2: JSON filtering does not work in sqlite + Tortoise
+            prefetched = await q.limit(1000)
+            objs = []
+            for p in prefetched:
+                content = ""
+                for sf in search_fields:
+                    content += json.dumps(getattr(p, sf)).lower()
+                if search.lower() in content:
+                    objs.append(p)
+                if len(objs) >= 10:
+                    break
+
+        else:
+            objs = await q.limit(10)
+
         await DBModel.fetch_for_list(objs, *related_fields)
 
         return Page(

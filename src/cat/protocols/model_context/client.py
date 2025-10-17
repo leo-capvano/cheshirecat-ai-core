@@ -20,7 +20,8 @@ class MCPClient(Client):
         self.config = config
         if len(config["mcpServers"]) == 0:
             super().__init__(empty_server)
-        super().__init__(config)
+        else:
+            super().__init__(config)
 
 
 class MCPClients():
