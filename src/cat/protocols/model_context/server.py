@@ -1,13 +1,19 @@
 from typing import Any, Literal
 from fastmcp.client import auth as mcp_auth
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, HttpUrl, field_serializer
 
 from cat import utils
 
 
 class MCPServer(BaseModel):
+    name: str
+    description: str
     url: HttpUrl
     auth_type: Literal["oauth2", "apikey", "none"] = "none"
+
+    @field_serializer("url")
+    def serialize_url(self, url):
+        return str(url)
 
     async def to_fastmcp_auth(self, cat):
         if self.auth_type == "apikey":
