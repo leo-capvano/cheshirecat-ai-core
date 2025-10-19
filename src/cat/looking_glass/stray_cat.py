@@ -223,7 +223,7 @@ class StrayCat:
             model: str | None = None,
             messages: list[Message] = [],
             tools: list[CatTool] = [],
-            stream: bool = False
+            stream: bool = True,
         ) -> Message:
         """Generate a response using the Large Language Model.
 
