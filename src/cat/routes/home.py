@@ -1,6 +1,7 @@
 import os
 import json
-from fastapi import APIRouter, Path, HTTPException
+from fastapi import APIRouter
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse, FileResponse
 
 from cat.types import ChatRequest, ChatResponse
@@ -9,21 +10,14 @@ from cat.utils import get_base_path
 
 router = APIRouter(prefix="", tags=["Home"])
 
-"""
+
 @router.get("/", include_in_schema=False)
 async def frontend(
 )-> FileResponse:
     
-    ui_path = os.path.join(get_base_path(), "routes/static/core_static_folder/ui/index.html")
-    
-    if os.path.exists(ui_path) and os.path.isfile(ui_path):
-        return FileResponse(ui_path)
-    else:
-        raise HTTPException(
-            status_code=404,
-            detail="File not found"
-        )
-"""
+    ui_index = os.path.join(get_base_path(), "routes/static/core_static_folder/ui/index.html")
+    return FileResponse(ui_index)
+
         
 @router.post("/message")
 async def message(

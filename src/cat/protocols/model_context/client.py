@@ -48,13 +48,9 @@ class MCPClients():
             config["mcpServers"][slug] = {
                 "url": str(server_config.url)
             }
-        for url in cat.chat_request.context.mcps:
-            slug = slugify(
-                str(url).split("://")[1],
-                separator="_",          
-            )
-            config["mcpServers"][slug] = {
-                "url": str(url)
+        for server_config in cat.chat_request.context.mcps:
+            config["mcpServers"][server_config.name] = {
+                "url": str(server_config.url)
             }
         
         need_new = (cat.user_id not in self.clients) \
