@@ -203,4 +203,7 @@ Auth system semplifications (TODO review):
 - move plugin settings out of plugin folder and into DB?
 - should we finally get rid of `BaseModelDict`?
 
+## Challenges
 
+- Create an "auto" agent that automatically redirects execution to the most competent agent (TODO agents should have a description)
+- Log into the Cat with your Google account

@@ -53,6 +53,8 @@ class Factory:
                 f"factory_allowed_{category_name}s", {}, cat=None
             )
             # TODO: should add type checks
+            # TODO: if agents, objects[slug].cat = cat
+
 
             if category.keep_default or (category.at_least_one and len(category.objects) == 0):
                 category.objects["default"] = category.default
