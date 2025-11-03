@@ -1,7 +1,7 @@
 [project]
 name = "cheshire-cat-ai"
 description = "Production ready AI agent framework"
-version = "2.0.4"
+version = "2.0.6"
 requires-python = ">=3.11"
 license-files = ["LICENSE"]
 authors = [
@@ -19,7 +19,7 @@ dependencies = [
     "PyJWT>=2.8.0",
     "bcrypt>=4.1.3",
     "pytz>=2025.2",
-    "langchain-core>=0.3.74",
+    "langchain-core>=1.0.0",
     "pillow>=11.3.0",
     "loguru>=0.7.2",
     "python-slugify>=8.0.1",

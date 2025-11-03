@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -22,6 +23,7 @@ from cat.routes.websocket import websocket
 from cat.routes.static import static
 from cat.routes.openapi import get_openapi_configuration_function
 from cat.looking_glass.cheshire_cat import CheshireCat
+from cat.utils import get_base_path
 
 
 @asynccontextmanager
@@ -84,11 +86,12 @@ async def scalar_docs():
         scalar_favicon_url="https://cheshirecat.ai/wp-content/uploads/2023/10/Logo-Cheshire-Cat.svg",
     )
 
-# frontend static files
+# UI
+ui_static_dir = os.path.join(get_base_path(), "routes/static/core_static_folder/ui")
 cheshire_cat_api.mount(
     "/ui",
     StaticFiles(
-        directory=f"{get_base_path()}/routes/static/core_static_folder/ui",
+        directory=ui_static_dir,
         html=True,
     ),
     name="ui",

@@ -1,13 +1,12 @@
-import os
 import json
-from fastapi import APIRouter, Path, HTTPException
-from fastapi.responses import StreamingResponse, FileResponse, RedirectResponse
+from fastapi import APIRouter
+from fastapi.responses import StreamingResponse, RedirectResponse
 
 from cat.types import ChatRequest, ChatResponse
 from cat.auth.permissions import AuthResource, AuthPermission, check_permissions
-from cat.utils import get_base_path
 
 router = APIRouter(prefix="", tags=["Home"])
+
 
 @router.get("/", include_in_schema=False)
 async def frontend(
