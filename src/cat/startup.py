@@ -1,12 +1,14 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from scalar_fastapi import get_scalar_api_reference
 from tortoise import Tortoise
 
 from cat.db.database import init_db
 from cat.env import get_env
+from cat.utils import get_base_path
 from cat.routes import (
     home,
     auth,
@@ -81,3 +83,13 @@ async def scalar_docs():
         title=cheshire_cat_api.title,
         scalar_favicon_url="https://cheshirecat.ai/wp-content/uploads/2023/10/Logo-Cheshire-Cat.svg",
     )
+
+# frontend static files
+cheshire_cat_api.mount(
+    "/ui",
+    StaticFiles(
+        directory=f"{get_base_path()}/routes/static/core_static_folder/ui",
+        html=True,
+    ),
+    name="ui",
+)
