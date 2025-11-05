@@ -7,7 +7,7 @@ from cat.protocols.model_context.type_wrappers import (
     ResourceLink,
     EmbeddedResource
 )
-from .contexts import Context
+
 from .messages import Message
 from .chats import ChatRequest, ChatResponse
 
@@ -19,7 +19,6 @@ __all__ = [
     AudioContent,
     ResourceLink,
     EmbeddedResource,
-    Context,
     Message,
     ChatRequest,
     ChatResponse

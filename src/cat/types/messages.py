@@ -5,7 +5,7 @@ from ..protocols.model_context.type_wrappers import ContentBlock
 
 
 class Message(BaseModel):
-    """Single message exchanged between user and assistant, part of a conversation."""
+    """Single Message exchanged between user and assistant, part of a conversation."""
 
     role: Literal["user", "assistant", "tool"]
     content : ContentBlock

@@ -48,7 +48,7 @@ class MCPClients():
             config["mcpServers"][slug] = {
                 "url": str(server_config.url)
             }
-        for server_config in cat.chat_request.context.mcps:
+        for server_config in cat.chat_request.mcps:
             config["mcpServers"][server_config.name] = {
                 "url": str(server_config.url)
             }

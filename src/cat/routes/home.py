@@ -14,7 +14,7 @@ async def frontend(
     # spa physically under /ui to avoid api and plugins route clashes
     return RedirectResponse(url="/ui")
 
-        
+      
 @router.post("/message")
 async def message(
     chat_request: ChatRequest,

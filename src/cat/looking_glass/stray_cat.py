@@ -291,7 +291,7 @@ class StrayCat:
         # TODOV2: give better naming to these hooks
         prompt_prefix = await self.execute_hook(
             "agent_prompt_prefix",
-            self.chat_request.context.instructions
+            self.chat_request.system_prompt
         )
         prompt_suffix = await self.execute_hook("agent_prompt_suffix", "")
 
@@ -564,16 +564,6 @@ Allowed classes are:
         if slug not in self._ccat.llms:
             raise Exception(f'Model "{slug}" not found')
         return self._ccat.llms[slug]
-
-    @property
-    def _embedder(self):
-        """
-        Low level embedder instance. Use `cat.embed` instead.
-        """
-        slug = self.chat_request.embedder
-        if slug not in self._ccat.embedders:
-            raise Exception(f'Embedder "{slug}" not found')
-        return self._ccat.embedders[slug]
 
     @property
     def mad_hatter(self):

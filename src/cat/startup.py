@@ -9,13 +9,11 @@ from tortoise import Tortoise
 
 from cat.db.database import init_db
 from cat.env import get_env
-from cat.utils import get_base_path
 from cat.routes import (
     home,
     auth,
     settings,
     chats,
-    contexts,
     status
 )
 from cat.routes.plugins import plugins
@@ -23,7 +21,6 @@ from cat.routes.websocket import websocket
 from cat.routes.static import static
 from cat.routes.openapi import get_openapi_configuration_function
 from cat.looking_glass.cheshire_cat import CheshireCat
-from cat.utils import get_base_path
 
 
 @asynccontextmanager
@@ -70,7 +67,7 @@ if cors_enabled == "true":
 
 # Add routers
 for r in [
-    home, status, auth, chats, contexts, settings,
+    home, status, auth, chats, settings,
     plugins, static, websocket
 ]:
     cheshire_cat_api.include_router(r.router)
@@ -85,14 +82,3 @@ async def scalar_docs():
         title=cheshire_cat_api.title,
         scalar_favicon_url="https://cheshirecat.ai/wp-content/uploads/2023/10/Logo-Cheshire-Cat.svg",
     )
-
-# UI
-ui_static_dir = os.path.join(get_base_path(), "routes/static/core_static_folder/ui")
-cheshire_cat_api.mount(
-    "/ui",
-    StaticFiles(
-        directory=ui_static_dir,
-        html=True,
-    ),
-    name="ui",
-)

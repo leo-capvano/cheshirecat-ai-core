@@ -91,7 +91,6 @@ class CheshireCat:
 
         self.auth_handlers = self.factory.get_objects("auth_handler")
         self.llms = self.factory.get_objects("llm")
-        self.embedders = self.factory.get_objects("embedder")
         self.agents = self.factory.get_objects("agent")
         self.mcps = self.factory.get_objects("mcp")
 

@@ -2,7 +2,7 @@ from typing import Any, Dict
 from pydantic import BaseModel
 
 from cat.factory.defaults import (
-    AuthHandlerDefault, LLMDefault, EmbedderDefault, AgentDefault
+    AuthHandlerDefault, LLMDefault, AgentDefault
 )
 
 
@@ -25,11 +25,6 @@ class Factory:
             ),
             "llm" : FactoryCategory(
                 default = LLMDefault(),
-                keep_default=False,
-                at_least_one=True
-            ),
-            "embedder" : FactoryCategory(
-                default = EmbedderDefault(),
                 keep_default=False,
                 at_least_one=True
             ),

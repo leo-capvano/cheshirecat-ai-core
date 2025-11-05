@@ -15,14 +15,12 @@ class SettingDB(Model):
     class Meta:
         table = "ccat_global_settings"
 
-"""
-class PluginDB(Model):
-    name = fields.CharField(primary_key=True, max_length=1000)
-    active = fields.BooleanField(default=True)
-    settings = fields.JSONField()
-    class Meta:
-        table = "ccat_global_plugins"
-"""
+#class PluginDB(Model):
+#    name = fields.CharField(primary_key=True, max_length=1000)
+#    active = fields.BooleanField(default=True)
+#    settings = fields.JSONField()
+#    class Meta:
+#        table = "ccat_global_plugins"
 
 ##########################
 ### user scoped tables ###
@@ -33,6 +31,7 @@ class UserScopedModelDB(Model):
     name = fields.CharField(max_length=1000)
     updated_at = fields.DatetimeField(auto_now=True)
     user_id = fields.UUIDField(db_index=True)
+    extra = fields.JSONField()
     class Meta:
         abstract = True
 
@@ -41,23 +40,19 @@ class UserSettingDB(UserScopedModelDB):
     class Meta:
         table = "ccat_settings"
 
-class ContextDB(UserScopedModelDB):
-    instructions = fields.TextField()
-    resources = fields.JSONField()
-    mcps = fields.JSONField()
-
-    class Meta:
-        table = "ccat_contexts"
+#class ContextDB(UserScopedModelDB):
+#    system_prompt = fields.TextField()
+#    resources = fields.JSONField()
+#    mcps = fields.JSONField()
+#
+#    class Meta:
+#        table = "ccat_contexts"
 
 class ChatDB(UserScopedModelDB):
     messages = fields.JSONField()
-    context = fields.ForeignKeyField(
-        'models.ContextDB', related_name='chats', db_index=True
-    )
     
     class Meta:
         table = "ccat_chats"
-
 
 
 # necessary for relationships
