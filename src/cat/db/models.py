@@ -40,17 +40,8 @@ class UserSettingDB(UserScopedModelDB):
     class Meta:
         table = "ccat_settings"
 
-#class ContextDB(UserScopedModelDB):
-#    system_prompt = fields.TextField()
-#    resources = fields.JSONField()
-#    mcps = fields.JSONField()
-#
-#    class Meta:
-#        table = "ccat_contexts"
-
 class ChatDB(UserScopedModelDB):
     messages = fields.JSONField()
-    
     class Meta:
         table = "ccat_chats"
 
