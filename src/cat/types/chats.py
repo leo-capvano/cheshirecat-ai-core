@@ -1,5 +1,5 @@
-from typing import List
-from pydantic import BaseModel
+from typing import List, Dict
+from pydantic import BaseModel, Field
 
 from cat.looking_glass import prompts
 from cat.protocols.model_context.type_wrappers import Resource
@@ -10,26 +10,57 @@ from ..protocols.model_context.type_wrappers import TextContent
 
 
 class ChatRequest(BaseModel):
+    agent: str = Field(
+        "default",
+        description="Agent slug, must be one of the available agents."
+    )
+    model: str = Field(
+        "default",
+        description='Model slug as defined by plugins, e.g. "openai:gpt-5".'
+    )
 
-    agent: str = "default" # name of the agent to run.
-    model: str = "default" # e.g. "openai:gpt-5"
+    system_prompt: str = Field(
+        prompts.MAIN_PROMPT_PREFIX,
+        description="System prompt (agent prompt prefix) to set the conversation context."
+    )
+    resources: List[Resource] = Field(
+        default_factory=list,
+        description="List of user defined resources (usually uploaded files) available to the agent."
+    )
+    mcps: List[MCPServer] = Field(
+        default_factory=list,
+        description="List of MCP servers the agent will interact with."
+    )
 
-    system_prompt: str = prompts.MAIN_PROMPT_PREFIX
-    resources: List[Resource] = []
-    mcps: List[MCPServer] = []
-
-    messages: List[Message] = [
-        Message(
-            role="user",
-            content=TextContent(
-                type="text",
-                text="Meow"
+    messages: List[Message] = Field(
+        default_factory=lambda: [
+            Message(
+                role="user",
+                content=TextContent(
+                    type="text",
+                    text="Meow"
+                )
             )
-        )
-    ]
+        ],
+        description="List of chat messages in the conversation."
+    )
 
-    stream: bool = True # whether to stream tokens or not
+    stream: bool = Field(
+        True,
+        description="Whether to enable streaming tokens or not."
+    )
+    extra: Dict = Field(
+        default_factory=dict,
+        description="Dictionary to hold extra custom fields."
+    )
 
 
 class ChatResponse(BaseModel):
-    messages: List[Message] = []
+    messages: List[Message] = Field(
+        default_factory=list,
+        description="List of chat messages returned in the response."
+    )
+    extra: Dict = Field(
+        default_factory=dict,
+        description="Dictionary to hold extra custom fields or metadata."
+    )

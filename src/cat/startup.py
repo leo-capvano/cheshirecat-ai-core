@@ -9,7 +9,6 @@ from cat.db.database import init_db
 from cat.routes import (
     home,
     auth,
-    settings,
     chats,
     status
 )
@@ -35,7 +34,6 @@ async def lifespan(app: FastAPI):
 # REST API
 cheshire_cat_api = FastAPI(
     lifespan=lifespan,
-    #openapi_url=None,
     docs_url=None,
     redoc_url=None,
     title="Cheshire Cat AI",
@@ -60,7 +58,7 @@ if cors_enabled == "true":
 
 # Add routers
 for r in [
-    home, status, auth, chats, settings,
+    home, status, auth, chats,
     plugins, static, websocket
 ]:
     cheshire_cat_api.include_router(r.router)

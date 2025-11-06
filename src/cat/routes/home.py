@@ -1,5 +1,5 @@
 import json
-from fastapi import APIRouter
+from fastapi import APIRouter, Body
 from fastapi.responses import StreamingResponse, RedirectResponse
 
 from cat.types import ChatRequest, ChatResponse
@@ -17,7 +17,21 @@ async def frontend(
       
 @router.post("/message")
 async def message(
-    chat_request: ChatRequest,
+    chat_request: ChatRequest = Body(
+        ..., 
+        example={
+            "agent": "default",
+            "model": "openai:gpt-4o",
+            "system_prompt": "You are the Cheshire Cat, and always talk in rhymes.",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": {"type": "text", "text": "Meow!"}
+                }
+            ],
+            "stream": False,
+        }
+    ),
     cat=check_permissions(AuthResource.CHAT, AuthPermission.EDIT),
 ) -> ChatResponse:
     

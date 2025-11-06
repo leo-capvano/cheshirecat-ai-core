@@ -27,5 +27,5 @@ else:
 
 
 async def init_db():
-    for model in [models.SettingDB, models.UserSettingDB, models.ChatDB]:
+    for model in [models.SettingDB, models.ChatDB]:
         await model.create_table(if_not_exists=True)

@@ -20,14 +20,14 @@ class SettingDB(Table, db=DB):
     value = JSON()
     
     class Meta:
-        tablename = "ccat_global_settings"
+        tablename = "ccat_settings"
 
 
 ##########################
 ### user scoped tables ###
 ##########################
 
-class UserScopedModelDB(Table, db=DB):
+class UserScopedDB(Table, db=DB):
     id = UUID(primary_key=True, default=uuid4)
     name = Varchar(length=1000)
     updated_at = Timestamptz(
@@ -40,14 +40,7 @@ class UserScopedModelDB(Table, db=DB):
         abstract = True
 
 
-class UserSettingDB(UserScopedModelDB):
-    value = JSON()
-
-    class Meta:
-        tablename = "ccat_settings"
-
-
-class ChatDB(UserScopedModelDB):
+class ChatDB(UserScopedDB):
     messages = JSON()
 
     class Meta:

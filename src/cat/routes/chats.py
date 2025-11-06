@@ -1,5 +1,4 @@
 from typing import List
-from uuid import UUID
 
 from cat.types import Message
 from cat.auth.permissions import AuthResource
