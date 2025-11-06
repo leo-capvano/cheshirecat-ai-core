@@ -9,11 +9,11 @@ authors = [
     { name = "Cheshire Cat AI Contributors" },
 ]
 dependencies = [
-    "pydantic>=2.11.7",
-    "uvicorn[standard]>=0.35.0",
-    "fastapi[standard]>=0.115.14",
+    "pydantic>=2.12.4",
+    "uvicorn[standard]>=0.38.0",
+    "fastapi[standard]>=0.121.0",
     "fastapi-sso>=0.18.0",
-    "scalar-fastapi>=1.0.3",
+    "scalar-fastapi>=1.4.3",
     "websockets>=15.0",
     "PyJWT>=2.8.0",
     "piccolo[all]>=1.30.0",
@@ -23,10 +23,6 @@ dependencies = [
     "pillow>=11.3.0",
     "loguru>=0.7.2",
     "python-slugify>=8.0.1",
-    "autopep8",
-    "pylint",
-    "perflint",
-    "pylint-actions",
     "pytest",
     "pytest-asyncio",
     "rapidfuzz>=3.6.1", # find an alternative for the levenshtein distance
