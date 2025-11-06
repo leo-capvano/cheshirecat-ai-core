@@ -37,7 +37,7 @@ class CheshireCat:
             # reference to the cat in fastapi state
             fastapi_app.state.ccat = self
 
-            # ensure core DB settings
+            # init DB and ensure core DB settings
             await self.populate_db()
 
             # instantiate MadHatter
@@ -64,10 +64,10 @@ class CheshireCat:
             log.error("Error during CheshireCat bootstrap. Exiting.")
             sys.exit()
 
-        print("Ready ^._.^")
+        print("\n^._.^\n")
 
     async def populate_db(self):
-        """Force minimal settings into core DB."""
+        """Init DB and insert minimal settings into it."""
 
         initial_settings = {
             "active_plugins": [],
@@ -75,7 +75,7 @@ class CheshireCat:
         }
 
         for name, value in initial_settings.items():
-            setting = await SettingDB.get_or_none(name=name)
+            setting = await SettingDB.objects().where(SettingDB.name == name).first()
             if setting is None:
                 setting = SettingDB(name=name, value=value)
                 await setting.save()

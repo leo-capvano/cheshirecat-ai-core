@@ -134,11 +134,15 @@ class MadHatter:
         return plugin_id in self.plugins.keys()
 
     async def get_active_plugins(self):
-        active_plugins = await SettingDB.get(name="active_plugins")
+        active_plugins = await SettingDB.objects().where(
+            SettingDB.name=="active_plugins"
+        ).first().output(load_json=True)
         return active_plugins.value
     
     async def set_active_plugins(self, active_plugins):
-        ap = await SettingDB.get(name="active_plugins")
+        ap = await SettingDB.objects().where(
+            SettingDB.name=="active_plugins"
+        ).first()
         ap.value = list(set(active_plugins))
         await ap.save()
 

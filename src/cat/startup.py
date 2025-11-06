@@ -1,14 +1,11 @@
-import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from scalar_fastapi import get_scalar_api_reference
-from tortoise import Tortoise
 
-from cat.db.database import init_db
 from cat.env import get_env
+from cat.db.database import init_db
 from cat.routes import (
     home,
     auth,
@@ -26,17 +23,13 @@ from cat.looking_glass.cheshire_cat import CheshireCat
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 
-    # init DB
     await init_db()
-
+    
     #  ^._.^ 
     ccat = CheshireCat()
     await ccat.bootstrap(app)
 
     yield
-    
-    # cleanup
-    await Tortoise.close_connections()
 
 
 # REST API

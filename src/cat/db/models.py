@@ -1,50 +1,54 @@
-
 from uuid import uuid4
+import datetime
+from piccolo.table import Table
+from piccolo.columns import (
+    Varchar,
+    JSON,
+    UUID,
+    Timestamptz,
+)
 
-from tortoise import Tortoise, fields
-from tortoise.models import Model
+from .database import DB
 
 
 ##############################
 ### globally scoped tables ###
-########################## ###
+##############################
 
-class SettingDB(Model):
-    name = fields.CharField(primary_key=True, max_length=1000)
-    value = fields.JSONField()
+class SettingDB(Table, db=DB):
+    name = Varchar(length=1000, primary_key=True)
+    value = JSON()
+    
     class Meta:
-        table = "ccat_global_settings"
+        tablename = "ccat_global_settings"
 
-#class PluginDB(Model):
-#    name = fields.CharField(primary_key=True, max_length=1000)
-#    active = fields.BooleanField(default=True)
-#    settings = fields.JSONField()
-#    class Meta:
-#        table = "ccat_global_plugins"
 
 ##########################
 ### user scoped tables ###
 ##########################
 
-class UserScopedModelDB(Model):
-    id = fields.UUIDField(primary_key=True, default=uuid4)
-    name = fields.CharField(max_length=1000)
-    updated_at = fields.DatetimeField(auto_now=True)
-    user_id = fields.UUIDField(db_index=True)
-    extra = fields.JSONField()
+class UserScopedModelDB(Table, db=DB):
+    id = UUID(primary_key=True, default=uuid4)
+    name = Varchar(length=1000)
+    updated_at = Timestamptz(
+        auto_update=lambda: datetime.datetime.now(datetime.timezone.utc)
+    )
+    user_id = UUID(index=True)
+    extra = JSON()
+
     class Meta:
         abstract = True
 
+
 class UserSettingDB(UserScopedModelDB):
-    value = fields.JSONField()
+    value = JSON()
+
     class Meta:
-        table = "ccat_settings"
+        tablename = "ccat_settings"
+
 
 class ChatDB(UserScopedModelDB):
-    messages = fields.JSONField()
+    messages = JSON()
+
     class Meta:
-        table = "ccat_chats"
-
-
-# necessary for relationships
-Tortoise.init_models(["cat.db.models"], "models")
+        tablename = "ccat_chats"

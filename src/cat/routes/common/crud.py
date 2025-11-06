@@ -1,45 +1,16 @@
-from typing import List, Optional, Tuple, Generic, TypeVar
-from uuid import uuid4
+from typing import List, Optional
 import json
-
-from pydantic import BaseModel, create_model
-
-from fastapi import APIRouter
-from fastapi import APIRouter, HTTPException, Depends, Body, Query
-
-from tortoise.models import Model
+from fastapi import APIRouter, HTTPException, Body, Query
+from pydantic import BaseModel
+from piccolo.table import Table
 
 from cat.looking_glass.stray_cat import StrayCat
 from cat.auth.permissions import AuthPermission, AuthResource, check_permissions
 from .schemas import Page
 
-def serialize_obj(obj, related_fields: list[str]) -> dict:
-    data = obj.__dict__.copy()
-
-    for field in related_fields:
-        related = getattr(obj, field, None)
-
-        if related is None:
-            data[field] = None
-
-        # reverse FK / M2M → has .related_objects when prefetched
-        elif hasattr(related, "related_objects"):
-            # if related.related_objects is not None:  # prefetched
-            data[field] = [r.__dict__.copy() for r in related.related_objects]
-
-        # forward FK (single related object)
-        else:
-            data[field] = related.__dict__.copy()
-
-    return data
-
-def get_related_fields(model: Model) -> List[str]:
-    related = \
-        list(model._meta.fk_fields) + list(model._meta.backward_fk_fields)
-    return related
 
 def create_crud(
-    db_model: Model,
+    db_model: Table,
     prefix: str,
     tag: str,
     auth_resource: AuthResource,
@@ -51,56 +22,38 @@ def create_crud(
 ) -> APIRouter:
 
     DBModel = db_model
+    SelectSchema, CreateSchema, UpdateSchema = select_schema, create_schema, update_schema
 
-    related_fields = get_related_fields(DBModel)
-
-    SelectSchema, CreateSchema, UpdateSchema = \
-        select_schema, create_schema, update_schema
-    
-    router = APIRouter(
-        prefix=prefix,
-        tags=[tag]
-    )
+    router = APIRouter(prefix=prefix, tags=[tag])
 
     @router.get("", description=f"List and search {tag}")
     async def get_list(
         search: Optional[str] = Query(None, description="Search query"),
-        # TODOV2: pagination
         cat: StrayCat = check_permissions(auth_resource, AuthPermission.LIST),
     ) -> Page[SelectSchema]:
         
         if restrict_by_user_id:
-            q = DBModel.filter(user_id=cat.user_id)
+            q = DBModel.objects().where(DBModel.user_id == cat.user_id)
         else:
-            q = DBModel.all()
-        
-        q = q.order_by("-updated_at")
+            q = DBModel.objects()
+
+        q = q.order_by(DBModel.updated_at, ascending=False)
+        objs = await q.limit(1000).output(load_json=True)
 
         if search:
-            # TODOV2: JSON filtering does not work in sqlite + Tortoise
-            prefetched = await q.limit(1000)
-            objs = []
-            for p in prefetched:
-                content = ""
-                for sf in search_fields:
-                    content += json.dumps(getattr(p, sf)).lower()
+            results = []
+            # piccolo + sqlite does not handle search in JSON
+            for p in objs:
+                content = "".join(json.dumps(getattr(p, sf)).lower() for sf in search_fields)
                 if search.lower() in content:
-                    objs.append(p)
-                if len(objs) >= 10:
-                    break
-
+                    results.append(p)
+                    if len(results) >= 10:
+                        break
+            objs = results
         else:
-            objs = await q.limit(10)
+            objs = objs[:10]
 
-        await DBModel.fetch_for_list(objs, *related_fields)
-
-        return Page(
-            items=[
-                serialize_obj(obj, related_fields) for obj in objs
-            ],
-            cursor=""
-        )
-
+        return Page(items=objs, cursor="")
 
     @router.get("/{id}", description=f"Get a {tag}")
     async def get_one(
@@ -108,19 +61,14 @@ def create_crud(
         cat: StrayCat = check_permissions(auth_resource, AuthPermission.READ),
     ) -> SelectSchema:
         
+        q = DBModel.objects().where(DBModel.id == id)
         if restrict_by_user_id:
-            q = DBModel.get_or_none(id=id, user_id=cat.user_id)
-        else:
-            q = DBModel.get_or_none(id=id)
-        
-        q = q.prefetch_related(*related_fields)
+            q = q.where(DBModel.user_id == cat.user_id)
 
-        obj = await q.get_or_none()
+        obj = await q.first().output(load_json=True)
         if obj is None:
             raise HTTPException(status_code=404, detail="Not found.")
-        
         return obj
-
 
     @router.post("", description=f"Create new {tag}")
     async def create(
@@ -128,15 +76,13 @@ def create_crud(
         cat: StrayCat = check_permissions(auth_resource, AuthPermission.WRITE),
     ) -> SelectSchema:
         
+        payload = data.model_dump()
         if restrict_by_user_id:
-            new_obj = DBModel(user_id=cat.user_id, **data.model_dump())
-        else:
-            new_obj = DBModel(**data.model_dump())
+            payload["user_id"] = cat.user_id
+        obj = DBModel(**payload)
+        await obj.save()
 
-        await new_obj.save()
-        await DBModel.fetch_related(new_obj, *related_fields)
-        return new_obj
-
+        return obj
 
     @router.put("/{id}", description=f"Edit a {tag}")
     async def edit(
@@ -144,20 +90,21 @@ def create_crud(
         data: UpdateSchema = Body(...),
         cat: StrayCat = check_permissions(auth_resource, AuthPermission.EDIT),
     ) -> SelectSchema:
-
+        
+        q = DBModel.objects().where(DBModel.id == id)
         if restrict_by_user_id:
-            obj = await DBModel.get_or_none(id=id, user_id=cat.user_id)
-        else:
-            obj = await DBModel.get_or_none(id=id)
+            q = q.where(DBModel.user_id == cat.user_id)
+
+        obj = await q.first().output(load_json=True)
 
         if obj is None:
-            raise HTTPException(status_code=404, detail=f"{tag } not found.")
-
-        obj.update_from_dict(data.model_dump())
+            raise HTTPException(status_code=404, detail=f"{tag} not found.")
+    
+        for key, value in data.model_dump().items():
+            setattr(obj, key, value)
         await obj.save()
-        await DBModel.fetch_related(obj, *related_fields)
+    
         return obj
-
 
     @router.delete("/{id}")
     async def delete(
@@ -165,15 +112,15 @@ def create_crud(
         cat: StrayCat = check_permissions(auth_resource, AuthPermission.DELETE),
     ):
         
+        q = DBModel.objects().where(DBModel.id == id)
         if restrict_by_user_id:
-            obj = await DBModel.get_or_none(id=id, user_id=cat.user_id)
-        else:
-            obj = await DBModel.get_or_none(id=id)
+            q = q.where(DBModel.user_id == cat.user_id)
+        
+        obj = await q.first()
 
         if obj is None:
-            raise HTTPException(status_code=404, detail=f"{tag } not found.")
-                    
-        await obj.delete() # TODOV2: check effects on relationships
-
+            raise HTTPException(status_code=404, detail=f"{tag} not found.")
+        
+        await obj.remove()
 
     return router
