@@ -109,8 +109,16 @@
   ```python
   from cat.types import Message, Resource # and all other types
   ```
+- Imports for most frequent used primitives are now simplified:
+  ```python
+  from cat import hook, tool, BaseAgent, ...
+  from cat.auth import check_permissions, User, BaseAuth
+  ```
 - core DB is a simple SQL (supports both sqlite and postgres) and it is used to store settings, chats, contexts and plugin settings. No more `metadata.json`, no `qdrant` in core.
 - factory explanation XXX
+- Environment variables:
+  - there are less env variables, as many things are delegated to plugins (which can decide whether to use them or not).
+  - `CCAT_CORE_HOST`, `CCAT_CORE_PORT` and `CCAT_CORE_USE_SECURE_PROTOCOLS` have been collapsed into one single env variable `CCAT_URL` with default value `http://localhost:1865`
 
 ## Hooks
 
@@ -152,7 +160,8 @@ Auth system semplifications (TODO review):
   ```bash
     CCAT_ADMIN_CREDENTIALS=username:password
   ```
-- there is only one given active AuthHandler at any given time :)
+- default AuthHandler will not be active if other custom auth handlers are present
+- if more than one custom auth handler is defined, they will be executed in sequence, and if one allows the request, access is granted. It's your responsibility to make sure only the desired auth handler(s) are active (they are also listed from endpoint `GET /status` for an easy check)
 - Utilities to add and edit users have been eradicated from the framework, due to many complications, niche requests from community, and the half baked solution that resulted in v1. Now AuthHandlers can manage users fully on their own. Support for SSO is rolling out!
 
 
@@ -194,11 +203,11 @@ Auth system semplifications (TODO review):
 - recover core plugins as they are all broken
 - `cat` argument in hooks and tools should be optional
 - update to langchain v1
+- root endpoint `/` should offer the webui (at the moment static assets urls for the SPA conflict with other endpoints)
+
 
 ## Questions
 
-- should core plugins hooks have priority 0 so they go first?
-- should all hooks be able to return a ChatResponse and interrupt the flow with the direct final response?
 - new plugins with custom requirements may not work as expected (need a restart).
 - as there are docker and pyPI releases, makes no sense to have a `develop` branch
 - move plugin settings out of plugin folder and into DB?

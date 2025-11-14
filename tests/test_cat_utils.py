@@ -4,6 +4,7 @@ from cat import utils
 
 
 def test_get_base_url(client):
+    # TODOV2: update to new env var CCAT_URL
     assert utils.get_base_url() == "http://localhost:1865"
     # test when CCAT_CORE_USE_SECURE_PROTOCOLS is set
     os.environ["CCAT_CORE_USE_SECURE_PROTOCOLS"] = "1"

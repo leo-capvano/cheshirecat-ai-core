@@ -144,11 +144,8 @@ class CatLogEngine:
                 
     def welcome(self):
         """Welcome message in the terminal."""
-        secure = "s" if get_env("CCAT_CORE_USE_SECURE_PROTOCOLS") in ("true", "1") else ""
-
-        cat_host = get_env("CCAT_CORE_HOST")
-        cat_port = get_env("CCAT_CORE_PORT")
-        cat_address = f"http{secure}://{cat_host}:{cat_port}"
+ 
+        cat_address = get_env("CCAT_URL")
 
         from cat.utils import get_base_path
         print("\n\n")
@@ -156,8 +153,8 @@ class CatLogEngine:
             print(f.read())
 
         left_margin = " " * 15
-        print(f"\n\n{left_margin} Cat REST API:   {cat_address}/docs")
-        print(f"{left_margin} Cat WEBUI:      {cat_address}\n\n")
+        print(f"\n\n{left_margin} REST API:   {cat_address}/docs")
+        print(f"{left_margin} WEB UI:     {cat_address}\n\n")
         # self.log_examples()
 
 

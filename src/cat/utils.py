@@ -3,7 +3,7 @@
 import os
 import inspect
 from datetime import timedelta
-from urllib.parse import urlparse
+from urllib.parse import urljoin
 from typing import Any
 from pydantic import BaseModel, ConfigDict
 
@@ -82,15 +82,12 @@ def verbal_timedelta(td: timedelta) -> str:
 
 def get_base_url():
     """Base url for the installation."""
-    secure = "s" if get_env("CCAT_CORE_USE_SECURE_PROTOCOLS") in ("true", "1") else ""
-    cat_host = get_env("CCAT_CORE_HOST")
-    cat_port = get_env("CCAT_CORE_PORT")
-    return f"http{secure}://{cat_host}:{cat_port}"
+    return get_env("CCAT_URL")
 
 
 def get_static_url():
     """Static files url."""
-    return get_base_url() + "/static"
+    return urljoin(get_base_url(), "static")
 
 
 def get_base_path():
@@ -116,22 +113,6 @@ def get_plugins_path():
 def get_static_path():
     """Allows exposing the static files' path."""
     return os.path.join(get_project_path(), "static")
-
-
-def is_https(url):
-    try:
-        parsed_url = urlparse(url)
-        return parsed_url.scheme == "https"
-    except Exception:
-        return False
-
-
-def extract_domain_from_url(url):
-    try:
-        parsed_url = urlparse(url)
-        return parsed_url.netloc + parsed_url.path
-    except Exception:
-        return url
 
 
 def explicit_error_message(e):

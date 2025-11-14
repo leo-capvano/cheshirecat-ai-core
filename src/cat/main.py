@@ -3,9 +3,15 @@ import shutil
 import uvicorn
 import debugpy
 from dotenv import load_dotenv
+from urllib.parse import urlparse
 
 from cat.env import get_env
-from cat.utils import get_base_path, get_project_path, get_plugins_path
+from cat.utils import (
+    get_base_url,
+    get_base_path,
+    get_project_path,
+    get_plugins_path,
+)
 
 
 def scaffold():
@@ -52,10 +58,20 @@ def main():
             "forwarded_allow_ips": get_env("CCAT_CORS_FORWARDED_ALLOW_IPS"),
         }
 
+    base_url = urlparse(get_base_url())
+    if base_url.port:
+        port = base_url.port
+    elif base_url.scheme == 'http':
+        port = 80
+    elif base_url.scheme == 'https':
+        port = 443
+    else:
+        raise Exception(f"Cannot extract port from CCAT_URL {get_base_url()}")
+
     uvicorn.run(
         "cat.startup:cheshire_cat_api",
         host="0.0.0.0",
-        port=int(get_env("CCAT_CORE_PORT")),
+        port=port,
         use_colors=True,
         log_level=get_env("CCAT_LOG_LEVEL").lower(),
         **debug_config,
