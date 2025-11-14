@@ -2,13 +2,15 @@ from uuid import uuid5, NAMESPACE_DNS
 
 from cat.env import get_env
 from cat.log import log
-from cat.auth.base_auth_handler import BaseAuthHandler
-from cat.auth.permissions import (
-    User, AuthPermission, AuthResource, get_full_permissions
+
+from .base import BaseAuth
+from ..permissions import (
+    AuthPermission, AuthResource
 )
+from ..user import User
 
 
-class AuthHandlerDefault(BaseAuthHandler):
+class DefaultAuth(BaseAuth):
     """Defaul auth handler, based on environment variables."""
 
     def authorize_user_from_jwt(
@@ -25,7 +27,7 @@ class AuthHandlerDefault(BaseAuthHandler):
             return User(
                 id=payload["sub"],
                 name=payload["username"],
-                permissions=get_full_permissions()
+                permissions=self.get_full_permissions()
             )
         # if nothing is returned, request shall not pass
 
@@ -40,7 +42,7 @@ class AuthHandlerDefault(BaseAuthHandler):
         return User(
                 id=str(uuid5(NAMESPACE_DNS, "admin")),
                 name="admin",
-                permissions=get_full_permissions()
+                permissions=self.get_full_permissions()
             )
         ######################
 
@@ -50,6 +52,6 @@ class AuthHandlerDefault(BaseAuthHandler):
             return User(
                 id=str(uuid5(NAMESPACE_DNS, username)),
                 name=username,
-                permissions=get_full_permissions()
+                permissions=self.get_full_permissions()
             )
         # if nothing is returned, request shall not pass

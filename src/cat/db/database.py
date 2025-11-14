@@ -26,6 +26,7 @@ else:
     raise ValueError(f"Unsupported DB URL: {DB_URL}")
 
 
+# TODO: cann it be done directly in models.py?
 async def init_db():
-    for model in [models.SettingDB, models.ChatDB]:
+    for model in [models.SettingDB]:
         await model.create_table(if_not_exists=True)

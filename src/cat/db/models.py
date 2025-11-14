@@ -39,9 +39,3 @@ class UserScopedDB(Table, db=DB):
     class Meta:
         abstract = True
 
-
-class ChatDB(UserScopedDB):
-    messages = JSON()
-
-    class Meta:
-        tablename = "ccat_chats"

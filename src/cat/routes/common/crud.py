@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from piccolo.table import Table
 
 from cat.looking_glass.stray_cat import StrayCat
-from cat.auth.permissions import AuthPermission, AuthResource, check_permissions
+from cat.auth import AuthPermission, AuthResource, check_permissions
 from .schemas import Page
 
 

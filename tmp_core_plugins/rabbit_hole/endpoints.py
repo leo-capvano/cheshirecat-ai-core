@@ -16,7 +16,7 @@ from fastapi import (
     HTTPException,
 )
 
-from cat.auth.permissions import AuthPermission, AuthResource, check_permissions
+from cat.auth import AuthPermission, AuthResource, check_permissions
 from cat.log import log
 
 

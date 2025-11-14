@@ -2,7 +2,7 @@ import os
 import pytest
 import time
 from cat.env import get_env
-from cat.auth.permissions import AuthPermission, AuthResource
+from cat.auth import AuthPermission, AuthResource
 
 from tests.utils import send_websocket_message, send_http_message
 

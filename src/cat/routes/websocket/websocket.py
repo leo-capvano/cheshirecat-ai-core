@@ -1,7 +1,7 @@
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 
-from cat.auth.permissions import AuthPermission, AuthResource
+from cat.auth import AuthPermission, AuthResource
 from cat.auth.connection import WebsocketAuth
 from cat.log import log
 

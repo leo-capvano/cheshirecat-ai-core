@@ -3,7 +3,7 @@ from fastapi import Request, APIRouter, HTTPException
 
 from cat.mad_hatter.decorators import endpoint
 from cat.looking_glass.cheshire_cat import CheshireCat
-from cat.auth.permissions import AuthPermission, AuthResource, check_permissions
+from cat.auth import AuthPermission, AuthResource, check_permissions
 from cat.looking_glass.stray_cat import StrayCat
 from cat.log import log
 

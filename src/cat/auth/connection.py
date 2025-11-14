@@ -16,7 +16,7 @@ from fastapi import (
 from fastapi.requests import HTTPConnection
 from fastapi.security.api_key import APIKeyHeader
 
-from cat.auth.permissions import (
+from cat.auth import (
     AuthPermission,
     AuthResource,
     User,

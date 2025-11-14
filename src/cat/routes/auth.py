@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import RedirectResponse
 
 from cat.looking_glass.stray_cat import StrayCat
-from cat.auth.permissions import (
+from cat.auth import (
     User,
     AuthPermission, AuthResource,
     check_permissions

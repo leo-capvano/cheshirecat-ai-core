@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 
 from cat.log import log
 from cat.mad_hatter.plugin_manifest import PluginManifest
-from cat.auth.permissions import AuthPermission, AuthResource, check_permissions
+from cat.auth import AuthPermission, AuthResource, check_permissions
 
 router = APIRouter(prefix="/registry")
 

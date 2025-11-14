@@ -6,7 +6,7 @@ from collections.abc import AsyncGenerator
 from typing import Literal, get_args, List, Dict, Union, Any, Callable
 
 from cat.protocols.agui import events
-from cat.auth.permissions import User
+from cat.auth import User
 from cat.looking_glass.cheshire_cat import CheshireCat
 from cat.protocols.future.llm_wrapper import LLMWrapper
 from cat.memory.working_memory import WorkingMemory

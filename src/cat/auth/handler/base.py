@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Dict, List
 from datetime import datetime, timedelta
 
 from pytz import utc
@@ -6,15 +7,40 @@ import jwt
 from jwt.exceptions import InvalidTokenError
 
 from cat.auth.permissions import (
-    AuthPermission, AuthResource, User
+    AuthPermission, AuthResource
 )
+from cat.auth.user import User
 from cat.env import get_env
 from cat.log import log
 
-class BaseAuthHandler(ABC):
+class BaseAuth(ABC):
     """
     Base class to build custom Auth systems.
     """
+
+    def get_full_permissions(self) -> Dict[AuthResource, List[AuthPermission]]:
+        """
+        Returns all available resources and permissions.
+        """
+        # TODOV2: should include plugins defined permissions
+        perms = {}
+        for res in AuthResource:
+            perms[res.name] = [p.name for p in AuthPermission]
+        return perms
+
+
+    def get_base_permissions(self) -> Dict[AuthResource, List[AuthPermission]]:
+        """
+        Returns the default permissions for new users (chat only!).
+        """
+
+        all_permissions = [p.name for p in AuthPermission]
+
+        # TODOV2: should include plugins defined permissions
+        return {
+            AuthResource.CHAT: all_permissions,
+            AuthResource.STATIC: all_permissions,
+        }
         
     def is_jwt(self, token: str) -> bool:
         """

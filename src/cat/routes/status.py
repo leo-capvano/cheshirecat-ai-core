@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 from fastapi import APIRouter, Request
 
-from cat.auth.permissions import AuthPermission, AuthResource, check_permissions
+from cat.auth import AuthPermission, AuthResource, check_permissions
 
 router = APIRouter(prefix="/status", tags=["Status"])
 

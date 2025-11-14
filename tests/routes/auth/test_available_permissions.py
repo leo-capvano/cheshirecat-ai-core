@@ -1,5 +1,5 @@
 
-from cat.auth.permissions import get_full_permissions
+from cat.auth import get_full_permissions
 
 def test_get_available_permissions(client, admin_headers):
 

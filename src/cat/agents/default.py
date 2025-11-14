@@ -1,14 +1,7 @@
 from cat.types import Message
+from .base import BaseAgent
 
-class BaseAgent:
-    async def list_tools(self):
-        return await self.cat.list_tools()
-    
-    @property
-    def chat_request(self):
-        return self.cat.chat_request
-
-class AgentDefault:
+class DefaultAgent(BaseAgent):
 
     async def execute(self, cat):
 

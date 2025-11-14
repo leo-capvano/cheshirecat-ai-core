@@ -4,7 +4,7 @@ import httpx
 
 from fastapi import APIRouter, Query
 
-from cat.auth.permissions import AuthPermission, AuthResource, check_permissions
+from cat.auth import AuthPermission, AuthResource, check_permissions
 from cat.routes.common.crud import Page
 
 

@@ -4,7 +4,7 @@ from typing import Dict
 from pydantic import BaseModel, ValidationError
 from fastapi import Body, APIRouter, HTTPException
 from cat.log import log
-from cat.auth.permissions import AuthPermission, AuthResource, check_permissions
+from cat.auth import AuthPermission, AuthResource, check_permissions
 
 router = APIRouter(prefix="/plugins")
 

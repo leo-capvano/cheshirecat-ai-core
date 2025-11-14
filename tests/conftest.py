@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from cat.looking_glass.stray_cat import StrayCat
-from cat.auth.permissions import User
+from cat.auth import User
 from cat.mad_hatter.plugin import Plugin
 import cat.utils
 

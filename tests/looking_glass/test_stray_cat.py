@@ -1,6 +1,6 @@
 import pytest
 
-from cat.auth.permissions import User
+from cat.auth import User
 from cat.types import ChatResponse, ChatRequest
 from cat.looking_glass.stray_cat import StrayCat
 from cat.memory.working_memory import WorkingMemory

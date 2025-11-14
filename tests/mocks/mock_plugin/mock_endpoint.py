@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 from cat.mad_hatter.decorators import endpoint
-from cat.auth.permissions import AuthPermission, AuthResource, check_permissions
+from cat.auth import AuthPermission, AuthResource, check_permissions
 
 class Item(BaseModel):
     name: str

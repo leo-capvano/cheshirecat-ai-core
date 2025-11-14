@@ -2,7 +2,7 @@ import sys
 from uuid import uuid4
 
 from cat.db.models import SettingDB
-from cat.factory.factory import Factory
+from cat.factory import Factory
 from cat.protocols.model_context.client import MCPClients
 from cat.log import log
 from cat.mad_hatter.mad_hatter import MadHatter

@@ -3,18 +3,11 @@ from fastapi import APIRouter, Body
 from fastapi.responses import StreamingResponse, RedirectResponse
 
 from cat.types import ChatRequest, ChatResponse
-from cat.auth.permissions import AuthResource, AuthPermission, check_permissions
+from cat.auth import AuthResource, AuthPermission, check_permissions
 
 router = APIRouter(prefix="", tags=["Home"])
 
 
-@router.get("/", include_in_schema=False)
-async def frontend(
-)-> RedirectResponse:
-    # spa physically under /ui to avoid api and plugins route clashes
-    return RedirectResponse(url="/ui")
-
-      
 @router.post("/message")
 async def message(
     chat_request: ChatRequest = Body(

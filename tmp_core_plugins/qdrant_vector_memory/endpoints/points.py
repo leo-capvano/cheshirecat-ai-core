@@ -4,7 +4,7 @@ from fastapi import Query, Body, Request, APIRouter, HTTPException
 import time
 
 from cat.mad_hatter.decorators import endpoint
-from cat.auth.permissions import AuthPermission, AuthResource, check_permissions
+from cat.auth import AuthPermission, AuthResource, check_permissions
 from cat.looking_glass.stray_cat import StrayCat
 from cat.log import log
 

@@ -9,7 +9,6 @@ from cat.db.database import init_db
 from cat.routes import (
     home,
     auth,
-    chats,
     status
 )
 from cat.routes.plugins import plugins
@@ -58,7 +57,7 @@ if cors_enabled == "true":
 
 # Add routers
 for r in [
-    home, status, auth, chats,
+    home, status, auth,
     plugins, static, websocket
 ]:
     cheshire_cat_api.include_router(r.router)

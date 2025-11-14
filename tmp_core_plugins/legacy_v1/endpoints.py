@@ -2,7 +2,7 @@
 from typing import Dict
 
 from cat.mad_hatter.decorators import endpoint
-from cat.auth.permissions import check_permissions, AuthResource, AuthPermission
+from cat.auth import check_permissions, AuthResource, AuthPermission
 from cat.utils import BaseModelDict
 from .convo import CatMessage
 

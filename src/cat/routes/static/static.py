@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from cat import utils
-from cat.auth.permissions import check_permissions, AuthResource, AuthPermission
+from cat.auth import check_permissions, AuthResource, AuthPermission
 
 # TODOV2: test these routes
 
