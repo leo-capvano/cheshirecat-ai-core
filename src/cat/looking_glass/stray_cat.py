@@ -9,7 +9,6 @@ from cat.protocols.agui import events
 from cat.auth import User
 from cat.looking_glass.cheshire_cat import CheshireCat
 from cat.protocols.future.llm_wrapper import LLMWrapper
-from cat.memory.working_memory import WorkingMemory
 from cat.types import Message, ChatRequest, ChatResponse
 from cat.mad_hatter.decorators import CatTool
 from cat import utils
@@ -40,24 +39,6 @@ class StrayCat:
     """ChatResponse object that will go out to the client once the conversation turn is finished.
         It is available since the beginning of the Cat flow."""
 
-    working_memory: WorkingMemory
-    """State machine containing the conversation state, persisted across conversation turns, acting as a simple dictionary / object.
-    Can be used in plugins to store and retrieve data to drive the conversation or do anything else.
-
-    Examples
-    --------
-    Store a value in the working memory during conversation
-    >>> cat.working_memory["location"] = "Rome"
-    or
-    >>> cat.working_memory.location = "Rome"
-
-    Retrieve a value in later conversation turns
-    >>> cat.working_memory["location"]
-    "Rome"
-    >>> cat.working_memory.location
-    "Rome"
-    """
-
     def __init__(
         self,
         user: User,
@@ -81,17 +62,6 @@ class StrayCat:
         if self.message_callback:
             await self.message_callback(data)
 
-    async def _load_working_memory(self):
-        """Load working memory from DB."""
-        
-        # TODOV2: load from DB
-        self.working_memory = WorkingMemory()
-
-    async def _save_working_memory(self):
-        """Save working memory to DB."""
-
-        # TODOV2: save to DB
-        pass
 
     # TODOV2: take away `ws` and simplify these methods so it is only one
     async def send_ws_message(self, content: str | dict, msg_type: MSG_TYPES = "notification"):
@@ -250,7 +220,7 @@ class StrayCat:
         Examples
         -------
         Detect profanity in a message
-        >>> message = cat.working_memory.user_message_json.text
+        >>> 
         ... cat.llm(f"Does this message contain profanity: '{message}'?  Reply with 'yes' or 'no'.")
         "no"
 
@@ -357,9 +327,6 @@ class StrayCat:
 
         log.info(self.chat_request.model_dump())
 
-        # get working memory from DB or create a new one
-        await self._load_working_memory()
-
         # Run a totally custom reply (skips all the side effects of the framework)
         fast_reply = self.mad_hatter.execute_hook(
             "fast_reply", {}, cat=self
@@ -391,9 +358,6 @@ class StrayCat:
             )
 
             self.mcp = None
-
-        # save working memory to DB
-        await self._save_working_memory()
 
         # Return final reply
         log.info(self.chat_response.model_dump())
