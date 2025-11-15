@@ -25,8 +25,3 @@ elif DB_URL.startswith("postgresql"):
 else:
     raise ValueError(f"Unsupported DB URL: {DB_URL}")
 
-
-# TODO: cann it be done directly in models.py?
-async def init_db():
-    for model in [models.KeyValueDB]:
-        await model.create_table(if_not_exists=True)

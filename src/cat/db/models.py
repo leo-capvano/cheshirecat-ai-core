@@ -50,3 +50,8 @@ class UserScopedDB(Table, db=DB):
 
     class Meta:
         abstract = True
+
+
+# Init DB tables
+for DBTable in [KeyValueDB, UserKeyValueDB]:
+    DBTable.create_table(if_not_exists=True).run_sync()

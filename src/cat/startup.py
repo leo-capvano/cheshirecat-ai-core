@@ -5,7 +5,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from scalar_fastapi import get_scalar_api_reference
 
 from cat.env import get_env
-from cat.db.database import init_db
 from cat.routes import (
     home,
     auth,
@@ -20,8 +19,6 @@ from cat.looking_glass.cheshire_cat import CheshireCat
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-
-    await init_db()
     
     #  ^._.^ 
     ccat = CheshireCat()
