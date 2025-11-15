@@ -1,7 +1,7 @@
 import sys
 from uuid import uuid4
 
-from cat.db.models import SettingDB
+from cat.db.models import KeyValueDB
 from cat.factory import Factory
 from cat.protocols.model_context.client import MCPClients
 from cat.log import log
@@ -74,14 +74,14 @@ class CheshireCat:
             "installation_id": [str(uuid4())],
         }
 
-        for name, value in initial_settings.items():
-            setting = await SettingDB.objects().where(SettingDB.name == name).first()
+        for key, value in initial_settings.items():
+            setting = await KeyValueDB.objects().where(KeyValueDB.key == key).first()
             if setting is None:
-                setting = SettingDB(name=name, value=value)
+                setting = KeyValueDB(key=key, value=value)
                 await setting.save()
 
                 # only at first startup
-                if name == "installation_id":
+                if key == "installation_id":
                     log.welcome()
 
     async def on_mad_hatter_refresh(self):

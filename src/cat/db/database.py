@@ -28,5 +28,5 @@ else:
 
 # TODO: cann it be done directly in models.py?
 async def init_db():
-    for model in [models.SettingDB]:
+    for model in [models.KeyValueDB]:
         await model.create_table(if_not_exists=True)

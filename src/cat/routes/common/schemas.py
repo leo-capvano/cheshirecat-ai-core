@@ -15,8 +15,6 @@ class CRUDSelect(BaseModel):
     id: UUID
     name: str
     updated_at: datetime
-    extra: dict = {}
 
 class CRUDUpdate(BaseModel):
     name: str = "No name"
-    extra: dict = {}

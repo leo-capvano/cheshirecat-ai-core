@@ -10,10 +10,12 @@ from ..protocols.model_context.type_wrappers import TextContent
 
 
 class ChatRequest(BaseModel):
+
     agent: str = Field(
         "default",
         description="Agent slug, must be one of the available agents."
     )
+
     model: str = Field(
         "default",
         description='Model slug as defined by plugins, e.g. "openai:gpt-5".'
@@ -23,10 +25,12 @@ class ChatRequest(BaseModel):
         prompts.MAIN_PROMPT_PREFIX,
         description="System prompt (agent prompt prefix) to set the conversation context."
     )
+
     resources: List[Resource] = Field(
         default_factory=list,
         description="List of user defined resources (usually uploaded files) available to the agent."
     )
+
     mcps: List[MCPServer] = Field(
         default_factory=list,
         description="List of MCP servers the agent will interact with."
@@ -49,9 +53,10 @@ class ChatRequest(BaseModel):
         True,
         description="Whether to enable streaming tokens or not."
     )
-    extra: Dict = Field(
+
+    custom: Dict = Field(
         default_factory=dict,
-        description="Dictionary to hold extra custom fields."
+        description="Dictionary to hold extra custom data."
     )
 
 
@@ -60,7 +65,8 @@ class ChatResponse(BaseModel):
         default_factory=list,
         description="List of chat messages returned in the response."
     )
-    extra: Dict = Field(
+    
+    custom: Dict = Field(
         default_factory=dict,
-        description="Dictionary to hold extra custom fields or metadata."
+        description="Dictionary to hold extra custom data."
     )
