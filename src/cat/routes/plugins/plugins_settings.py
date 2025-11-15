@@ -8,12 +8,17 @@ from cat.auth import AuthPermission, AuthResource, check_permissions
 
 router = APIRouter(prefix="/plugins")
 
+class PluginSettings(BaseModel):
+    id: str
+    value: dict
+    schema: dict
+
 @router.get("/{id}/settings")
 async def get_plugin_settings(
     id: str,
     cat=check_permissions(AuthResource.PLUGIN, AuthPermission.READ),
-) -> Dict:
-    """Returns the settings of a specific plugin"""
+) -> PluginSettings:
+    """Returns the settings of a specific plugin."""
 
     if not cat.mad_hatter.plugin_exists(id):
         raise HTTPException(status_code=404, detail="Plugin not found")
@@ -27,7 +32,11 @@ async def get_plugin_settings(
     if schema["properties"] == {}:
         schema = {}
 
-    return {"id": id, "value": settings, "schema": schema}
+    return PluginSettings(
+        id=id,
+        value= settings,
+        schema=schema
+    )
 
 
 @router.put("/{id}/settings")
@@ -35,7 +44,7 @@ async def upsert_plugin_settings(
     id: str,
     payload: Dict = Body({"setting_a": "some value", "setting_b": "another value"}),
     cat=check_permissions(AuthResource.PLUGIN, AuthPermission.EDIT),
-) -> Dict:
+) -> PluginSettings:
     """Updates the settings of a specific plugin"""
 
     if not cat.mad_hatter.plugin_exists(id):
@@ -49,6 +58,7 @@ async def upsert_plugin_settings(
         PluginSettingsModel = plugin.settings_model()
         # Validate the settings
         PluginSettingsModel.model_validate(payload)
+        schema = plugin.settings_schema()
     except ValidationError as e:
         raise HTTPException(
             status_code=400,
@@ -57,4 +67,8 @@ async def upsert_plugin_settings(
 
     final_settings = plugin.save_settings(payload)
 
-    return {"id": id, "value": final_settings}
+    return PluginSettings(
+        id=id,
+        value=final_settings,
+        schema=schema
+    )
