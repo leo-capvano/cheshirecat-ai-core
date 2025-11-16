@@ -1,10 +1,10 @@
-from typing import Dict, List
+from typing import Dict, List, Any
 from uuid import UUID
 
-from cat.utils import BaseModelDict
+from pydantic import BaseModel
 from .permissions import AuthResource, AuthPermission
 
-class User(BaseModelDict):
+class User(BaseModel):
     """
     Class to represent a User.
     Will be creted by Auth handler(s) starting from a JWT.
@@ -24,7 +24,7 @@ class User(BaseModelDict):
     # - profile data
     # - custom attributes
     # - roles
-    extra: BaseModelDict = BaseModelDict()
+    custom: Any
 
     def can(
             self,

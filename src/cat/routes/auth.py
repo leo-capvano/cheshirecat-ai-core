@@ -17,12 +17,15 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 @router.get("/login/{name}")
 async def login(r: Request, name: str) -> RedirectResponse:
-    if name not in r.app.state.ccat.auth_handlers.keys():
+    
+    auth = r.app.state.ccat.auth_handlers.get(name, None)
+    
+    if auth is None:
         return HTTPException(status_code=404, detail=f"Auth Handler {name} not found.")
     
     # start OAuth flow
     return RedirectResponse(
-        url="https://example.com"
+        url=await auth.build_redirect_uri()
     )
 
 @router.get("/me")

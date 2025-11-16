@@ -1,8 +1,6 @@
 from enum import Enum
-from typing import Dict, List
 
 from fastapi import Depends
-from cat.utils import BaseModelDict
 
 
 # TODOV2: these Enums should be easily extensible (so maybe not even enums)

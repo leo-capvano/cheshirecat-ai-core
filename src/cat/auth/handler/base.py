@@ -64,7 +64,7 @@ class BaseAuth(ABC):
             "sub": user.id,                      # Subject (the user ID)
             "username": user.name,               # Username
             "permissions": user.permissions,     # User permissions
-            "extra": user.extra,                 # Additional information
+            "custom": user.custom,                 # Additional information
             "exp": expires                       # Expiry date as a Unix timestamp
         }
         return jwt.encode(

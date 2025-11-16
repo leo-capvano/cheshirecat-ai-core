@@ -19,7 +19,7 @@ from cat.auth import check_permissions, AuthResource, AuthPermission
 router = APIRouter(prefix="/static", tags=["Static Files"])
 
 
-class UploadedFile(utils.BaseModelDict):
+class UploadedFile(BaseModel):
     path: str
     url: str
     mime_type: str

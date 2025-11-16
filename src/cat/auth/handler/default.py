@@ -37,7 +37,7 @@ class DefaultAuth(BaseAuth):
             auth_resource: AuthResource,
             auth_permission: AuthPermission,
     ) -> User | None: 
-        
+
         ########## tmp #######
         return User(
                 id=str(uuid5(NAMESPACE_DNS, "admin")),
