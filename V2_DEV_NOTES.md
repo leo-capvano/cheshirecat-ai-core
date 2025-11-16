@@ -220,20 +220,37 @@ Auth system semplifications (TODO review):
 
 ## TODO
 
-- update core plugins so they attach to hooks exposed by core and provide their own hooks for other plugins
-- `qdrant_vector_memory` should deal with embedder changes, maybe reactivating the snapshot
+### auth
+
+- SSO infrastructure implementation
 - security must be always ON, also on a fresh installation, with a default jwt secret and API key. Pages in `/docs` should allow logging in
-- `StrayCat.__call_` should be an async generator using `yield` to send tokens and notifications. Those yielded result are then managed at the transport layer (websocket or http/streaming/sse). Cat internals should know absolutely nothing about network protocols.
+- refine `BaseAuth`
+
+### core plugins
+
+- recover core plugins as they are all broken
+- update core plugins so they attach to hooks exposed by core and provide their own hooks for other plugins
+- how do plugins check for support or the present of other plugins?
+- `qdrant_vector_memory` should deal with embedder changes, maybe reactivating the snapshot
+
+### tests
+
 - core tests should only deal with core (also because plugin install dependencies is mocked!!!)
-- allow plugin settings with conditionals and subpages with json schema primitives `if`, `oneOf`, etc.
+- tests for plugins should be automatically executed
+
+### settings
+
+- multipage plugin settings
+- user based settings
+
+### other
+
 - AG-UI should send `event: {xxx}`, leave `data: {xxx}` for the legacy messaging style 
-- static files ownership in DB table or via route checks, i.e `static/me`
-- internal user_id, to avoid throwing around email, could be a uuid5 (based on namespace installation_id)
+- internal user_id should be forced to be uuid
 - some packages used by core occupy a lot of space and do basically nothing (find alts)
   `du -h .venv/lib/python3.13/site-packages --max-depth=1 | sort -hr`
 - `@hook` decorator should support autocomplete for the hooks names, and allow custom strings
 - check for memory leaks (see Luca Gobbi's setup for locust)
-- recover core plugins as they are all broken
 - `cat` argument in hooks and tools should be optional
 - update to langchain v1
 - root endpoint `/` should offer the webui (at the moment static assets urls for the SPA conflict with other endpoints)

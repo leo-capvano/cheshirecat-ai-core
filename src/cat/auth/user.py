@@ -1,17 +1,18 @@
 from typing import Dict, List
+from uuid import UUID
 
 from cat.utils import BaseModelDict
 from .permissions import AuthResource, AuthPermission
 
 class User(BaseModelDict):
     """
-    Class to represent token content after the token has been decoded.
-    Will be creted by AuthHandler(s) to standardize their output.
-    Core will use this object to retrieve or create a StrayCat (session)
+    Class to represent a User.
+    Will be creted by Auth handler(s) starting from a JWT.
+    Core will use this object to build a StrayCat (session).
+    User will be accessible via `StrayCat.user`
     """
 
-    # Best practice is to have a human readable name and a uuid5 as id
-    id: str
+    id: UUID
     name: str
 
     # permissions
