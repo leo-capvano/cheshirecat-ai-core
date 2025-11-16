@@ -61,6 +61,9 @@
 - The cat vector memory can be completely deactivated, or some of it, and can be replaced/extended for example with a graph memory. See plugin `qdrant_vector_memory`
 - Due to difficulties in keeping up with langchain, core only depends on `langchain_core`. All LLM and embedder vendors are now packed in a dedicated `langchain_models_pack` plugin so they are isolated and more easily maintained. All langchain imports and all conversions between langchain and cat types happen in a single folder under `cat.protocols.future` waiting for a standard protocol for all LLM services, if ever. Ditching langchain alltogether is possible.
 - plugins can contain tests inside a folder names `tests`. This folder will be ignored by the cat at runtime but tests will be run by `pytest`
+- plugins settings are now saved and loaded from DB, so no more need for a local `settings.json`
+- `load_settings` and `save_settings` are now async. Plugin overrides for those methods are not available anymore, since no one was using them.
+- Settings pydantic model can have fields without a default value
 
 
 ## Network
@@ -208,10 +211,11 @@ Auth system semplifications (TODO review):
 
 ## Questions
 
-- new plugins with custom requirements may not work as expected (need a restart).
-- as there are docker and pyPI releases, makes no sense to have a `develop` branch
+- as there are docker and pyPI releases, does it make sense to have a `develop` branch?
 - move plugin settings out of plugin folder and into DB?
 - should we finally get rid of `BaseModelDict`?
+- should we keep the working_memory functionality? In case, `working_memory` can be a property/setter of StrayCat internally loading/saving a JSON from `UserKeyValueDB` table
+- should plugin methods `load_settings` and `save_settings` work both with dictionaries and pydantic objects?
 
 ## Challenges
 

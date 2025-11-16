@@ -8,8 +8,9 @@ from cat.utils import BaseModelDict
 # TODOV2: these Enums should be easily extensible (so maybe not even enums)
 class AuthResource(str, Enum):
     """Enum of core authorization resources. Can be extended via plugin."""
+    #SETTING = "SETTING"
+    #PROFILE = "PROFILE"
     CHAT = "CHAT"
-    SETTING = "SETTING"
     PLUGIN = "PLUGIN"
     STATIC = "STATIC"
 

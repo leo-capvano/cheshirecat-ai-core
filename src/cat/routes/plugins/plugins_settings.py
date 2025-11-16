@@ -24,7 +24,7 @@ async def get_plugin_settings(
         raise HTTPException(status_code=404, detail="Plugin not found")
 
     try:
-        settings = cat.mad_hatter.plugins[id].load_settings()
+        settings = await cat.mad_hatter.plugins[id].load_settings()
         schema = cat.mad_hatter.plugins[id].settings_schema()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -34,7 +34,7 @@ async def get_plugin_settings(
 
     return PluginSettings(
         id=id,
-        value= settings,
+        value=settings,
         schema=schema
     )
 
@@ -58,17 +58,20 @@ async def upsert_plugin_settings(
         PluginSettingsModel = plugin.settings_model()
         # Validate the settings
         PluginSettingsModel.model_validate(payload)
-        schema = plugin.settings_schema()
+        final_settings = await plugin.save_settings(payload)
     except ValidationError as e:
         raise HTTPException(
             status_code=400,
-            detail="\n".join(list(map((lambda x: x["msg"]), e.errors()))), # TODOV2: can be raw JSON
+            detail=e.errors()
         )
-
-    final_settings = plugin.save_settings(payload)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
 
     return PluginSettings(
         id=id,
         value=final_settings,
-        schema=schema
+        schema=PluginSettingsModel.model_json_schema()
     )

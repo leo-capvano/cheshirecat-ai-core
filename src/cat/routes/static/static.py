@@ -20,7 +20,7 @@ router = APIRouter(prefix="/static", tags=["Static Files"])
 
 
 class UploadedFile(utils.BaseModelDict):
-    path: bytes
+    path: str
     url: str
     mime_type: str
 
@@ -64,13 +64,10 @@ async def upload_file(
         mime_type=mime_type
     )
 
-
-
-
 @router.get("")
 async def get_static_files(
     cat=check_permissions(AuthResource.STATIC, AuthPermission.LIST)
-) -> List[str]:
+) -> List[UploadedFileResponse]:
     """Retrieve list of static file URLs uploaded by a specific user."""
 
     hashed_user_id = str(uuid5(NAMESPACE_URL, str(cat.user_id)))
@@ -81,10 +78,12 @@ async def get_static_files(
     urls = []
     for path in file_paths:
         urls.append(
-            path.replace(utils.get_static_path(), utils.get_static_url())
+            UploadedFileResponse(
+                url=path.replace(utils.get_static_path(), utils.get_static_url()),
+                mime_type=mimetypes.guess_type(path)[0]
+            )
         )
     return urls
-    
 
 @router.get("/{path:path}")
 async def get_static_file(
@@ -101,20 +100,4 @@ async def get_static_file(
             status_code=404,
             detail="File not found"
         )
-    
 
-# TODOV2: delete static route
-
-
-
-
-# TODOV2: take away
-def mount(cheshire_cat_api):
-
-    # internal static files folder
-    core_static_dir = utils.get_base_path() + "/routes/static/core_static_folder"
-    cheshire_cat_api.mount(
-        "/core-static",
-        StaticFiles(directory=core_static_dir),
-        name="core-static",
-    )

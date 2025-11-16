@@ -5,13 +5,14 @@ import glob
 import tempfile
 import importlib
 import subprocess
-from typing import Dict, List
+from typing import Dict, List, Callable
 from inspect import getmembers, isclass
 from pydantic import BaseModel, ValidationError
 from packaging.requirements import Requirement
 
 from cat.mad_hatter.decorators import CatTool, CatHook, CatPluginDecorator, CatEndpoint
 from cat.mad_hatter.plugin_manifest import PluginManifest
+from cat.db.models import KeyValueDB
 from cat import utils
 from cat.log import log
 
@@ -75,14 +76,6 @@ class Plugin:
         # Load of hook, tools and endpoints
         self._load_decorated_functions()
 
-        # by default, plugin settings are saved inside the plugin folder
-        #   in a JSON file called settings.json
-        settings_file_path = os.path.join(self._path, "settings.json")
-
-        # Try to create setting.json
-        if not os.path.isfile(settings_file_path):
-            self._create_settings_from_model()
-
         # run custom activation from @plugin
         if "activated" in self.overrides:
             self.overrides["activated"].function(self)
@@ -108,6 +101,8 @@ class Plugin:
         self._deactivate_endpoints()
         self._plugin_overrides = {}
 
+        # TODOV2: remove settings from DB?
+
     # get plugin settings JSON schema
     def settings_schema(self):
         # is "settings_schema" hook defined in the plugin?
@@ -115,7 +110,7 @@ class Plugin:
             return self.overrides["settings_schema"].function()
         else:
             # if the "settings_schema" is not defined but
-            # "settings_model" is it gets the schema from the model
+            # "settings_model" is, get the schema from the model
             if "settings_model" in self.overrides:
                 return self.overrides["settings_model"].function().model_json_schema()
 
@@ -132,82 +127,59 @@ class Plugin:
         return PluginSettingsModel
 
     # load plugin settings
-    def load_settings(self):
-        # is "settings_load" hook defined in the plugin?
-        if "load_settings" in self.overrides:
-            return self.overrides["load_settings"].function()
+    async def load_settings(self):
 
-        # by default, plugin settings are saved inside the plugin folder
-        #   in a JSON file called settings.json
-        settings_file_path = os.path.join(self._path, "settings.json")
+        db_key = f"{self.id}_plugin_settings"
 
-        if not os.path.isfile(settings_file_path):
-            if not self._create_settings_from_model():
-                return {}
+        try:
+            # load settings from DB
+            settings = await KeyValueDB.objects().where(
+                KeyValueDB.key == db_key
+            ).first().output(load_json=True)
 
-        # load settings.json if exists
-        if os.path.isfile(settings_file_path):
-            try:
-                with open(settings_file_path, "r") as json_file:
-                    settings = json.load(json_file)
-                    return settings
+            # if it does not exist in DB, return defaults
+            if settings is None:
+                return self._create_settings_from_model()
 
-            except Exception as e:
-                log.error(f"Unable to load plugin {self._id} settings.")
-                log.warning(self.plugin_specific_error_message())
-                raise e
+            return settings.value
+
+        except Exception:
+            log.error(f"Unable to load plugin {self._id} settings.")
+            log.warning(self.plugin_specific_error_message())
+            raise
 
     # save plugin settings
-    def save_settings(self, settings: Dict):
-        # is "settings_save" hook defined in the plugin?
-        if "save_settings" in self.overrides:
-            return self.overrides["save_settings"].function(settings)
-
-        # by default, plugin settings are saved inside the plugin folder
-        #   in a JSON file called settings.json
-        settings_file_path = os.path.join(self._path, "settings.json")
+    async def save_settings(self, settings: Dict):
 
         # load already saved settings
-        old_settings = self.load_settings()
+        old_settings = await self.load_settings()
 
-        # overwrite settings over old ones
-        updated_settings = {**old_settings, **settings}
-
-        # write settings.json in plugin folder
+        # save settings
         try:
-            with open(settings_file_path, "w") as json_file:
-                json.dump(updated_settings, json_file, indent=4)
-            return updated_settings
+            settings = KeyValueDB(
+                key=f"{self.id}_plugin_settings",
+                value={**old_settings, **settings}
+            )
+            await settings.save()
+            return settings
         except Exception:
             log.error(f"Unable to save plugin {self._id} settings.")
             log.warning(self.plugin_specific_error_message())
-            return {}
+            raise
 
     def _create_settings_from_model(self) -> bool:
-        # by default, plugin settings are saved inside the plugin folder
-        #   in a JSON file called settings.json
-        settings_file_path = os.path.join(self._path, "settings.json")
+        """Create settings dict directly from the pydantic Model, skipping required fields."""
 
-        try:
-            model = self.settings_model()
-            # if some settings have no default value this will raise a ValidationError
-            settings = model().model_dump_json(indent=4)
+        Model = self.settings_model()
+        settings = {}
 
-            # If each field have a default value and the model is correct,
-            # create the settings.json with default values
-            with open(settings_file_path, "x") as json_file:
-                json_file.write(settings)
-                log.debug(
-                    f"{self.id} have no settings.json, created with settings model default values"
-                )
-
-            return True
-
-        except ValidationError:
-            log.debug(
-                f"{self.id} settings model have missing defaut values, no settings.json created"
-            )
-            return False
+        for name, field in Model.model_fields.items():
+            if not field.is_required():
+                if isinstance(field.default, Callable):
+                    settings[name] = field.default()
+                else:
+                    settings[name] = field.default
+        return settings
 
     def _load_manifest(self) -> PluginManifest:
         
