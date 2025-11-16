@@ -1,4 +1,5 @@
-
+import os
+import inspect
 import asyncio
 import time
 from uuid import uuid4
@@ -246,7 +247,7 @@ class StrayCat:
     
 
     async def execute_hook(self, hook_name, default_value):
-        return self.mad_hatter.execute_hook( # TODOV2: have hook execution async
+        return await self.mad_hatter.execute_hook(
             hook_name,
             default_value,
             cat=self
@@ -263,7 +264,9 @@ class StrayCat:
             "agent_prompt_prefix",
             self.chat_request.system_prompt
         )
-        prompt_suffix = await self.execute_hook("agent_prompt_suffix", "")
+        prompt_suffix = await self.execute_hook(
+            "agent_prompt_suffix", ""
+        )
 
         return prompt_prefix + prompt_suffix
 
@@ -328,8 +331,8 @@ class StrayCat:
         log.info(self.chat_request.model_dump())
 
         # Run a totally custom reply (skips all the side effects of the framework)
-        fast_reply = self.mad_hatter.execute_hook(
-            "fast_reply", {}, cat=self
+        fast_reply = await self.execute_hook(
+            "fast_reply", {}
         )
         if fast_reply != {}: # TODOV2: dunno if this breaks pydantic validation on the output
             return fast_reply
@@ -344,8 +347,8 @@ class StrayCat:
 
             # hook to modify/enrich user input
             # TODOV2: shuold be compatible with the old `user_message_json`
-            self.chat_request = self.mad_hatter.execute_hook(
-                "before_cat_reads_message", self.chat_request, cat=self
+            self.chat_request = await self.execute_hook(
+                "before_cat_reads_message", self.chat_request
             )
 
             # run agent(s). They will populate the ChatResponse
@@ -353,8 +356,8 @@ class StrayCat:
             await self.execute_agent(requested_agent)
 
             # run final response through plugins
-            self.chat_response = self.mad_hatter.execute_hook(
-                "before_cat_sends_message", self.chat_response, cat=self
+            self.chat_response = await self.execute_hook(
+                "before_cat_sends_message", self.chat_response
             )
 
             self.mcp = None
@@ -537,18 +540,24 @@ Allowed classes are:
         -------
         mad_hatter : MadHatter
             Module to manage plugins.
-
+        """
+        return self._ccat.mad_hatter
+    
+    @property
+    def plugin(self):
+        """Access plugin object (used from within a plugin).
 
         Examples
         --------
 
         Obtain the path in which your plugin is located
-        >>> cat.mad_hatter.get_plugin().path
-        /app/cat/plugins/my_plugin
+        >>> cat.plugin.path
+        /home/my_cat/plugins/my_plugin
 
         Obtain plugin settings
-        >>> await cat.mad_hatter.get_plugin().load_settings()
+        >>> await cat.plugin.load_settings()
         {"num_cats": 44, "rows": 6, "remainder": 2}
         """
-        return self._ccat.mad_hatter
+
+        return self._ccat.plugin
         

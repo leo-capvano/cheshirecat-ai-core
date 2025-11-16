@@ -40,12 +40,12 @@ class Factory:
             ),
         }
 
-    async def load_objects(self, mad_hatter):
+    async def load_objects(self, cat):
         """Collect objects instantiated by plugins (llms, auth handlers, agents, etc)."""
 
         for category_name, category in self.categories.items():
-            category.objects = mad_hatter.execute_hook(
-                f"factory_allowed_{category_name}s", {}, cat=None
+            category.objects = await cat.mad_hatter.execute_hook(
+                f"factory_allowed_{category_name}s", {}, cat=cat
             )
             # TODOV2: should add type checks
             # TODOV2: if agents, objects[slug].cat = cat

@@ -76,7 +76,6 @@ async def install_plugin(
         "application/zip", "application/x-tar"
     ]
     content_type = mimetypes.guess_type(file.filename)[0]
-    print(content_type)
     if content_type not in admitted_mime_types:
         raise HTTPException(
             status_code=400,

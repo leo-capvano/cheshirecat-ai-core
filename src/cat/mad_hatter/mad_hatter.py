@@ -1,10 +1,9 @@
 import os
+import inspect
 import glob
 import shutil
-import inspect
 from copy import deepcopy
 from typing import List, Dict, Any, Callable
-from pathlib import Path
 
 from cat.log import log
 import cat.utils as utils
@@ -181,7 +180,7 @@ class MadHatter:
         await self.refresh_caches()
 
 
-    def execute_hook(self, hook_name, *args, cat) -> Any:
+    async def execute_hook(self, hook_name, *args, cat) -> Any:
         """Execute a hook."""
 
         # check if hook is supported
@@ -200,7 +199,10 @@ class MadHatter:
                     log.debug(
                         f"Executing {hook.plugin_id}::{hook.name} with priority {hook.priority}"
                     )
-                    hook.function(cat=cat)
+                    await utils.run_sync_or_async(
+                        hook.function,
+                        cat=cat
+                    )
                 except Exception:
                     log.error(f"Error in plugin {hook.plugin_id}::{hook.name}")
                     plugin_obj = self.plugins[hook.plugin_id]
@@ -221,8 +223,11 @@ class MadHatter:
                 log.debug(
                     f"Executing {hook.plugin_id}::{hook.name} with priority {hook.priority}"
                 )
-                tea_spoon = hook.function(
-                    deepcopy(tea_cup), *deepcopy(args[1:]), cat=cat
+                tea_spoon = await utils.run_sync_or_async(
+                    hook.function,
+                    deepcopy(tea_cup),
+                    *deepcopy(args[1:]),
+                    cat=cat
                 )
                 # log.debug(f"Hook {hook.plugin_id}::{hook.name} returned {tea_spoon}")
                 if tea_spoon is not None:
@@ -235,21 +240,26 @@ class MadHatter:
         # tea_cup has passed through all hooks. Return final output
         return tea_cup
 
-    def get_plugin(self):
-        """Get plugin object (used from within a plugin)"""
 
-        # who's calling?
-        calling_frame = inspect.currentframe().f_back
-        # Get the module associated with the frame
-        module = inspect.getmodule(calling_frame)
-        # Get the absolute and then relative path of the calling module's file
-        abs_path = inspect.getabsfile(module)
-        
-        # Replace the root and get only the current plugin folder
-        plugin_suffix = os.path.normpath(
-            abs_path.replace(utils.get_plugins_path() + "/", "")
-        )
-        # Plugin's folder
-        name = plugin_suffix.split("/")[0]
-        return self.plugins[name]
+    def get_plugin(self) -> Plugin:
+        """Internal use only. Plugins should use `cat.plugin`."""
 
+        stack = inspect.stack()
+        plugins_path = utils.get_plugins_path()
+        norm_plugins_path = os.path.normpath(plugins_path)
+
+        for frame_info in stack:
+
+            frame = frame_info.frame
+            module = inspect.getmodule(frame)
+
+            if module and hasattr(module, '__file__'):
+                
+                abs_path = os.path.abspath(module.__file__)
+                if abs_path.startswith(norm_plugins_path + os.sep):
+                    plugin_suffix = os.path.relpath(abs_path, norm_plugins_path)
+                    plugin_name = plugin_suffix.split(os.sep)[0]
+                    if plugin_name in self.plugins:
+                        return self.plugins[plugin_name]
+                    
+        raise Exception("No calling plugin found in the call stack.")

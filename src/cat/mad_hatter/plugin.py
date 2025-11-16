@@ -127,7 +127,7 @@ class Plugin:
         return PluginSettingsModel
 
     # load plugin settings
-    async def load_settings(self):
+    async def load_settings(self) -> Dict:
 
         db_key = f"{self.id}_plugin_settings"
 
@@ -149,19 +149,19 @@ class Plugin:
             raise
 
     # save plugin settings
-    async def save_settings(self, settings: Dict):
+    async def save_settings(self, settings: Dict) -> Dict:
 
         # load already saved settings
         old_settings = await self.load_settings()
 
         # save settings
         try:
-            settings = KeyValueDB(
-                key=f"{self.id}_plugin_settings",
-                value={**old_settings, **settings}
-            )
-            await settings.save()
-            return settings
+            db_settings = await KeyValueDB.objects().where(
+                KeyValueDB.key == f"{self.id}_plugin_settings"
+            ).first().output(load_json=True)
+            db_settings.value = {**old_settings, **settings}
+            await db_settings.save()
+            return db_settings.value
         except Exception:
             log.error(f"Unable to save plugin {self._id} settings.")
             log.warning(self.plugin_specific_error_message())

@@ -1,7 +1,7 @@
 
 
 from typing import Dict
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, Field, ValidationError
 from fastapi import Body, APIRouter, HTTPException
 from cat.log import log
 from cat.auth import AuthPermission, AuthResource, check_permissions
@@ -11,7 +11,7 @@ router = APIRouter(prefix="/plugins")
 class PluginSettings(BaseModel):
     id: str
     value: dict
-    schema: dict
+    schema_: dict = Field(..., alias="schema")
 
 @router.get("/{id}/settings")
 async def get_plugin_settings(
@@ -69,6 +69,8 @@ async def upsert_plugin_settings(
             status_code=400,
             detail=str(e)
         )
+    
+    await cat.mad_hatter.refresh_caches()
 
     return PluginSettings(
         id=id,

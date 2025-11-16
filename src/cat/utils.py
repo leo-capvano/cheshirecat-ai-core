@@ -238,7 +238,8 @@ def get_caller_info(skip=2, return_short=True, return_string=True):
 async def run_sync_or_async(f, *args, **kwargs) -> Any:
     if inspect.iscoroutinefunction(f):
         return await f(*args, **kwargs)
-    deprecation_warning(f"Function {f} should be async.")
+    path = inspect.getfile(f)
+    deprecation_warning(f"Function {f.__name__} in {path} should be async.")
     return f(*args, **kwargs)
 
 

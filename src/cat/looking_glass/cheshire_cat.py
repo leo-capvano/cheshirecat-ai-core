@@ -53,13 +53,13 @@ class CheshireCat:
             await self.mad_hatter.find_plugins()
             
             # allows plugins to do something before cat components are loaded
-            self.mad_hatter.execute_hook("before_cat_bootstrap", cat=self)
+            await self.mad_hatter.execute_hook("before_cat_bootstrap", cat=self)
             
             # init MCP clients cache
             self.mcp_clients = MCPClients()
 
             # allows plugins to do something after the cat bootstrap is complete
-            self.mad_hatter.execute_hook("after_cat_bootstrap", cat=self)
+            await self.mad_hatter.execute_hook("after_cat_bootstrap", cat=self)
         except Exception:
             log.error("Error during CheshireCat bootstrap. Exiting.")
             sys.exit()
@@ -85,9 +85,9 @@ class CheshireCat:
                     log.welcome()
 
     async def on_mad_hatter_refresh(self):
-        
+
         # Get objects from plugins
-        await self.factory.load_objects(self.mad_hatter)
+        await self.factory.load_objects(self)
 
         self.auth_handlers = self.factory.get_objects("auth_handler")
         self.llms = self.factory.get_objects("llm")
@@ -99,8 +99,12 @@ class CheshireCat:
             endpoint.activate(self.fastapi_app)
 
         # allow plugins to hook the refresh (e.g. to embed tools)
-        self.mad_hatter.execute_hook("after_mad_hatter_refresh", cat=self)
+        await self.mad_hatter.execute_hook("after_mad_hatter_refresh", cat=self)
 
-    
+    @property
+    def plugin(self):
+        """Access plugin object (used from within a plugin)."""
+
+        return self.mad_hatter.get_plugin()
 
 

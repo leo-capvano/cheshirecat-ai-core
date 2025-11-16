@@ -64,6 +64,18 @@
 - plugins settings are now saved and loaded from DB, so no more need for a local `settings.json`
 - `load_settings` and `save_settings` are now async. Plugin overrides for those methods are not available anymore, since no one was using them.
 - Settings pydantic model can have fields without a default value
+- to access plugin data (settings, path) from within the plugin itself, you were doing:
+  ```python
+  # get current plugin path
+  cat.mad_hatter.get_plugin().path
+  # get plugin settings
+  cat.mad_hatter.get_plugin().load_settings()
+  ```
+  Now you can do:
+  ```python
+  cat.plugin.path
+  await cat.plugin.load_settings() # load_settings now is async
+  ```
 
 
 ## Network
@@ -216,6 +228,7 @@ Auth system semplifications (TODO review):
 - should we finally get rid of `BaseModelDict`?
 - should we keep the working_memory functionality? In case, `working_memory` can be a property/setter of StrayCat internally loading/saving a JSON from `UserKeyValueDB` table
 - should plugin methods `load_settings` and `save_settings` work both with dictionaries and pydantic objects?
+- when should the factory run? at cat startup or at each StrayCat request? (the second may slow down but allows for user specific injection of objects)
 
 ## Challenges
 
