@@ -18,16 +18,12 @@ from cat.log import log
 
 
 # Empty class to represent basic plugin Settings model
-class PluginSettingsModel(BaseModel):
+class PluginEmptySettingsModel(BaseModel):
     pass
 
 
-# this class represents a plugin in memory
-# the plugin itsefl is managed as much as possible unix style
-#      (i.e. by saving information in the folder itself)
-
-
 class Plugin:
+    """Represents a plugin in memory, mapped to the plugin folder."""
 
     def __init__(self, plugin_path: str):
         # does folder exist?
@@ -67,6 +63,8 @@ class Plugin:
         self._plugin_overrides = {}
 
     def activate(self):
+        """Activate plugin."""
+        
         # install plugin requirements on activation
         try:
             self._install_requirements()
@@ -81,6 +79,7 @@ class Plugin:
             self.overrides["activated"].function(self)
 
     def deactivate(self):
+        """Deactivate plugin."""
 
         # run custom deactivation from @plugin
         if "deactivated" in self.overrides:
@@ -103,31 +102,21 @@ class Plugin:
 
         # TODOV2: remove settings from DB?
 
-    # get plugin settings JSON schema
     def settings_schema(self):
-        # is "settings_schema" hook defined in the plugin?
-        if "settings_schema" in self.overrides:
-            return self.overrides["settings_schema"].function()
-        else:
-            # if the "settings_schema" is not defined but
-            # "settings_model" is, get the schema from the model
-            if "settings_model" in self.overrides:
-                return self.overrides["settings_model"].function().model_json_schema()
+        """Get plugin settings JSON schema."""
+        return self.settings_model().model_json_schema()
 
-        # default schema (empty)
-        return PluginSettingsModel.model_json_schema()
-
-    # get plugin settings Pydantic model
     def settings_model(self):
+        """Get plugin settings Pydantic model"""
         # is "settings_model" hook defined in the plugin?
         if "settings_model" in self.overrides:
             return self.overrides["settings_model"].function()
 
         # default schema (empty)
-        return PluginSettingsModel
+        return PluginEmptySettingsModel
 
-    # load plugin settings
     async def load_settings(self) -> Dict:
+        """Load plugin settings."""
 
         db_key = f"{self.id}_plugin_settings"
 
@@ -148,8 +137,8 @@ class Plugin:
             log.warning(self.plugin_specific_error_message())
             raise
 
-    # save plugin settings
     async def save_settings(self, settings: Dict) -> Dict:
+        """Save plugin settings."""
 
         # load already saved settings
         old_settings = await self.load_settings()

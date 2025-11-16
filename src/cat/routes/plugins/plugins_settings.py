@@ -29,9 +29,6 @@ async def get_plugin_settings(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    if schema["properties"] == {}:
-        schema = {}
-
     return PluginSettings(
         id=id,
         value=settings,

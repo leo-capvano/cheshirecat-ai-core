@@ -118,7 +118,6 @@ def test_activate_plugin(plugin):
     # overrides by @plugin decorator
     assert len(plugin.overrides) == 4
     assert set(plugin.overrides.keys()) == {
-        "settings_schema",
         "settings_model",
         "activated",
         "deactivated",

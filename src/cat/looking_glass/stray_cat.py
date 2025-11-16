@@ -377,7 +377,7 @@ class StrayCat:
 
         # unique id for this run
         run_id = str(uuid4())
-        thread_id = str(uuid4()) # TODO: should it be the one in the db? Was request.thread
+        thread_id = str(uuid4())
 
         # AGUI event for agent run start
         yield events.RunStartedEvent(
@@ -387,7 +387,7 @@ class StrayCat:
         )
 
         # build queue and task
-        queue: asyncio.Queue[str | None] = asyncio.Queue()
+        queue: asyncio.Queue = asyncio.Queue()
         async def callback(msg) -> None:
             await queue.put(msg) # TODO have a timeout
         async def runner() -> None:
