@@ -46,12 +46,14 @@
 
 ## Agents
 
-- there is a new decorator (TODO) `@agent` that allows you to define your own agents. When you send a request to the cat, you can ask a reply from a specific agent (more details below). If the agent name is not specified in the request, a default `SimpleAgent` will be used. 
-- you can declare an agent in your plugin using `@agent` and subclassing the `BaseAgent` class, which only requires a method `execute` and a `name` attribute. TODO example.
-- the agent router is name based. You can still define a custom routing agent that can do way more complicated stuff (embedding based routing, LLM based routing, etc.).
+- Version 2 supports multiple agents, and the agent to be run can be chosen *per message*. So many agents can intervene in a single chat and they can communicate.
+- you can declare an agent in your plugin subclassing the `BaseAgent` class and registering it via hook `factory_allowed_agents`. A minimal agent only needs to implement the `execute` method:
+  ```python
+  TODO example
+  ```
+- If you want to achieve automatic routing between agents, you can define a custom routing agent (embedding based routing, LLM based routing, etc.). By default, core only requires you to specify an agent in chat request and that the agent is registered.
 - So yes, now a plugin can contain one or more agents, and the agents can talk among themselves. I don't recommend such setups in production, but for sure having more agents and having the user decide which one to run, should allow more stable and useful AI apps.
-- Agents can decide whether or not to run hooks, and even create new ones. Just call `cat.mad_hatter.execute_hook("my_hook", default_value, cat)` and everything works as it already worked.
-- TODO: nice utility method `cat.execute_hook("hook_name", default)`.
+- Agents can decide whether or not to run hooks, and even create new ones. Just call `await self.execute_hook("my_hook", default_value)` and everything works as it already worked.
 
 
 ## Plugins
@@ -76,50 +78,59 @@
   cat.plugin.path
   await cat.plugin.load_settings() # load_settings now is async
   ```
+- plugin `settings_schema` is not overridable, only `settings_model` (as no one was using it)
 
 
 ## Network
 
-- new `/chat` endpoint that supports streaming (GIVE EXAMPLE), accepting `ChatRequest` and returning `ChatResponse` under both http and websocket. You can access this data structures in plugins with `cat.chat_request` and `cat.chat_response`.
-- When a client calls the cat, it can specify which agent to use in `ChatRequest.agent`. Default is `simple`, which is the old one.
-- conversation history endpoints (GET and POST) have been deleted and there is a new CRUD for chat sessions in core plugin `XXXXXXX`. Convo history as a recommended practice, must be passed via ws or http via `ChatRequest.messages` (similar to OpenAI or Ollama).
-- endpoint `/message` has been moved to plugin `legacy_v1`, so it is still available. The main http endpoint to chat with the cat is `/chat` and must receive a `ChatRequest` JSON, which is very similar to the format use by all major LLM/assistant vendors. The endpoint supports streaming
-- You can define new agents in your plugin subclassing `BaseAgent` and registering it with a hook:
-  ```python
-    ESEMPIO CUSTOM AGENT
-  ```
-- so input and output data structure have changed, but by keeping active plugin `legacy_v1` old clients should still work (make a PR if you find bugs).
-- From now on we only support chat models, text only or text plus images. Pure completion models are not supported anymore. If you need to use one, create your own LLM adapter and hook it via `factory_allowed_llms`.
-- Embedders are not automatically associated with the chosen LLM vendor. You will need to configure that yourself, The cat will notify you at every message if the embedder is not set.
+- new `POST /message` endpoint that supports streaming (GIVE EXAMPLE), accepting `ChatRequest` and returning `ChatResponse` under both http and websocket. You can access this data structures in plugins with `cat.chat_request` and `cat.chat_response`. From within an agent, `self.chat_request` and `self.chat_response`. Note if you have a multi agent setup, all the agents will share this data structure. Any number of messages and custom data can be appended to `chat_response.messages` and `chat_response.custom`.
+- When a client calls the cat, it can specify which agent to use in `ChatRequest.agent`. Default is `default`, which is similar to the old one, this time can run multiple tools in a row and builds prompt for each step. No more double prompt (there was one for tools and one for memory).
+- conversation history endpoints (GET and POST) have been deleted and there is a new CRUD for chat sessions in plugin `ui`, which also includes the new multi-chat, multi-agent and multi-context frontend. Convo history as a recommended practice, must be passed via ws or http via `ChatRequest.messages` (similar to OpenAI or Ollama).
 - when calling the Cat via websocket and http streaming, all tokens, notifications, agent steps, errors and other lifecycle events (including final response) will be sent following the [AG-UI](https://docs.ag-ui.com/concepts/events) protocol. 
 - Settings, Plugins, Auth and Static endpoints have been refined and typed
   - details for each TODO
-- new `chats` endpoints
+- plugin `ui` contains a ready to use CRUD for chats, which saves past chats to DB, allows searching and is completely detatched from core. Core only deals with actually running the conversation.
+
+## Models
+
+- from now on we only support chat models, text only or multimodal. Pure completion models are not supported anymore. If you need to use one, create your own LLM adapter and hook it via `factory_allowed_llms`.
+- Embedders are not present in core, so are not automatically associated with the chosen LLM vendor. You will need to configure that yourself via an plugin or a custom one.
 
 
 ## Folder structure
 
 - `plugins`, `static` and `data` folders live now in the root folder of a project, and are automatically created at first launch. In this way the cat can be used as a simple python package.
-- Core plugins are automatically installed at first launch (TODO)
-- For the rest, the python package is absolutely stateless and stores no information whatsoever ( TODO check caches)
+- A selection of plugins are automatically installed at first launch (in the future we can make this customizable)
+- For the rest, the python package is absolutely stateless and stores no information whatsoever. Everything is either in the project folders or in the DB.
 
 
 ## Internals
 
-- For v2, not being forced to respect retro-compatibility, I made a much requested move towards `async/await`. Important core contributors were pushing for this, and support for MCP made it a forced choice. The Cat now uses a single thread and should support way more concurrent requests. This implies that many methods that were simple funcions, now are declared `async` and must be awaited with `await`.
-- Some of the functions (from core and plugins) work both sync and async. More details on async below.
-- All websocket methods (`send_ws_message`, `send_chat_message`, `send_notification`, `send_error`) must be awaited as they are now async:
+- For v2, not being forced to respect retro-compatibility, I made a much requested move towards `async/await`. Important core contributors were pushing for this, and support for MCP made it a forced choice. The Cat now uses a single thread and should support way more concurrent requests. This implies that many methods that were simple functions, now are declared `async` and must be awaited with `await`.
+- Some of the plugin primitives (hooks and tools) work both sync and async. More details on async below.
+- (TODO: not really, better use AGUI custom event) - All websocket methods (`send_ws_message`, `send_chat_message`, `send_notification`, `send_error`) must be awaited as they are now async:
 
     ```python
         await send_ws_message(msg)
     ```
-- also `cat.llm` is async (dunno, maybe leave it there for retro and have a new `cat.async_llm` but the name sucks). TODO Or maybe use a decorator to make it work both ways
-- `cat.llm` got a deep refactoring and has many options XXXXXX
-- `StrayCat.working_memory.history` is not kept in RAM, as it is passed by the client and easily found in `cat.chat_request.messages`; history construction is delegated to plugins (so you can decide whether to keep it stored client side, cat side - with custom endpoints - or another service side).
-- there is no more distinction between
-- A specialized factory is responsible to generate objects for AuthHandler, LLM, Embedder. The factory uses hooks you already had to gather all custom classes from plugins.
-- `CatForm` used via the `@form` decorator are not included in core and have been moved to a plugin `form`. It was interesting to do research on this, but we ended up overengineering them: LLMs are way more powerful now and MCP has `elicitation` directly baked into tools.
-- Caches are managed directly via an indexed SQL table, so all previous cache versions have been deleted.
+- also `cat.llm` is async and more rich in functionality so it can be used in endpoints and agents allowing flexibility:
+  ```python
+  async def llm(
+      self,
+      system_prompt: str,
+      model: str | None = None,
+      messages: list[Message] = [],
+      tools: list[CatTool] = [],
+      stream: bool = True,
+  ) -> Message:
+  ```
+- `StrayCat.working_memory.history` is not present anymore; in case we want to reimplment it `working_memory` should be a property getter/setter in `StrayCat` reading and writing a JSON to DB.
+- Conversation history (and other context information) is passed by the client and easily found in `cat.chat_request.messages`; history construction is delegated to clients and plugins (so you can decide whether to keep it stored client side, cat side - with custom endpoints - or another service side).
+- A specialized factory is responsible to collect objects (auth handlers, LLMs, Agents) from plugins. The factory uses hooks to make this collection.
+- `CatForm` used via the `@form` decorator is not included in core and have been moved to a plugin `form`. It was interesting to do research on this, but we ended up overengineering them: LLMs are way more powerful now and MCP has `elicitation` directly baked into tools. Furthermore, most of function calling fine tuning nowadays make the LLM itself ask for more info by inspecting the tool signature.
+- Core DB is a simple SQL (supports both sqlite and postgres) and it is used to store settings, chats, contexts and plugin settings. No more `metadata.json`, no `qdrant` in core, no memory/file caches.
+- Internal SQL is managed via Piccolo ORM (more about it later) and contains just two tables, `KeyValueDB` and `UserKeyValueDB`, acting as key/value stores respectively for global data and user specific data. It's very easy to leverage core DB and Piccolo to add tables from plugins.
+- Core defines also an abstract table called `UserScopedDB` that can be subclassed by plugins and used for custom CRUDs (chats, contexts, products, whatever).
 - We've got a stabler and easier typing for Cat internals. Import the classes like this:
   ```python
   from cat.types import Message, Resource # and all other types
@@ -129,7 +140,6 @@
   from cat import hook, tool, BaseAgent, ...
   from cat.auth import check_permissions, User, BaseAuth
   ```
-- core DB is a simple SQL (supports both sqlite and postgres) and it is used to store settings, chats, contexts and plugin settings. No more `metadata.json`, no `qdrant` in core.
 - factory explanation XXX
 - Environment variables:
   - there are less env variables, as many things are delegated to plugins (which can decide whether to use them or not).
@@ -139,29 +149,30 @@
 
 - you have now in `cat.chat_request` an object of type `ChatRequest`, containing user input and convo history, and in `cat.chat_response` an object of type `ChatResponse`.  
 `cat.chat_response` is available since the beginning of the message flow. This is to avoid patterns in which devs stored in working memory stuff to be added later on in the final response via `before_cat_send_message`. Now you can store output data directly in `cat.chat_response` and the client will receive that data.  
-Both `cat.chat_request` and `cat.chat_response` are cleared at each message. Use `cat.working_memory` to store arbitrary information across the whole conversation.
+Both `cat.chat_request` and `cat.chat_response` are cleared at each message. Use `cat.working_memory` (if we decide to reimplement it) to store arbitrary information across the whole conversation.
 - hooks can be declared sync, as in v1, and also async. The async version is recommended and the sync one will trigger a warning. Example:
   ```python
   @hook
-  async def before_cat_sends_message(m, cat):
-      m.text = await cat.llm("...")
-      return m
+  async def before_cat_sends_message(chat_response, cat):
+      mex = await cat.llm("...")
+      chat_response.append(mex)
+      return chat_response
   ```
 - `before_agent_starts` hook now has no argument aside `cat`, as all context/agent_input is directly stored and inserted into prompt based on the content of working memory (you can hook this via `agent_prompt_suffix`)
 
 
 ## Tools
 
-- From now on we need to talk about internal and external (MCP) tools. Both are automatically converted to `CatTool` and made available to the agents
-- Tools can now accept multiple arguments, thanks to the implemntation provided by Emanuele Morrone (@pingdred)
-- Tool output can be a string, but now we allow also custom data structures and files via CatToolOutput (Yet TODO)
+- From now on we need to talk about internal and external (MCP) tools. Both are automatically converted to `CatTool` and made available to the agents via `await self.list_tools()`.
+- Tools can now accept multiple arguments, positional and keyword, thanks to the implemntation provided by Emanuele Morrone (@pingdred)
+- Tool output can be a string, but now we allow also custom data structures and files via CatToolOutput (Yet TODO). Tools will be able to return images, audio, files and resources of any kind - even UI pieces.
 
 
 ## Auth
 
 Auth system semplifications (TODO review):
 
-- All endpoints, http and websocket, start closed (except XXXXX)
+- (TODO) All endpoints, http and websocket, start closed (except XXXXX)
 - You can now login into `/docs` using `CCAT_API_KEY`
 - The default `CCAT_API_KEY` is `meow`.
 - The default `CCAT_JWT_SECRET` is `meow_jwt`
@@ -170,14 +181,15 @@ Auth system semplifications (TODO review):
 - If you are calling the cat machine-to-machine, use `CCAT_API_KEY`, for both http and ws. Websocket in a machine-to-machine settings supports headers, so you can follow the same schema (query parameter `?token=` is not supported anymore). TODO: still active just for dev v2
 - If you are calling the cat form an unsecure client (a browser), use *only* jwt auth.
 - You need to authenticate also to see `/docs` and there is a little form to do it in the page
-- it is now possible to have `@endpoint` with custom resource and permissions. They can be defined on the endpoint and must be matched by user permissions (which can be assigned via AuthHandler)
+- it is now possible to have `@endpoint` with custom resource and permissions. They can be defined on the endpoint and must be matched by user permissions (which can be assigned via Auth handler)
 - A new installation by default only recognizes one superuser with full permissions, with name `admin` and pass `admin`. To change these credentials use env variable `CCAT_ADMIN_CREDENTIALS` in this format:
   ```bash
     CCAT_ADMIN_CREDENTIALS=username:password
   ```
-- default AuthHandler will not be active if other custom auth handlers are present
+- Auth handlers can be added by plugins by subclassing `BaseAuth` and registering it via hook `factory_allowed_auth_handlers`.
+- default Auth handler will not be active if other custom auth handlers are present
 - if more than one custom auth handler is defined, they will be executed in sequence, and if one allows the request, access is granted. It's your responsibility to make sure only the desired auth handler(s) are active (they are also listed from endpoint `GET /status` for an easy check)
-- Utilities to add and edit users have been eradicated from the framework, due to many complications, niche requests from community, and the half baked solution that resulted in v1. Now AuthHandlers can manage users fully on their own. Support for SSO is rolling out!
+- Utilities to add and edit users have been eradicated from the framework, due to many complications, numerous niche requests from community, and the half baked solution that resulted in v1. Now Auth handlers can manage users fully on their own, core will ony deal with the `User` object as outputted by the handler. Support for SSO is rolling out!
 
 
 ## MCP support
@@ -189,6 +201,13 @@ Auth system semplifications (TODO review):
       prompts = await cat.list_prompts()
       resources = await cat.list_resources()
   ```
+  or from within an agent:
+  ```python
+      tools = await self.list_tools()
+      prompts = await self.list_prompts()
+      resources = await self.list_resources()
+  ```
+
   Note `list_tools` gives a list of `CatTool` objects, which uniform both intenral plugin tools and MCP tools.
 - you can connect to the cat only MCP servers that have http transport. Do not even try to ask me to run stdio based servers inside the cat. Use a proper proxy and aggregator for your local stuff, for example [MetaMCP](https://docs.metamcp.com/en).
 
@@ -196,8 +215,7 @@ Auth system semplifications (TODO review):
 ## Others
 
 - all http errors, both the ones coming from the cat and the ones coming from fastAPI validation, return an `HTTPException`
-- statci files are protected
-
+- static files are protected and organized in folders, one per user, with an hashed name.
 
 
 ## TODO
