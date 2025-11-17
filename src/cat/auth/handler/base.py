@@ -74,6 +74,8 @@ class BaseAuth(ABC):
         )
     
     def decode_jwt(self, token) -> dict:
+        """Decode jwt.
+        Will return None if not able to decode or signature is wrong."""
         try:
             payload = jwt.decode(
                 token,
@@ -83,7 +85,6 @@ class BaseAuth(ABC):
             return payload
         except Exception:
             log.warning("Could not decode JWT")
-            return None
 
     async def authorize_user_from_credential(
         self,
@@ -94,12 +95,12 @@ class BaseAuth(ABC):
 
         if self.is_jwt(credential):
             # JSON Web Token auth
-            return self.authorize_user_from_jwt(
+            return await self.authorize_user_from_jwt(
                 credential, auth_resource, auth_permission
             )
         else:
             # API_KEY auth
-            return self.authorize_user_from_key(
+            return await self.authorize_user_from_key(
                 credential, auth_resource, auth_permission
             )
     
@@ -120,3 +121,29 @@ class BaseAuth(ABC):
         auth_permission: AuthPermission
     ) -> User | None:
         pass
+
+    async def get_provider_login_url(
+        self,
+        redirect_uri: str
+    ) -> str:
+        """Return the OAuth provider login URL.
+        Implement this method to have your Auth handler support OAuth.
+        """
+        raise Exception(
+            "To support OAuth, auth handlers must implement " +
+            "`build_redirect_uri` and `authorize_user_from_oauth_code`"
+        )
+
+    async def authorize_user_from_oauth_code(
+        self,
+        redirect_uri: str,
+        query_params: Dict 
+    ) -> User | None:
+        """
+        Exchange OAuth provider code/state for user info and map it to internal User.
+        Implement this method to have your Auth handler support OAuth.
+        """
+        raise Exception(
+            "To support OAuth, auth handlers must implement " +
+            "`build_redirect_uri` and `authorize_user_from_oauth_code`"
+        )

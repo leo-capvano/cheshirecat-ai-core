@@ -24,7 +24,7 @@ class User(BaseModel):
     # - profile data
     # - custom attributes
     # - roles
-    custom: Any
+    custom: Any = {}
 
     def can(
             self,

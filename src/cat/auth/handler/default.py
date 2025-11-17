@@ -13,7 +13,7 @@ from ..user import User
 class DefaultAuth(BaseAuth):
     """Defaul auth handler, based on environment variables."""
 
-    def authorize_user_from_jwt(
+    async def authorize_user_from_jwt(
         self,
         token: str,
         auth_resource: AuthResource,
@@ -29,29 +29,29 @@ class DefaultAuth(BaseAuth):
                 name=payload["username"],
                 permissions=self.get_full_permissions()
             )
-        # if nothing is returned, request shall not pass
+        # if no user is returned, request shall not pass
 
-    def authorize_user_from_key(
+    async def authorize_user_from_key(
             self,
             key: str,
             auth_resource: AuthResource,
             auth_permission: AuthPermission,
-    ) -> User | None: 
+    ) -> User | None:
+        
+        env_key = get_env("CCAT_API_KEY")
+        admin_credentials = get_env("CCAT_ADMIN_CREDENTIALS")
 
-        ########## tmp #######
-        return User(
-                id=str(uuid5(NAMESPACE_DNS, "admin")),
-                name="admin",
-                permissions=self.get_full_permissions()
-            )
-        ######################
+        if (env_key is None) or (env_key == key):
 
-        # allow access with full permissions
-        if key == get_env("CCAT_API_KEY"):
-            username = get_env("CCAT_ADMIN_CREDENTIALS").split(":")[0]
+            if admin_credentials:
+                username = admin_credentials.split(":")[0]
+            else:
+                username = "admin"
+
             return User(
-                id=str(uuid5(NAMESPACE_DNS, username)),
+                id=str(uuid5(NAMESPACE_DNS, "admin")),
                 name=username,
                 permissions=self.get_full_permissions()
             )
-        # if nothing is returned, request shall not pass
+        
+        # if no user is returned, request shall not pass
