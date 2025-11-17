@@ -7,9 +7,9 @@ from scalar_fastapi import get_scalar_api_reference
 from cat.env import get_env
 from cat.routes import (
     home,
-    auth,
     status
 )
+from cat.routes.auth import auth
 from cat.routes.plugins import plugins
 from cat.routes.websocket import websocket
 from cat.routes.static import static

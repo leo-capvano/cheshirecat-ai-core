@@ -182,14 +182,11 @@ Auth system semplifications (TODO review):
 - If you are calling the cat form an unsecure client (a browser), use *only* jwt auth.
 - You need to authenticate also to see `/docs` and there is a little form to do it in the page
 - it is now possible to have `@endpoint` with custom resource and permissions. They can be defined on the endpoint and must be matched by user permissions (which can be assigned via Auth handler)
-- A new installation by default only recognizes one superuser with full permissions, with name `admin` and pass `admin`. To change these credentials use env variable `CCAT_ADMIN_CREDENTIALS` in this format:
-  ```bash
-    CCAT_ADMIN_CREDENTIALS=username:password
-  ```
+- A new installation by default only recognizes one user called `admin` with full permissions. Internal identity provider will ask directly for `CCAT_API_KEY` if you set one. This setup is perfect for development and personal usage, while for production either you use the Cat as a pure microservice, or implement SSO methods in your Auth handler.
 - Auth handlers can be added by plugins by subclassing `BaseAuth` and registering it via hook `factory_allowed_auth_handlers`.
 - default Auth handler will not be active if other custom auth handlers are present
 - if more than one custom auth handler is defined, they will be executed in sequence, and if one allows the request, access is granted. It's your responsibility to make sure only the desired auth handler(s) are active (they are also listed from endpoint `GET /status` for an easy check)
-- Utilities to add and edit users have been eradicated from the framework, due to many complications, numerous niche requests from community, and the half baked solution that resulted in v1. Now Auth handlers can manage users fully on their own, core will ony deal with the `User` object as outputted by the handler. Support for SSO is rolling out!
+- Utilities to add and edit users have been eradicated from the framework, due to many complications, numerous niche requests from community, and the half baked solution that resulted in v1. Now Auth handlers can recognize users communicating with your identity provider of choice, core will ony deal with the `User` object as translated by the handler.
 
 
 ## MCP support
@@ -219,6 +216,10 @@ Auth system semplifications (TODO review):
 
 
 ## TODO
+
+### agents
+
+- Provide easy methods to load and save resources / memories (after refactoring the vector memory plugin)
 
 ### auth
 

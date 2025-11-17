@@ -13,7 +13,7 @@ from cat import utils
 from cat.env import get_env
 
 
-router = APIRouter(prefix="/auth", tags=["Auth"])
+router = APIRouter()
 
 # TODOAUTH TODOV2 /logout endpoint
 # TODOAUTH TODOV2 /token/verify
@@ -38,7 +38,7 @@ async def oauth_login(r: Request, name: str) -> RedirectResponse:
 
 
 @router.get("/callback/{name}")
-async def oauth_callback(r: Request, name: str, code: str):
+async def oauth_callback(r: Request, name: str):
     """OAuth callback."""
 
     auth = r.app.state.ccat.auth_handlers.get(name, None)
@@ -63,12 +63,17 @@ async def oauth_callback(r: Request, name: str, code: str):
 
     token = auth.issue_jwt(user)
 
-    # TODOV2: should keep somewhere the frontend url where the whole flow started
-    # TODOV2: not secure to pass JWT via url fragments
-    frontend_url = utils.get_base_url() + f"#token={token}"
     response = RedirectResponse(utils.get_base_url())
-
+    response.set_cookie(
+        "access_token",
+        token,
+        httponly=True,
+        secure="https" in utils.get_base_url(),
+        samesite="lax",
+        max_age=int( get_env("CCAT_JWT_EXPIRE_MINUTES") ) * 60,
+    )
     return response
+
 
 @router.get("/me")
 async def get_user_info(
@@ -76,4 +81,3 @@ async def get_user_info(
 ) -> User:
     """Returns user information."""
     return cat.user.model_dump()
-

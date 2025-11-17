@@ -1,5 +1,8 @@
 from uuid import uuid5, NAMESPACE_DNS
+from urllib.parse import urljoin
+from typing import Dict
 
+from cat import utils
 from cat.env import get_env
 from cat.log import log
 
@@ -39,19 +42,35 @@ class DefaultAuth(BaseAuth):
     ) -> User | None:
         
         env_key = get_env("CCAT_API_KEY")
-        admin_credentials = get_env("CCAT_ADMIN_CREDENTIALS")
 
         if (env_key is None) or (env_key == key):
-
-            if admin_credentials:
-                username = admin_credentials.split(":")[0]
-            else:
-                username = "admin"
-
             return User(
                 id=str(uuid5(NAMESPACE_DNS, "admin")),
-                name=username,
+                name="admin",
                 permissions=self.get_full_permissions()
             )
         
         # if no user is returned, request shall not pass
+
+    async def get_provider_login_url(
+        self,
+        redirect_uri: str
+    ) -> str:
+        
+        return urljoin(
+            utils.get_base_url(), f"/auth/internal-idp?redirect_uri={redirect_uri}"
+        )
+
+    async def authorize_user_from_oauth_code(
+        self,
+        redirect_uri: str,
+        query_params: Dict 
+    ) -> User | None:
+        
+        # mock idp, not sure how to simulate the code
+        if query_params["code"] == "1":
+            return 
+        
+        return User(
+            #custom: keycloak
+        )

@@ -5,7 +5,6 @@ def get_supported_env_variables():
 
     return {
         "CCAT_URL": "http://localhost:1865",
-        "CCAT_ADMIN_CREDENTIALS": "admin:admin",
         "CCAT_SQL": "sqlite:///data/sqlite/core.db", # TODOV2: db could be encrypted by default # postgresql+asyncpg://user:password@localhost/dbname
         "CCAT_API_KEY": None,
         "CCAT_JWT_SECRET": "meow_jwt",

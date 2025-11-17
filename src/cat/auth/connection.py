@@ -79,8 +79,13 @@ class HTTPAuth(BaseAuth):
         )), # this mess for the damn swagger
     ) -> AsyncGenerator[StrayCat | None, None]:
 
+        # check Authorization header
         if credential is not None:
             credential = credential.replace("Bearer ", "")
+        
+        # check cookies
+        if credential is None:
+            credential = connection.cookies.get("access_token")
         
         async for stray in self.authorize(connection, credential):
             yield stray
