@@ -129,14 +129,20 @@ class CatTool:
 
     def standardize_output(self, tool_call, tool_result):
 
-        # legacy tools
         if isinstance(tool_result, str):
+            # legacy tools
             tool_result = CallToolResult(
                 content = [
                     TextContent(
                         text=tool_result
                     )
                 ],
+                structured_content=None
+            )
+        elif isinstance(tool_result, Message):
+            # returning the output of cat.llm directly
+            tool_result = CallToolResult(
+                content = [tool_result.content],
                 structured_content=None
             )
 

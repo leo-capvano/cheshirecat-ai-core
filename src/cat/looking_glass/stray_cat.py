@@ -1,10 +1,10 @@
-import os
-import inspect
+
 import asyncio
 import time
 from uuid import uuid4
 from collections.abc import AsyncGenerator
 from typing import Literal, get_args, List, Dict, Union, Any, Callable
+from pydantic import BaseModel, ConfigDict
 
 from cat.protocols.agui import events
 from cat.auth import User
@@ -18,7 +18,7 @@ from cat.log import log
 MSG_TYPES = Literal["notification", "chat", "error", "chat_token"]
 
 # The Stray cat goes around tools, hooks and endpoints... making troubles
-class StrayCat:
+class StrayCat(BaseModel):
     """Session object containing user data, conversation state and many utility pointers.
     The framework creates an instance for every http request and websocket connection, making it available for plugins.
 
@@ -39,12 +39,16 @@ class StrayCat:
     chat_response: ChatResponse | None = None
     """ChatResponse object that will go out to the client once the conversation turn is finished.
         It is available since the beginning of the Cat flow."""
+    
+    model_config = ConfigDict(extra='allow')
 
     def __init__(
         self,
         user: User,
         ccat: CheshireCat
     ):
+        
+        super().__init__()
 
         # user data
         self.user = user
