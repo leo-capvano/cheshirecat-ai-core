@@ -126,9 +126,12 @@ class Plugin:
                 KeyValueDB.key == db_key
             ).first().output(load_json=True)
 
-            # if it does not exist in DB, return defaults
+            # if it does not exist in DB, create it with defaults
             if settings is None:
-                return self._create_settings_from_model()
+                defaults = self._create_settings_from_model()
+                defaults = KeyValueDB(key=db_key, value=defaults)
+                await defaults.save()
+                return defaults.value
 
             return settings.value
 
