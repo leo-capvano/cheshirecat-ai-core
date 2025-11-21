@@ -14,8 +14,15 @@ from ..user import User
 
 
 class DefaultAuth(BaseAuth):
-    """Defaul auth handler, based on environment variables."""
+    """Defaul auth handler, only admin user, based on environment variables."""
 
+    def get_admin(self) -> User:
+        return User(
+            id=uuid5(NAMESPACE_DNS, "admin"),
+            name="admin",
+            permissions=self.get_full_permissions()
+        )
+    
     async def authorize_user_from_jwt(
         self,
         token: str,
@@ -44,11 +51,7 @@ class DefaultAuth(BaseAuth):
         env_key = get_env("CCAT_API_KEY")
 
         if (env_key is None) or (env_key == key):
-            return User(
-                id=str(uuid5(NAMESPACE_DNS, "admin")),
-                name="admin",
-                permissions=self.get_full_permissions()
-            )
+            return self.get_admin()
         
         # if no user is returned, request shall not pass
 
@@ -71,6 +74,4 @@ class DefaultAuth(BaseAuth):
         if query_params["code"] == "1":
             return 
         
-        return User(
-            #custom: keycloak
-        )
+        return self.get_admin()

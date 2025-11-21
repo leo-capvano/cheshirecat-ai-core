@@ -15,13 +15,30 @@ from cat.env import get_env
 
 router = APIRouter()
 
-# TODOAUTH TODOV2 /logout endpoint
 # TODOAUTH TODOV2 /token/verify
 # TODOAUTH TODOV2 /token/refresh
 
+@router.get("/logout")
+def logout(r: Request) -> RedirectResponse:
+    """Logs out the user by clearing the access_token cookie."""
+
+    origin_url = r.headers.get("origin") or r.headers.get("referer") or utils.get_base_url()
+    from cat.log import log
+    log.critical(f"Logging out to {origin_url}")
+    response = RedirectResponse(url=origin_url)
+    response.delete_cookie(
+        "access_token",
+        httponly=True,
+        secure="https" in utils.get_base_url(),
+        samesite="lax",
+    )
+    return response
 
 @router.get("/login/{name}")
-async def oauth_login(r: Request, name: str) -> RedirectResponse:
+async def oauth_login(
+    r: Request,
+    name: str
+) -> RedirectResponse:
     """Starts the OAuth flow."""
     
     auth = r.app.state.ccat.auth_handlers.get(name, None)
@@ -29,13 +46,23 @@ async def oauth_login(r: Request, name: str) -> RedirectResponse:
     if auth is None:
         raise HTTPException(status_code=404, detail=f"Auth Handler {name} not found.")
     
-    redirect_uri = urljoin(utils.get_base_url(), f"auth/callback/{name}")
 
-    # start OAuth flow
-    return RedirectResponse(
+    redirect_uri = urljoin(utils.get_base_url(), f"auth/callback/{name}")
+    origin_url = r.headers.get("origin") or r.headers.get("referer") or utils.get_base_url()
+    
+    # start OAuth flow and set origin cookie so callback can redirect back
+    response = RedirectResponse(
         url = await auth.get_provider_login_url(redirect_uri)
     )
-
+    response.set_cookie(
+        "origin_url",
+        origin_url,
+        httponly=True,
+        secure="https" in utils.get_base_url(),
+        samesite="lax",
+        max_age=300,
+    )
+    return response
 
 @router.get("/callback/{name}")
 async def oauth_callback(r: Request, name: str):
@@ -63,7 +90,10 @@ async def oauth_callback(r: Request, name: str):
 
     token = auth.issue_jwt(user)
 
-    response = RedirectResponse(utils.get_base_url())
+   # read origin cookie (fallback to base_url), then remove it and set JWT cookie
+    origin_url = r.cookies.get("origin_url") or utils.get_base_url()
+    response = RedirectResponse(origin_url)
+    response.delete_cookie("origin_url", samesite="lax", secure="https" in utils.get_base_url())
     response.set_cookie(
         "access_token",
         token,

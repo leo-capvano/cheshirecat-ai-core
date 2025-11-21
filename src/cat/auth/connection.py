@@ -54,7 +54,7 @@ class BaseConnection(ABC):
             user: User = await ah.authorize_user_from_credential(
                 credential, self.resource, self.permission
             )
-            if user:
+            if user and isinstance(user, User):
                 # create new StrayCat
                 cat = StrayCat(user, connection.app.state.ccat)
                 
@@ -74,7 +74,7 @@ class HTTPConnection(BaseConnection):
         connection: Request,
         credential = Depends(APIKeyHeader(
             name="Authorization",
-            description="Insert here your CCAT_API_KEY. Default is: meow",
+            description="Insert here your CCAT_API_KEY, or Bearer JWT token.",
             auto_error=False
         )), # this mess for the damn swagger
     ) -> AsyncGenerator[StrayCat | None, None]:

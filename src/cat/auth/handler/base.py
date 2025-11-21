@@ -61,7 +61,7 @@ class BaseAuth(ABC):
         expires = datetime.now(utc) + timedelta(seconds=expire_delta_in_seconds)
 
         jwt_content = {
-            "sub": user.id,                      # Subject (the user ID)
+            "sub": str(user.id),                 # Subject (the user ID)
             "username": user.name,               # Username
             "permissions": user.permissions,     # User permissions
             "custom": user.custom,                 # Additional information

@@ -1,7 +1,7 @@
 from typing import Dict, List, Any
 from uuid import UUID
+from pydantic import BaseModel, field_validator
 
-from pydantic import BaseModel
 from .permissions import AuthResource, AuthPermission
 
 class User(BaseModel):
@@ -16,15 +16,25 @@ class User(BaseModel):
     name: str
 
     # permissions
-    permissions: Dict[
-        AuthResource, List[AuthPermission]] | Dict[str, List[str]
-    ]
+    permissions: Dict[AuthResource, List[AuthPermission]] | Dict[str, List[str]]
 
     # only put in here what you are comfortable to pass plugins:
     # - profile data
     # - custom attributes
     # - roles
     custom: Any = {}
+
+    @field_validator("id", mode="before")
+    def ensure_uuid(cls, v):
+        """
+        Accept either a uuid.UUID or a UUID string; normalize to uuid.UUID.
+        """
+        if isinstance(v, UUID):
+            return v
+        try:
+            return UUID(str(v))
+        except Exception:
+            raise ValueError("User id must be a valid UUID or UUID string")
 
     def can(
             self,
@@ -42,7 +52,7 @@ class User(BaseModel):
         Examples
         --------
 
-        Obtain the path in which your plugin is located
+        Check if user can delete a plugin:
         >>> cat.user.can("PLUGIN", "DELETE")
         True
         """
