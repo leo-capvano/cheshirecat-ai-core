@@ -243,6 +243,8 @@ Auth system semplifications (TODO review):
 
 - multipage plugin settings
 - user based settings
+- `cat.plugin.load_settings` should allow to choose the format (`as_dict=True` otherwise return directly the pydantic obj)
+- `cat.plugin.save_settings` should accept both a dictionary or a pydantic model
 
 ### other
 
