@@ -41,9 +41,9 @@ def check_permissions(resource: AuthResource | str, permission: AuthPermission |
     """
 
     # import here to avoid circular imports
-    from cat.auth.connection import HTTPAuth
+    from cat.auth.connection import HTTPConnection
 
-    return Depends(HTTPAuth(
+    return Depends(HTTPConnection(
         # in case strings are passed, we do not force to the enum, to allow custom permissions
         # (which in any case are to be matched in the endpoint)
         resource = resource, 

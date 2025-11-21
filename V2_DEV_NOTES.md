@@ -265,6 +265,7 @@ Auth system semplifications (TODO review):
 - should we keep the working_memory functionality? In case, `working_memory` can be a property/setter of StrayCat internally loading/saving a JSON from `UserKeyValueDB` table
 - should plugin methods `load_settings` and `save_settings` work both with dictionaries and pydantic objects?
 - when should the factory run? at cat startup or at each StrayCat request? (the second may slow down but allows for user specific injection of objects)
+- class `User` has UUID as id, not sure would be more flexible to have a str
 
 ## Challenges
 

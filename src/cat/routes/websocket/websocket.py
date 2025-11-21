@@ -2,7 +2,7 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 
 from cat.auth import AuthPermission, AuthResource
-from cat.auth.connection import WebsocketAuth
+from cat.auth.connection import WebsocketConnection
 from cat.log import log
 
 router = APIRouter(tags=["Websocket"])
@@ -11,7 +11,7 @@ router = APIRouter(tags=["Websocket"])
 @router.websocket("/ws")
 async def websocket_endpoint(
     websocket: WebSocket,
-    cat=Depends(WebsocketAuth(AuthResource.CHAT, AuthPermission.EDIT))
+    cat=Depends(WebsocketConnection(AuthResource.CHAT, AuthPermission.EDIT))
 ):
     await websocket.accept()
 

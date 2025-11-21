@@ -25,7 +25,7 @@ from cat.looking_glass.stray_cat import StrayCat
 from cat.log import log
 
 
-class BaseAuth(ABC):
+class BaseConnection(ABC):
 
     def __init__(
             self,
@@ -67,7 +67,7 @@ class BaseAuth(ABC):
         self.not_allowed()
 
 
-class HTTPAuth(BaseAuth):
+class HTTPConnection(BaseConnection):
 
     async def __call__(
         self,
@@ -95,7 +95,7 @@ class HTTPAuth(BaseAuth):
         
 
 # TODOV2: do websockets support headers now?
-class WebsocketAuth(BaseAuth):
+class WebsocketConnection(BaseConnection):
 
     async def __call__(
         self,
