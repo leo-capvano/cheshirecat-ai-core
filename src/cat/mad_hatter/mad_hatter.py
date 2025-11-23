@@ -7,8 +7,10 @@ from typing import List, Dict, Any, Callable
 
 from cat.log import log
 import cat.utils as utils
+from cat.env import get_env
 from cat.db.models import KeyValueDB
 from cat.mad_hatter.plugin_extractor import PluginExtractor
+from cat.mad_hatter.registry import registry_download_plugin
 from cat.mad_hatter.plugin import Plugin
 from cat.mad_hatter.decorators.hook import CatHook
 from cat.mad_hatter.decorators.tool import CatTool
@@ -37,26 +39,48 @@ class MadHatter:
         # callback out of the hook system to notify other components about a refresh
         self.on_refresh_callbacks: List[Callable] = []
 
-    async def install_plugin(self, package_plugin) -> Plugin:
-        # extract zip/tar file into plugin folder
-        extractor = PluginExtractor(package_plugin)
-        plugin_path = extractor.extract(utils.get_plugins_path())
-
-        # remove zip after extraction
-        os.remove(package_plugin)
-
-        # create plugin obj
+    async def install_plugin(self, plugin_origin, activate=True) -> Plugin:
+        """
+        Install a plugin.
+        
+        Parameters
+        ----------
+        plugin_origin : str
+            Path to the plugin zip/tar file or registry URL
+        activate : bool, optional
+            Whether to activate the plugin after installation. Default is True.
+    
+        Returns
+        -------
+        Plugin
+            Installed plugin object.
+        """
+        
         try:
+            if plugin_origin.startswith("http"):
+                plugin_zip_path = await registry_download_plugin(plugin_origin)
+            else:
+                plugin_zip_path = plugin_origin
+
+            # extract zip/tar file into plugin folder
+            extractor = PluginExtractor(plugin_zip_path)
+            plugin_path = extractor.extract(utils.get_plugins_path())
+
+            # remove zip after extraction
+            shutil.rmtree(plugin_zip_path, ignore_errors=True)
+
+            # create plugin obj
             plugin = Plugin(plugin_path)
+            self.plugins[plugin.id] = plugin
         except Exception as e:
             log.error("Could not install plugin in {plugin_path}. Removing it.")
-            shutil.rmtree(plugin_path)
+            shutil.rmtree(plugin_path, ignore_errors=True)
             raise e
 
-        # activate it
-        self.plugins[plugin.id] = plugin
-        await self.toggle_plugin(plugin.id)
-        return self.plugins[plugin.id]
+        if activate:
+            await self.toggle_plugin(plugin.id)
+    
+        return plugin
 
     async def uninstall_plugin(self, plugin_id):
 
@@ -73,20 +97,47 @@ class MadHatter:
         del self.plugins[plugin_id]
 
         # remove plugin folder
-        shutil.rmtree(plugin_path)
+        shutil.rmtree(plugin_path, ignore_errors=True)
+
+    async def preinstall_plugins(self):
+        """
+        Preinstall plugins based on env CCAT_PREINSTALLED_PLUGINS.
+        Called by CheshireCat during bootstrap.
+        Will only run if no plugins are present.
+        """
+
+        all_plugin_folders = glob.glob( f"{utils.get_plugins_path()}/*/")
+        if all_plugin_folders != []:
+            return
+
+        try:
+            preinstalled_plugins_urls = get_env("CCAT_PREINSTALLED_PLUGINS")
+            if preinstalled_plugins_urls:
+                for url in preinstalled_plugins_urls.split(","):
+                    url = url.strip()
+                    if url and url.startswith("http"):
+                        log.info(f"Preinstalling plugin from {url}")
+                        await self.install_plugin(url)
+        except Exception as e:
+            log.error(f"Error preinstalling plugins: {e}")
 
     async def find_plugins(self):
+        """
+        Discover plugins in the plugins folder, activate the ones
+        marked as active in the db, and refresh caches.
+        """
         # emptying plugin dictionary, plugins will be discovered from disk
         # and stored in a dictionary plugin_id -> plugin_obj
         self.plugins = {}
 
+        # plugins are found in the `./plugins` folder
+        all_plugin_folders = glob.glob( f"{utils.get_plugins_path()}/*/")
+
         # active plugins ids (stored in db)
         active_plugins = await self.get_active_plugins()
 
-        # plugins are found in the `./plugins` folder
-        all_plugin_folders = \
-            glob.glob( f"{utils.get_plugins_path()}/*/")
-
+        # TODOV2: if there is a mismatch between active plugins in db
+        #  and plugins found on disk, sync the db
         log.info("Active Plugins:")
         log.info(active_plugins)
 

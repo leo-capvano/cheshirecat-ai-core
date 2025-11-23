@@ -5,7 +5,7 @@ import inspect
 from datetime import timedelta
 from urllib.parse import urljoin
 from typing import Any
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 from rapidfuzz.distance import Levenshtein
 
@@ -51,14 +51,9 @@ def verbal_timedelta(td: timedelta) -> str:
     str
         Human-readable string of time difference.
 
-    Notes
-    -----
-    This method is used to give the Language Model information time information about the memories retrieved from
-    the vector database.
-
     Examples
     --------
-    >>> print(verbal_timedelta(timedelta(days=2, weeks=1))
+    >>> verbal_timedelta(timedelta(days=2, weeks=1)
     'One week and two days ago'
     """
 

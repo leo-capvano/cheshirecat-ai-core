@@ -1,10 +1,10 @@
 import os
-import shutil
 import uvicorn
 import debugpy
 from dotenv import load_dotenv
 from urllib.parse import urlparse
 
+from cat.scaffold import scaffolder
 from cat.env import get_env
 from cat.utils import (
     get_base_url,
@@ -14,24 +14,17 @@ from cat.utils import (
 )
 
 
-def scaffold():
-    scaffold_path = os.path.join(get_base_path(), "scaffold")
-    for folder in os.listdir(scaffold_path):
-        origin = os.path.join(scaffold_path, folder)
-        destination = os.path.join(get_project_path(), folder)
-        if not os.path.exists(destination):
-            shutil.copytree(origin, destination)
-
-    
 # RUN!
 def main():
 
     # load env variables
-    load_dotenv()
-    # TODOV2: make sure this works also when distributed as a package
+    load_dotenv(dotenv_path=os.path.join(
+        get_project_path(), ".env"
+    ))
+    # TODOV2: make sure this works also when distributed as a docker image
 
     # scaffold dev project with minimal folders (cat is used as a package)
-    scaffold()
+    scaffolder.setup_project()
 
     # debugging utilities, to deactivate put `DEBUG=false` in .env
     debug_config = {}
@@ -52,7 +45,7 @@ def main():
 
     # uvicorn running behind an https proxy
     proxy_pass_config = {}
-    if get_env("CCAT_HTTPS_PROXY_MODE") in ("1", "true"):
+    if get_env("CCAT_HTTPS_PROXY_MODE") in ("1", "true"): # TODOV2: is this necessary? can be the default?
         proxy_pass_config = {
             "proxy_headers": True,
             "forwarded_allow_ips": get_env("CCAT_CORS_FORWARDED_ALLOW_IPS"),

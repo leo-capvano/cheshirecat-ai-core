@@ -28,8 +28,8 @@ def test_unpackage_zip(client, plugin_is_flat):
 def test_get_id_and_extension(client, plugin_is_flat):
     zip_path = create_mock_plugin_zip(flat=plugin_is_flat)
     extractor = PluginExtractor(zip_path)
-    assert extractor.get_plugin_id() == "mock_plugin"
-    assert extractor.get_extension() == "zip"
+    assert extractor.id == "mock_plugin"
+    assert extractor.extension == "zip"
     os.remove(zip_path)
 
 

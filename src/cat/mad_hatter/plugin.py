@@ -97,7 +97,7 @@ class Plugin:
 
         self._hooks = []
         self._tools = []
-        self._deactivate_endpoints()
+        self._deactivate_endpoints() # TODOV2: endpoint sync is messed up with CCat fastapi_app
         self._plugin_overrides = {}
 
         # TODOV2: remove settings from DB?

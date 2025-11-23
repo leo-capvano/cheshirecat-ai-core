@@ -60,12 +60,10 @@ async def install_plugin_from_registry(
 ) -> PluginManifest:
     """Install a new plugin from registry"""
 
-    # download zip from registry
     try:
-        tmp_plugin_path = await registry_download_plugin(payload.url)
-        plugin = await cat.mad_hatter.install_plugin(tmp_plugin_path)
+        plugin = await cat.mad_hatter.install_plugin(payload.url)
     except Exception as e:
-        log.error("Could not download plugin from registry")
-        raise HTTPException(status_code=500, detail="Could not download plugin from registry")
+        log.error("Could not install plugin from registry")
+        raise HTTPException(status_code=500, detail="Could not install plugin from registry")
 
-    return manifest # TODO return InstalledPlugin
+    return plugin.manifest

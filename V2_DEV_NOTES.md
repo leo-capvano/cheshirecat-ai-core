@@ -245,6 +245,7 @@ Auth system semplifications (TODO review):
 - user based settings
 - `cat.plugin.load_settings` should allow to choose the format (`as_dict=True` otherwise return directly the pydantic obj)
 - `cat.plugin.save_settings` should accept both a dictionary or a pydantic model
+- `settings.py` file in project path alà django, and if not in any case get rid of `get_env`
 
 ### other
 
@@ -257,13 +258,13 @@ Auth system semplifications (TODO review):
 - `cat` argument in hooks and tools should be optional
 - update to langchain v1
 - root endpoint `/` should offer the webui (at the moment static assets urls for the SPA conflict with other endpoints)
+- wrap internal tables (key value store) in easy to use get/set methods (the user related one accessible directly from `User` object)
 
 
 ## Questions
 
 - as there are docker and pyPI releases, does it make sense to have a `develop` branch?
 - move plugin settings out of plugin folder and into DB?
-- should we finally get rid of `BaseModelDict`?
 - should we keep the working_memory functionality? In case, `working_memory` can be a property/setter of StrayCat internally loading/saving a JSON from `UserKeyValueDB` table
 - should plugin methods `load_settings` and `save_settings` work both with dictionaries and pydantic objects?
 - when should the factory run? at cat startup or at each StrayCat request? (the second may slow down but allows for user specific injection of objects)

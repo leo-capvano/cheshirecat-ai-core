@@ -63,7 +63,6 @@ class StrayCat(BaseModel):
     # TODOV2: method should be one and should be `send_message`.
     #         Stray should not know about websockets or anything network related
     async def __send_ws_json(self, data: Any):
-        
         if self.message_callback:
             await self.message_callback(data)
 

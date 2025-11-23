@@ -52,11 +52,6 @@ class PluginExtractor:
         extracted_path = os.path.join(to, self.id)
         # if folder exists, delete it as it will be replaced
         if os.path.exists(extracted_path):
-            settings_file_path = os.path.join(extracted_path, "settings.json")
-            # check if settings.json exists in the folder
-            if os.path.isfile(settings_file_path):
-                # copy settings.json to the temporary directory
-                shutil.copy(settings_file_path, folder_to_copy)
             shutil.rmtree(extracted_path)
         # extracted plugin in plugins folder!
         shutil.move(folder_to_copy, extracted_path)
@@ -67,7 +62,4 @@ class PluginExtractor:
 
         # return extracted dir path
         return extracted_path
-
-    def get_extension(self):
-        return self.extension
 

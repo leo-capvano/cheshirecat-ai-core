@@ -5,9 +5,6 @@ from piccolo.engine.postgres import PostgresEngine
 from piccolo.engine.sqlite import SQLiteEngine
 
 from cat.env import get_env
-from cat.log import log
-from cat.db import models  # make sure models are imported so tables are registered
-
 
 DB_URL = get_env("CCAT_SQL")
 
@@ -24,4 +21,3 @@ elif DB_URL.startswith("postgresql"):
     # DB.startup()
 else:
     raise ValueError(f"Unsupported DB URL: {DB_URL}")
-

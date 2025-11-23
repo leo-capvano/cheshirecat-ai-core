@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from .plugins_installed import router as r_crud
+from .plugins_local import router as r_crud
 from .plugins_settings import router as r_settings
 from .plugins_registry import router as r_registry
 

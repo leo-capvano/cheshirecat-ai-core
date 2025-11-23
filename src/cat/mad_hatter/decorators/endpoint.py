@@ -95,7 +95,8 @@ class Endpoint:
     def _init_decorators(cls, new_cheshire_cat_api):
         cls.cheshire_cat_api = new_cheshire_cat_api
 
-    # @endpoint decorator. Any function in a plugin decorated by @endpoint.endpoint will be exposed as FastAPI operation
+    # @endpoint decorator. Any function in a plugin decorated by @endpoint.endpoint
+    #  will be exposed as FastAPI operation
     def endpoint(
         cls,
         path,
