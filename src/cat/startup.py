@@ -57,8 +57,7 @@ for r in [
     home, status, auth,
     plugins, static, websocket
 ]:
-    cheshire_cat_api.include_router(r.router)
-
+    cheshire_cat_api.include_router(r.router)#, prefix="/api")
 
 # Endpoint playground
 @cheshire_cat_api.get("/docs", include_in_schema=False)

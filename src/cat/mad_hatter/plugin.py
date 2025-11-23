@@ -97,7 +97,7 @@ class Plugin:
 
         self._hooks = []
         self._tools = []
-        self._deactivate_endpoints() # TODOV2: endpoint sync is messed up with CCat fastapi_app
+        self._endpoints = []
         self._plugin_overrides = {}
 
         # TODOV2: remove settings from DB?
@@ -297,11 +297,6 @@ class Plugin:
             return f"To resolve any problem related to {name} plugin, contact the creator using github issue at the link {url}"
         return f"Error in {name} plugin, contact the creator"
 
-    def _deactivate_endpoints(self):
-
-        for endpoint in self._endpoints:
-            endpoint.deactivate()
-        self._endpoints = []
 
     def _clean_hook(self, hook: CatHook):
         # getmembers returns a tuple
@@ -310,19 +305,21 @@ class Plugin:
         return h
 
     def _clean_tool(self, tool: CatTool):
-        # getmembers returns a tuple
         t = tool[1]
         t.plugin_id = self._id
         return t
 
     def _clean_endpoint(self, endpoint: CatEndpoint):
-        # getmembers returns a tuple
-        f = endpoint[1]
-        f.plugin_id = self._id
-        return f
+        e = endpoint[1]
+        # writing it at all levels (even at low level function) because
+        #  fastapi rebuild the routes when doing `app.include_router`
+        e.plugin_id = self._id
+        for route in e.routes:
+            route.plugin_id = self._id
+            route.endpoint.plugin_id = self._id # this works
+        return e
 
     def _clean_plugin_override(self, plugin_override):
-        # getmembers returns a tuple
         return plugin_override[1]
 
     # a plugin hook function has to be decorated with @hook

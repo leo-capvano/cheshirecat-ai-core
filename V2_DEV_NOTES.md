@@ -259,6 +259,7 @@ Auth system semplifications (TODO review):
 - update to langchain v1
 - root endpoint `/` should offer the webui (at the moment static assets urls for the SPA conflict with other endpoints)
 - wrap internal tables (key value store) in easy to use get/set methods (the user related one accessible directly from `User` object)
+- endpoint with path arguments are not deactivated (not listed in fastapi_app.routes)
 
 
 ## Questions

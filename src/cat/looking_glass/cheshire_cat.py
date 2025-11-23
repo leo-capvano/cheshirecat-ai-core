@@ -2,6 +2,7 @@ import sys
 
 from cat.factory import Factory
 from cat.protocols.model_context.client import MCPClients
+from cat.mad_hatter.decorators.endpoint import CatEndpoint
 from cat.log import log
 from cat.mad_hatter.mad_hatter import MadHatter
 
@@ -36,6 +37,10 @@ class CheshireCat:
             self.fastapi_app = fastapi_app
             # reference to the cat in fastapi state
             fastapi_app.state.ccat = self
+            self.core_routes_sign = []
+            for r in fastapi_app.routes:
+                signature = self.get_route_signature(r)
+                self.core_routes_sign.append(signature)
 
             # init Factory
             self.factory = Factory()
@@ -66,7 +71,7 @@ class CheshireCat:
 
     async def on_mad_hatter_refresh(self):
 
-        # Get objects from plugins
+        # Get factory objects from plugins
         await self.factory.load_objects(self)
 
         self.auth_handlers = self.factory.get_objects("auth_handler")
@@ -75,17 +80,51 @@ class CheshireCat:
         self.mcps = self.factory.get_objects("mcp")
 
         # update endpoints
-        for endpoint in self.mad_hatter.endpoints:
-            log.error(endpoint)
-            #endpoint.activate(self.fastapi_app)
-        
-        # TODOV2: remove the endpoints
-        # TODOV2: remove plugin full routers installed by non active plugins
-        for e in self.fastapi_app.router.routes:
-            log.warning(f"Route: {e.path} -> {e.name}")
+        self.refresh_endpoints()
 
         # allow plugins to hook the refresh (e.g. to embed tools)
         await self.mad_hatter.execute_hook("after_mad_hatter_refresh", cat=self)
+
+    def refresh_endpoints(self):
+        """Sync plugin endpoints with the fastapi app."""
+
+        log.info(self.core_routes_sign)
+
+        # create a signature for every custom endpoint route
+        custom_routes_sign = []
+        for e in self.mad_hatter.endpoints:
+            for r in e.routes:
+                signature = self.get_route_signature(r)
+                custom_routes_sign.append(signature)
+                log.info(signature)
+
+        # remove all CatEndpoint routes from fastapi app
+        routes_to_remove = []
+        for route in self.fastapi_app.routes:
+            signature = self.get_route_signature(route)
+            if signature not in self.core_routes_sign:
+                log.critical(route.plugin_id)
+                routes_to_remove.append(route)
+
+        for route in routes_to_remove:
+            log.error(signature)
+            self.fastapi_app.routes.remove(route)
+            if route in self.fastapi_app.router.routes:
+                self.fastapi_app.router.routes.remove(route)
+            self.fastapi_app.openapi_schema = None  # reset openapi schema
+        
+        # add the new list
+        for e in self.mad_hatter.endpoints:
+            self.fastapi_app.include_router(e)
+            self.fastapi_app.openapi_schema = None  # reset openapi schema
+
+
+    def get_route_signature(self, route):
+        try:
+            signature = f"{route.name}-{route.path}-{route.tags}-{route.methods}"
+        except:
+            signature = f"{route.name}-{route.path}"
+        return signature
 
     @property
     def plugin(self):
