@@ -1,6 +1,7 @@
 from typing import Callable
 from fastapi import APIRouter
 from cat.log import log
+from cat.utils import run_sync_or_async
 
 
 class CatEndpoint(APIRouter):
@@ -47,6 +48,21 @@ class CatEndpointDecorator:
 
     def delete(self, path: str, **kwargs):
         return self._wrap("delete", path, **kwargs)
+    
+    def router(self, function: Callable):
+
+        # TODOV2: support async functions
+        returned_router = function()
+
+        if not isinstance(returned_router, APIRouter):
+            raise TypeError(
+                "The function decorated with @endpoint.router must return an APIRouter instance."
+            )
+
+        ce = CatEndpoint()
+        ce.include_router(returned_router)
+        return ce
+
 
 
 endpoint = CatEndpointDecorator()

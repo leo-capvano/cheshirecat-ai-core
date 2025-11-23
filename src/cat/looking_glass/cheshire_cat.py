@@ -82,7 +82,7 @@ class CheshireCat:
         await self.mad_hatter.execute_hook("after_mad_hatter_refresh", cat=self)
 
     def refresh_endpoints(self):
-        """Sync plugin endpoints with the fastapi app."""
+        """Sync plugin endpoints in the fastapi app."""
 
         # remove all CatEndpoint routes from fastapi app
         routes_to_remove = []
