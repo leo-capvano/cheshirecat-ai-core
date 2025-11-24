@@ -145,6 +145,7 @@
 - Environment variables:
   - there are less env variables, as many things are delegated to plugins (which can decide whether to use them or not).
   - `CCAT_CORE_HOST`, `CCAT_CORE_PORT` and `CCAT_CORE_USE_SECURE_PROTOCOLS` have been collapsed into one single env variable `CCAT_URL` with default value `http://localhost:1865`
+  - can get main paths and urls from `cat.paths` and `cat.urls`
 
 ## Hooks
 

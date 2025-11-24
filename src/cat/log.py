@@ -1,5 +1,6 @@
 """The log engine."""
 
+import os
 import sys
 import json
 import traceback
@@ -159,16 +160,22 @@ class CatLogEngine:
     def welcome(self):
         """Welcome message in the terminal."""
  
-        from cat.paths import BASE_PATH
+        from cat import paths
         cat_address = get_env("CCAT_URL")
 
-        print("\n\n")
-        with open(BASE_PATH + "/welcome.txt", "r") as f:
-            print(f.read())
+        if not os.path.exists( paths.DATA_PATH + "/.welcome" ):
+            print("\n\n")
+            with open(paths.BASE_PATH + "/welcome.txt", "r") as f:
+                print(f.read())
 
-        left_margin = " " * 15
-        print(f"\n\n{left_margin} REST API:   {cat_address}/docs")
-        print(f"{left_margin} WEB UI:     {cat_address}\n\n")
+            left_margin = " " * 15
+            print(f"\n\n{left_margin} WEB UI:           {cat_address}")
+            print(f"{left_margin} API PLAYGROUND:   {cat_address}/docs\n\n")
+            open( paths.DATA_PATH + "/.welcome", "w").close()
+        else:
+            print("\n^._.^\n")
+
+
         # self.log_examples()
 
 

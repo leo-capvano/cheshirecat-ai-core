@@ -1,6 +1,7 @@
 import sys
 
 from cat import log
+from cat.env import get_env
 from cat.factory import Factory
 from cat.protocols.model_context.client import MCPClients
 from cat.mad_hatter.mad_hatter import MadHatter
@@ -59,12 +60,11 @@ class CheshireCat:
             # allows plugins to do something after the cat bootstrap is complete
             await self.mad_hatter.execute_hook("after_cat_bootstrap", cat=self)
 
-            log.welcome()
         except Exception:
             log.error("Error during CheshireCat bootstrap. Exiting.")
             sys.exit()
 
-        print("\n^._.^\n")
+        log.welcome()
 
     async def on_mad_hatter_refresh(self):
 
