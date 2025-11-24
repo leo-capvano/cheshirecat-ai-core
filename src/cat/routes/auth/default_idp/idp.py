@@ -10,7 +10,12 @@ from cat.env import get_env
 
 router = APIRouter()
 
-@router.get("/internal-idp", include_in_schema=False)
+# TODOV2: internal idp should give a 403 when default auth handler is not active
+
+@router.get(
+    "/internal-idp",
+    include_in_schema=False
+)
 async def internal_idp(
     redirect_uri: str
 ):
@@ -21,7 +26,10 @@ async def internal_idp(
     return HTMLResponse(html)
 
 
-@router.post("/internal-idp/login", include_in_schema=False)
+@router.post(
+    "/internal-idp/login",
+    include_in_schema=False
+)
 async def internal_idp_login(
     api_key: str = Form(...),
     redirect_uri: str = Form(...)
@@ -37,7 +45,10 @@ async def internal_idp_login(
         status_code=303
     )
 
-@router.post("/internal-idp/token", include_in_schema=False)
+@router.post(
+    "/internal-idp/token",
+    include_in_schema=False
+)
 async def token_endpoint(code: str = Form(...)):
     valid_code = hashlib.sha256(get_env("CCAT_API_KEY").encode()).hexdigest()[:16]
     if code != valid_code:

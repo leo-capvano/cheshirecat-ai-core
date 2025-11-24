@@ -2,18 +2,18 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from scalar_fastapi import get_scalar_api_reference
 
 from cat.env import get_env
 from cat.routes import (
     home,
-    status
+    status,
+    openapi,
 )
-from cat.routes.auth import auth
 from cat.routes.plugins import plugins
 from cat.routes.websocket import websocket
 from cat.routes.static import static
-from cat.routes.openapi import get_openapi_configuration_function
+from cat.routes.auth import oauth
+from cat.routes.auth.default_idp import idp
 from cat.looking_glass.cheshire_cat import CheshireCat
 
 
@@ -52,19 +52,13 @@ if cors_enabled == "true":
         allow_headers=["*"],
     )
 
-# Add routers
+# API routers
 for r in [
-    home, status, auth,
+    home, status, oauth,
     plugins, static, websocket
 ]:
-    cheshire_cat_api.include_router(r.router)#, prefix="/api")
+    cheshire_cat_api.include_router(r.router, prefix="/api/v2")
 
-# Endpoint playground
-@cheshire_cat_api.get("/docs", include_in_schema=False)
-async def scalar_docs():
-    cheshire_cat_api.openapi = get_openapi_configuration_function(cheshire_cat_api)
-    return get_scalar_api_reference(
-        openapi_url="/openapi.json",
-        title=cheshire_cat_api.title,
-        scalar_favicon_url="https://cheshirecat.ai/wp-content/uploads/2023/10/Logo-Cheshire-Cat.svg",
-    )
+# user facing routers
+for r in [ openapi, idp ]:
+    cheshire_cat_api.include_router(r.router)

@@ -13,7 +13,7 @@ from cat import utils
 from cat.env import get_env
 
 
-router = APIRouter()
+router = APIRouter(prefix="/auth", tags=["Auth"])
 
 # TODOAUTH TODOV2 /token/verify
 # TODOAUTH TODOV2 /token/refresh
@@ -23,8 +23,6 @@ def logout(r: Request) -> RedirectResponse:
     """Logs out the user by clearing the access_token cookie."""
 
     origin_url = r.headers.get("origin") or r.headers.get("referer") or utils.get_base_url()
-    from cat.log import log
-    log.critical(f"Logging out to {origin_url}")
     response = RedirectResponse(url=origin_url)
     response.delete_cookie(
         "access_token",
@@ -47,7 +45,7 @@ async def oauth_login(
         raise HTTPException(status_code=404, detail=f"Auth Handler {name} not found.")
     
 
-    redirect_uri = urljoin(utils.get_base_url(), f"auth/callback/{name}")
+    redirect_uri = urljoin(utils.get_api_url(), f"auth/callback/{name}")
     origin_url = r.headers.get("origin") or r.headers.get("referer") or utils.get_base_url()
     
     # start OAuth flow and set origin cookie so callback can redirect back
@@ -76,7 +74,7 @@ async def oauth_callback(r: Request, name: str):
             detail=f"Auth Handler {name} not found."
         )
 
-    redirect_uri = urljoin(utils.get_base_url(), f"auth/callback/{name}")
+    redirect_uri = urljoin(utils.get_api_url(), f"auth/callback/{name}")
 
     user = await auth.authorize_user_from_oauth_code(
         redirect_uri,

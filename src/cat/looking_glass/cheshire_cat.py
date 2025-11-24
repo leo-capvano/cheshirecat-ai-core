@@ -15,7 +15,7 @@ class CheshireCat:
     for the bootstrapping of the application.
 
     In most cases you will not need to interact with this class directly, but rather
-    with class `StrayCat`which will be available in your plugin's hooks, tools and endpoints.
+    with class `StrayCat` which will be available in your plugin's hooks, tools and endpoints.
 
     Attributes
     ----------
@@ -59,6 +59,8 @@ class CheshireCat:
 
             # allows plugins to do something after the cat bootstrap is complete
             await self.mad_hatter.execute_hook("after_cat_bootstrap", cat=self)
+
+            log.welcome()
         except Exception:
             log.error("Error during CheshireCat bootstrap. Exiting.")
             sys.exit()

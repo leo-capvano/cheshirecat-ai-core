@@ -79,6 +79,9 @@ def get_base_url():
     """Base url for the installation."""
     return get_env("CCAT_URL")
 
+def get_api_url():
+    """Base url for the API."""
+    return urljoin(get_base_url(), "api/v2")
 
 def get_static_url():
     """Static files url."""

@@ -63,6 +63,6 @@ class CatEndpointDecorator:
         ce.include_router(returned_router)
         return ce
 
-
+# TODOV2: endpoints with the same function name collide, even with different paths
 
 endpoint = CatEndpointDecorator()

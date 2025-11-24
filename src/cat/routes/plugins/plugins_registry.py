@@ -9,13 +9,13 @@ from cat.auth import AuthPermission, AuthResource, check_permissions
 router = APIRouter(prefix="/registry")
 
 @router.get("")
-async def get_available_plugins(
+async def registry_get_plugins(
     search: str = None,
     cat=check_permissions(AuthResource.PLUGIN, AuthPermission.LIST),
     # author: str = None, to be activated in case of more granular search
     # tag: str = None, to be activated in case of more granular search
 ) -> List[PluginManifest]:
-    """List available plugins"""
+    """List available plugins from registry."""
 
     # retrieve plugins from official repo
     registry_plugins = await registry_search_plugins(search)
@@ -54,7 +54,7 @@ class PluginRegistryUpload(BaseModel):
     url: str
 
 @router.post("/install")
-async def install_plugin_from_registry(
+async def registry_install_plugin(
     payload: PluginRegistryUpload,
     cat=check_permissions(AuthResource.PLUGIN, AuthPermission.WRITE),
 ) -> PluginManifest:

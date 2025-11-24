@@ -83,6 +83,7 @@
 
 ## Network
 
+- endpoints are placed under `/api/v2`. Plugins with custom endpoints can follow the convention or not. Root route `/` is not occupied by core and can be used from a plugin to serve a custom frontend - like the default `ui` plugin does.
 - new `POST /message` endpoint that supports streaming (GIVE EXAMPLE), accepting `ChatRequest` and returning `ChatResponse` under both http and websocket. You can access this data structures in plugins with `cat.chat_request` and `cat.chat_response`. From within an agent, `self.chat_request` and `self.chat_response`. Note if you have a multi agent setup, all the agents will share this data structure. Any number of messages and custom data can be appended to `chat_response.messages` and `chat_response.custom`.
 - When a client calls the cat, it can specify which agent to use in `ChatRequest.agent`. Default is `default`, which is similar to the old one, this time can run multiple tools in a row and builds prompt for each step. No more double prompt (there was one for tools and one for memory).
 - conversation history endpoints (GET and POST) have been deleted and there is a new CRUD for chat sessions in plugin `ui`, which also includes the new multi-chat, multi-agent and multi-context frontend. Convo history as a recommended practice, must be passed via ws or http via `ChatRequest.messages` (similar to OpenAI or Ollama).
@@ -226,6 +227,7 @@ Auth system semplifications (TODO review):
 - SSO infrastructure implementation
 - security must be always ON, also on a fresh installation, with a default jwt secret and API key. Pages in `/docs` should allow logging in
 - refine `BaseAuth`
+- when default auth is not active, `/auth/internal-idp` endpoint should return 403
 
 ### core plugins
 
@@ -260,6 +262,7 @@ Auth system semplifications (TODO review):
 - root endpoint `/` should offer the webui (at the moment static assets urls for the SPA conflict with other endpoints)
 - wrap internal tables (key value store) in easy to use get/set methods (the user related one accessible directly from `User` object)
 - endpoint with path arguments are not deactivated (not listed in fastapi_app.routes)
+- as main / volume fodlers, ditch `static` in favour of `data/db` + `data/files` + `plugins`. When plugins serve actual static files, they can have the files inside of them. If they serve files for users, they can use the `data/files` folder and related utilities
 
 
 ## Questions
