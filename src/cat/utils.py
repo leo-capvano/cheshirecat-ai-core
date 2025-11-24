@@ -75,16 +75,6 @@ def verbal_timedelta(td: timedelta) -> str:
         return "{} ago".format(abs_delta)
 
 
-def get_base_url():
-    """Base url for the installation."""
-    return get_env("CCAT_URL")
-
-
-def get_api_url():
-    """Base url for the API."""
-    return urljoin(get_base_url(), "api/v2/")
-
-
 def get_base_path():
     """Path to the cat package, for internal core usage."""
     return os.path.dirname(os.path.abspath(cat.__file__))

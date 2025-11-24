@@ -2,16 +2,14 @@ from uuid import uuid5, NAMESPACE_DNS
 from urllib.parse import urljoin
 from typing import Dict
 
-from cat import utils
+from cat import urls
 from cat.env import get_env
-from cat import log
 
 from .base import BaseAuth
 from ..permissions import (
     AuthPermission, AuthResource
 )
 from ..user import User
-
 
 class DefaultAuth(BaseAuth):
     """Defaul auth handler, only admin user, based on environment variables."""
@@ -61,7 +59,7 @@ class DefaultAuth(BaseAuth):
     ) -> str:
         
         return urljoin(
-            utils.get_base_url(), f"/auth/internal-idp?redirect_uri={redirect_uri}"
+            urls.BASE_URL, f"/auth/internal-idp?redirect_uri={redirect_uri}"
         )
 
     async def authorize_user_from_oauth_code(
