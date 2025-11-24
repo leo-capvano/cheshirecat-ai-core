@@ -159,11 +159,11 @@ class CatLogEngine:
     def welcome(self):
         """Welcome message in the terminal."""
  
+        from cat.paths import BASE_PATH
         cat_address = get_env("CCAT_URL")
 
-        from cat.utils import get_base_path
         print("\n\n")
-        with open(get_base_path() + "/welcome.txt", "r") as f:
+        with open(BASE_PATH + "/welcome.txt", "r") as f:
             print(f.read())
 
         left_margin = " " * 15

@@ -1,17 +1,13 @@
 """Various utiles used from the projects."""
 
-import os
 import inspect
 from datetime import timedelta
-from urllib.parse import urljoin
 from typing import Any
 from pydantic import BaseModel
 
 from rapidfuzz.distance import Levenshtein
 
-import cat
 from cat import log
-from cat.env import get_env
 
 
 def to_camel_case(text: str) -> str:
@@ -73,31 +69,6 @@ def verbal_timedelta(td: timedelta) -> str:
         return "{} ago".format(abs_delta)
     else:
         return "{} ago".format(abs_delta)
-
-
-def get_base_path():
-    """Path to the cat package, for internal core usage."""
-    return os.path.dirname(os.path.abspath(cat.__file__))
-
-
-def get_project_path():
-    """Path to the folder from which the cat was run (contains data, plugins and static folders)"""
-    return os.getcwd()
-
-
-def get_data_path():
-    """Allows exposing the data folder path."""
-    return os.path.join(get_project_path(), "data")
-
-
-def get_uploads_path():
-    """Allows exposing the static files' path."""
-    return os.path.join(get_data_path(), "files")
-
-
-def get_plugins_path():
-    """Allows exposing the plugins' path."""
-    return os.path.join(get_project_path(), "plugins")
 
 
 def levenshtein_distance(prediction: str, reference: str) -> int:

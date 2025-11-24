@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 from cat.looking_glass.stray_cat import StrayCat
 from cat.auth import User
 from cat.mad_hatter.plugin import Plugin
-import cat.utils
+import cat.paths
 
 from tests.utils import create_mock_plugin_zip
 
@@ -36,9 +36,9 @@ def patches(monkeypatch, tmp_path):
 
     # Use mock folder as project folder
     monkeypatch.setattr(
-        cat.utils,
-        'get_project_path',
-        lambda: str(tmp_path / "mocks")
+        cat.paths,
+        'PROJECT_PATH',
+        str(tmp_path / "mocks")
     )
 
     # TODOV2: maybe with uv this is fast enough

@@ -6,15 +6,14 @@ import tempfile
 import importlib
 import subprocess
 from typing import Dict, List, Callable
-from inspect import getmembers, isclass
-from pydantic import BaseModel, ValidationError
+from inspect import getmembers
+from pydantic import BaseModel
 from packaging.requirements import Requirement
 
 from cat.mad_hatter.decorators import CatTool, CatHook, CatPluginDecorator, CatEndpoint
 from cat.mad_hatter.plugin_manifest import PluginManifest
 from cat.db.models import KeyValueDB
-from cat import utils
-from cat import log
+from cat import utils, log, paths
 
 
 # Empty class to represent basic plugin Settings model
@@ -255,7 +254,7 @@ class Plugin:
         plugin_overrides = []
 
         # TODOV2: this for should probably go in mad_hatter
-        base_path = utils.get_plugins_path()
+        base_path = paths.PLUGINS_PATH
         if base_path not in sys.path:
             sys.path.insert(0, base_path)
         

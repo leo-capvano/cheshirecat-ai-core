@@ -4,21 +4,16 @@ import debugpy
 from dotenv import load_dotenv
 from urllib.parse import urlparse
 
-from cat import urls
+from cat import urls, paths
 from cat.scaffold import scaffolder
 from cat.env import get_env
-from cat.utils import (
-    get_base_path,
-    get_project_path,
-    get_plugins_path,
-)
 
 # RUN!
 def main():
 
     # load env variables
     load_dotenv(dotenv_path=os.path.join(
-        get_project_path(), ".env"
+        paths.PROJECT_PATH, ".env"
     ))
     # TODOV2: make sure this works also when distributed as a docker image
 
@@ -31,8 +26,8 @@ def main():
         debug_config = {
             "reload": True,
             "reload_dirs": [
-                get_base_path(),
-                get_plugins_path()
+                paths.BASE_PATH,
+                paths.PLUGINS_PATH
             ],
             "reload_includes": [
                 "plugin.json"

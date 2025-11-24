@@ -1,7 +1,6 @@
 import os
 import pytest
-from cat import urls
-from cat import paths
+from cat import urls, paths, utils
 
 
 def test_get_base_url(client):
@@ -20,38 +19,33 @@ def test_get_base_url(client):
 
 
 def test_get_base_path(client):
-    assert utils.get_base_path() == os.getcwd() + "/src/cat"
+    assert paths.BASE_PATH == os.getcwd() + "/src/cat"
 
 
 def test_get_project_path(client):
     # during tests, project is in a temp folder
-    pytest_tmp_folder = utils.get_project_path()
+    pytest_tmp_folder = paths.PROJECT_PATH
     assert pytest_tmp_folder.startswith("/tmp/pytest-")
     assert pytest_tmp_folder.endswith("/mocks")
 
 
 def test_get_data_path(client):
     # "data" in production, "mocks/data" during tests
-    assert utils.get_data_path() == \
-        os.path.join(utils.get_project_path(), "data")
+    assert paths.DATA_PATH == os.path.join(paths.PROJECT_PATH, "data")
 
 
 def test_get_plugin_path(client):
     # "plugins" in production, "mocks/plugins" during tests
-    assert utils.get_plugins_path() == \
-        os.path.join(utils.get_project_path(), "plugins")
+    assert paths.PLUGINS_PATH == os.path.join(paths.PROJECT_PATH, "plugins")
 
 
-def test_get_static_path(client):
-    # "statis" in production, "mocks/static" during tests
-    assert utils.get_static_path() == \
-        os.path.join(utils.get_project_path(), "static")
-
+def test_get_uploads_path(client):
+    # "uploads" in production, "mocks/uploads" during tests
+    assert paths.UPLOADS_PATH == os.path.join(paths.DATA_PATH, "uploads")
 
 def test_levenshtein_distance():
     assert utils.levenshtein_distance("hello world", "hello world") == 0.0
     assert utils.levenshtein_distance("hello world", "") == 1.0
-
 
 def test_parse_json():
     json_string = """{

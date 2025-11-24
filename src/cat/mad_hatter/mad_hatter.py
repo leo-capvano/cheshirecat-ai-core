@@ -5,8 +5,7 @@ import shutil
 from copy import deepcopy
 from typing import List, Dict, Any, Callable
 
-from cat import log
-import cat.utils as utils
+from cat import log, paths, utils
 from cat.env import get_env
 from cat.db.models import KeyValueDB
 from cat.mad_hatter.plugin_extractor import PluginExtractor
@@ -64,7 +63,7 @@ class MadHatter:
 
             # extract zip/tar file into plugin folder
             extractor = PluginExtractor(plugin_zip_path)
-            plugin_path = extractor.extract(utils.get_plugins_path())
+            plugin_path = extractor.extract(paths.PLUGINS_PATH)
 
             # remove zip after extraction
             shutil.rmtree(plugin_zip_path, ignore_errors=True)
@@ -106,7 +105,7 @@ class MadHatter:
         Will only run if no plugins are present.
         """
 
-        all_plugin_folders = glob.glob( f"{utils.get_plugins_path()}/*/")
+        all_plugin_folders = glob.glob( f"{paths.PLUGINS_PATH}/*/")
         if all_plugin_folders != []:
             return
 
@@ -131,7 +130,7 @@ class MadHatter:
         self.plugins = {}
 
         # plugins are found in the `./plugins` folder
-        all_plugin_folders = glob.glob( f"{utils.get_plugins_path()}/*/")
+        all_plugin_folders = glob.glob( f"{paths.PLUGINS_PATH}/*/")
 
         # active plugins ids (stored in db)
         active_plugins = await self.get_active_plugins()
@@ -296,8 +295,7 @@ class MadHatter:
         """Internal use only. Plugins should use `cat.plugin`."""
 
         stack = inspect.stack()
-        plugins_path = utils.get_plugins_path()
-        norm_plugins_path = os.path.normpath(plugins_path)
+        norm_plugins_path = os.path.normpath(paths.PLUGINS_PATH)
 
         for frame_info in stack:
 
