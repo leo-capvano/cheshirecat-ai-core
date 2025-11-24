@@ -4,7 +4,7 @@ from typing import Dict
 
 from cat import utils
 from cat.env import get_env
-from cat.log import log
+from cat import log
 
 from .base import BaseAuth
 from ..permissions import (

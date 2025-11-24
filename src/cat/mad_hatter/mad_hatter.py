@@ -5,7 +5,7 @@ import shutil
 from copy import deepcopy
 from typing import List, Dict, Any, Callable
 
-from cat.log import log
+from cat import log
 import cat.utils as utils
 from cat.env import get_env
 from cat.db.models import KeyValueDB

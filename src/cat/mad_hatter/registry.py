@@ -3,7 +3,7 @@ import random
 import aiofiles
 
 from cat.mad_hatter.plugin_manifest import PluginManifest
-from cat.log import log
+from cat import log
 
 
 def get_registry_url():

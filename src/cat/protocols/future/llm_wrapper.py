@@ -15,7 +15,7 @@ from langchain_core.messages import (
 from cat.types import Message, TextContent
 from cat.mad_hatter.decorators import CatTool
 from cat.env import get_env
-from cat.log import log
+from cat import log
 from .llm_callbacks import NewTokenHandler
 
 

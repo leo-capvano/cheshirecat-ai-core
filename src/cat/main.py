@@ -13,7 +13,6 @@ from cat.utils import (
     get_plugins_path,
 )
 
-
 # RUN!
 def main():
 

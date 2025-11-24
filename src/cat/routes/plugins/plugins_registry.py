@@ -2,7 +2,7 @@ from typing import Dict, List
 from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException
 
-from cat.log import log
+from cat import log
 from cat.mad_hatter.plugin_manifest import PluginManifest
 from cat.auth import AuthPermission, AuthResource, check_permissions
 

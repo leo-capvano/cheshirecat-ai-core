@@ -23,7 +23,7 @@ from qdrant_client.http.models import (
 
 from langchain.docstore.document import Document
 
-from cat.log import log
+from cat import log
 from cat.env import get_env
 
 

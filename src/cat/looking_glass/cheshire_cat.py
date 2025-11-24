@@ -1,9 +1,8 @@
 import sys
 
+from cat import log
 from cat.factory import Factory
 from cat.protocols.model_context.client import MCPClients
-from cat.mad_hatter.decorators.endpoint import CatEndpoint
-from cat.log import log
 from cat.mad_hatter.mad_hatter import MadHatter
 
 

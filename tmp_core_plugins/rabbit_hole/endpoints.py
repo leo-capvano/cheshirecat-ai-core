@@ -17,7 +17,7 @@ from fastapi import (
 )
 
 from cat.auth import AuthPermission, AuthResource, check_permissions
-from cat.log import log
+from cat import log
 
 
 # TODOV2:

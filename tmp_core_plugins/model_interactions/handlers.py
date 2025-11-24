@@ -6,7 +6,7 @@ from langchain_core.callbacks.base import BaseCallbackHandler
 from.interactions_types import LLMModelInteraction
 from langchain_core.outputs.llm_result import LLMResult
 
-from cat.log import log
+from cat import log
 import tiktoken
 
 class ModelInteractionHandler(BaseCallbackHandler):

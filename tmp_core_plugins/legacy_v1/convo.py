@@ -10,7 +10,7 @@ from pydantic import Field, computed_field
 from langchain_core.messages import AIMessage, HumanMessage
 
 from cat.utils import BaseModelDict, deprecation_warning
-from cat.log import log
+from cat import log
 
 
 class Role(Enum):

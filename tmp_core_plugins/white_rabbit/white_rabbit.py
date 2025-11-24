@@ -8,7 +8,7 @@ from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
 from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR
 
-from cat.log import log
+from cat import log
 from cat.mad_hatter.decorators import hook
 
 

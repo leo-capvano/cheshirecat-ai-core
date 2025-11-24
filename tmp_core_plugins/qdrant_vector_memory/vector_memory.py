@@ -4,7 +4,7 @@ from cat.utils import extract_domain_from_url, is_https
 
 from qdrant_client import QdrantClient
 
-from cat.log import log
+from cat import log
 from cat.env import get_env
 from cat.utils import get_data_path
 from cat.mad_hatter.decorators import hook

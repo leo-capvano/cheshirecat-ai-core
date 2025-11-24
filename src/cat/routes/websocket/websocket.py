@@ -3,7 +3,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 
 from cat.auth import AuthPermission, AuthResource
 from cat.auth.connection import WebsocketConnection
-from cat.log import log
+from cat import log
 
 router = APIRouter(tags=["Websocket"])
 

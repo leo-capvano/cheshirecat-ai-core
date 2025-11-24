@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from rapidfuzz.distance import Levenshtein
 
 import cat
-from cat.log import log
+from cat import log
 from cat.env import get_env
 
 

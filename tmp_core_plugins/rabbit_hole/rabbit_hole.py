@@ -18,7 +18,7 @@ from langchain_community.document_loaders.parsers.txt import TextParser
 from langchain_community.document_loaders.parsers.html.bs4 import BS4HTMLParser
 from langchain.document_loaders.blob_loaders.schema import Blob
 
-from cat.log import log
+from cat import log
 
 
 class RabbitHole:

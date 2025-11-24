@@ -4,7 +4,7 @@ from typing import List, Dict
 from pydantic import BaseModel, ValidationError
 
 from cat.utils import parse_json
-from cat.log import log
+from cat import log
 
 
 # Conversational Form State

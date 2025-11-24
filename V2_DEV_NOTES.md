@@ -138,7 +138,7 @@
   ```
 - Imports for most frequent used primitives are now simplified:
   ```python
-  from cat import hook, tool, BaseAgent, ...
+  from cat import hook, tool, endpoint, log, BaseAgent, ...
   from cat.auth import check_permissions, User, BaseAuth
   ```
 - factory explanation XXX

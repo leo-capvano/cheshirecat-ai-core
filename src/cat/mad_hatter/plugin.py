@@ -14,7 +14,7 @@ from cat.mad_hatter.decorators import CatTool, CatHook, CatPluginDecorator, CatE
 from cat.mad_hatter.plugin_manifest import PluginManifest
 from cat.db.models import KeyValueDB
 from cat import utils
-from cat.log import log
+from cat import log
 
 
 # Empty class to represent basic plugin Settings model

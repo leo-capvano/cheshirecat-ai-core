@@ -11,7 +11,7 @@ from cat.auth.permissions import (
 )
 from cat.auth.user import User
 from cat.env import get_env
-from cat.log import log
+from cat import log
 
 class BaseAuth(ABC):
     """

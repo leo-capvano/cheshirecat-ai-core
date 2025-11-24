@@ -13,7 +13,7 @@ from cat.protocols.future.llm_wrapper import LLMWrapper
 from cat.types import Message, ChatRequest, ChatResponse
 from cat.mad_hatter.decorators import CatTool
 from cat import utils
-from cat.log import log
+from cat import log
 
 MSG_TYPES = Literal["notification", "chat", "error", "chat_token"]
 

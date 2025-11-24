@@ -1,6 +1,6 @@
 from typing import Callable
 from fastapi import APIRouter
-from cat.log import log
+from cat import log
 from cat.utils import run_sync_or_async
 
 
