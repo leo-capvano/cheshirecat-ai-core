@@ -132,6 +132,20 @@ class CatLogEngine:
         for line in lines:
             logger.log(level, line)
 
+    def deprecation_warning(self, message: str, skip=3):
+        """
+        Log a deprecation warning with caller's information.
+        "skip" is the number of stack levels to go back to the caller info.
+        """
+
+        from cat.utils import get_caller_info
+        caller = get_caller_info(skip, return_short=False)
+
+        # Format and log the warning message
+        log.warning(
+            f"{caller} Deprecation Warning: {message})"
+        )
+
     def print_short_traceback(self):
         if sys.exc_info()[0] is not None:
             exc_type, exc_value, exc_traceback = sys.exc_info()

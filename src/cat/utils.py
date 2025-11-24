@@ -110,34 +110,6 @@ def get_plugins_path():
     return os.path.join(get_project_path(), "plugins")
 
 
-def explicit_error_message(e):
-    # add more explicit info on "RateLimitError" by OpenAI, 'cause people can't get it
-    error_description = str(e)
-    if "billing details" in error_description:
-        # happens both when there are no credits or the key is not active
-        error_description = """Your OpenAI key is not active or you did not add a payment method.
-You need a credit card - and money in it - to use OpenAI api.
-HOW TO FIX: go to your OpenAI accont and add a credit card"""
-
-        log.error(
-            error_description
-        )  # just to make sure the message is read both front and backend
-
-    return error_description
-
-
-def deprecation_warning(message: str, skip=3):
-    """Log a deprecation warning with caller's information.
-        "skip" is the number of stack levels to go back to the caller info."""
-
-    caller = get_caller_info(skip, return_short=False)
-
-    # Format and log the warning message
-    log.warning(
-        f"{caller} Deprecation Warning: {message})"
-    )
-
-
 def levenshtein_distance(prediction: str, reference: str) -> int:
     res = Levenshtein.normalized_distance(prediction, reference)
     return res
@@ -234,7 +206,7 @@ async def run_sync_or_async(f, *args, **kwargs) -> Any:
     if inspect.iscoroutinefunction(f):
         return await f(*args, **kwargs)
     path = inspect.getfile(f)
-    deprecation_warning(f"Function {f.__name__} in {path} should be async.")
+    log.deprecation_warning(f"Function {f.__name__} in {path} should be async.")
     return f(*args, **kwargs)
 
 
