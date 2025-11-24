@@ -70,10 +70,6 @@ async def get_static_files(
 ) -> List[UploadedFileResponse]:
     """Retrieve list of static file URLs uploaded by a specific user."""
 
-    from cat import log
-    log.critical("get_static_files called")
-    return []
-
     hashed_user_id = str(uuid5(NAMESPACE_URL, str(cat.user_id)))
     static_dir = utils.get_static_path()
     full_path = os.path.join(static_dir, hashed_user_id) # uuid3/5
