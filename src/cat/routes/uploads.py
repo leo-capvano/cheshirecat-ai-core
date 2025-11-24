@@ -8,10 +8,9 @@ from pydantic import BaseModel
 
 from fastapi import UploadFile, File, Path
 from fastapi import APIRouter, HTTPException, UploadFile, File
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from cat import utils
+from cat import utils, paths, urls
 from cat.auth import check_permissions, AuthResource, AuthPermission
 
 # TODOV2: test these routes
@@ -34,7 +33,7 @@ async def upload_file(
     cat=check_permissions(AuthResource.FILE, AuthPermission.WRITE)
 ) -> UploadedFileResponse:
     hashed_user_id = str(uuid5(NAMESPACE_URL, str(cat.user_id)))
-    save_dir = os.path.join(utils.get_static_path(), hashed_user_id)
+    save_dir = os.path.join(paths.UPLOADS_PATH, hashed_user_id)
     os.makedirs(save_dir, exist_ok=True)
 
     safe_filename = os.path.basename(file.filename)
@@ -48,7 +47,7 @@ async def upload_file(
     if not mime_type:
         mime_type = "application/octet-stream"
 
-    url = f"{utils.get_static_url()}/{hashed_user_id}/{safe_filename}"
+    url = f"{urls.API_URL}/uploads/{hashed_user_id}/{safe_filename}"
 
     await cat.execute_hook(
         "after_file_upload",
@@ -65,33 +64,32 @@ async def upload_file(
     )
 
 @router.get("")
-async def get_static_files(
+async def get_uploaded_files(
     cat=check_permissions(AuthResource.FILE, AuthPermission.LIST)
 ) -> List[UploadedFileResponse]:
-    """Retrieve list of static file URLs uploaded by a specific user."""
+    """Retrieve list of uploaded file URLs uploaded by a specific user."""
 
     hashed_user_id = str(uuid5(NAMESPACE_URL, str(cat.user_id)))
-    static_dir = utils.get_static_path()
-    full_path = os.path.join(static_dir, hashed_user_id) # uuid3/5
+    upload_dir = paths.UPLOADS_PATH
+    full_path = os.path.join(upload_dir, hashed_user_id) # uuid5
 
     file_paths = glob.glob(f"{full_path}/**.*", recursive=True)
-    urls = []
+    uploads = []
     for path in file_paths:
-        urls.append(
+        uploads.append(
             UploadedFileResponse(
-                url=path.replace(utils.get_static_path(), utils.get_static_url()),
+                url=path.replace(paths.UPLOADS_PATH, urls.API_URL + "/uploads"),
                 mime_type=mimetypes.guess_type(path)[0]
             )
         )
-    return urls
+    return uploads
 
 @router.get("/{path:path}")
-async def get_static_file(
+async def get_uploaded_file(
     path: str = Path(...),
     cat=check_permissions(AuthResource.FILE, AuthPermission.READ)
 )-> FileResponse:
-    static_dir = utils.get_static_path()
-    full_path = os.path.join(static_dir, path)
+    full_path = os.path.join(paths.UPLOADS_PATH, path)
 
     if os.path.exists(full_path) and os.path.isfile(full_path):
         return FileResponse(full_path)
