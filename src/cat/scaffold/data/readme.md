@@ -1,4 +1,16 @@
-In this folder will be stored all the data (settings, users, etc.).
-Plugins must store their data here to.
+# Data Directory
 
-TODO: provide links and brief instructions
+This folder stores all application data including database and files.
+Plugin folders should only contain code and static files.
+
+## Directory Structure
+
+```
+data/
+├── sqlite/                # Database storage
+├── uploads/               # Uploaded files
+│     └── {user-hash}/     # Per-user private directories
+```
+
+
+

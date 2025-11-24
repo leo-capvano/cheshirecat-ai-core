@@ -14,9 +14,7 @@ def test_get_base_url(client):
     os.environ["CCAT_CORE_USE_SECURE_PROTOCOLS"] = ""
     assert utils.get_base_url() == "http://localhost:1865"
 
-
-def test_get_static_url(client):
-    assert utils.get_static_url() == "http://localhost:1865/static"
+    # TODOV2: check get_api_url()
 
 
 def test_get_base_path(client):

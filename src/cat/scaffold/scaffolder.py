@@ -23,7 +23,7 @@ def create_folders():
 
     scaffold_path = os.path.join(get_base_path(), "scaffold")
 
-    for folder in ["data", "plugins", "static"]:
+    for folder in ["data", "plugins"]:
         origin = os.path.join(scaffold_path, folder)
         destination = os.path.join(get_project_path(), folder)
         if not os.path.exists(destination):

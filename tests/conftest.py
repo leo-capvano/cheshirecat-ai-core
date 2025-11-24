@@ -58,13 +58,8 @@ def patches(monkeypatch, tmp_path):
 def app(patches) -> Generator[FastAPI, Any, None]:
     
     clean_up_envs()
-
     from cat.startup import cheshire_cat_api # will instantiate the cat
-    #from fastapi.staticfiles import StaticFiles
-
-    #cheshire_cat_api.mount("/static", StaticFiles(directory=cat.utils.get_static_path()), name="static")
     yield cheshire_cat_api
-
     clean_up_envs()
 
 

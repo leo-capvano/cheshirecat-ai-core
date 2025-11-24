@@ -11,7 +11,7 @@ from cat.routes import (
 )
 from cat.routes.plugins import plugins
 from cat.routes.websocket import websocket
-from cat.routes.static import static
+from cat.routes import uploads
 from cat.routes.auth import oauth
 from cat.routes.auth.default_idp import idp
 from cat.looking_glass.cheshire_cat import CheshireCat
@@ -55,7 +55,7 @@ if cors_enabled == "true":
 # API routers
 for r in [
     home, status, oauth,
-    plugins, static, websocket
+    plugins, uploads, websocket
 ]:
     cheshire_cat_api.include_router(r.router, prefix="/api/v2")
 

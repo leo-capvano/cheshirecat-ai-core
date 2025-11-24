@@ -10,7 +10,7 @@ class AuthResource(str, Enum):
     #PROFILE = "PROFILE"
     CHAT = "CHAT"
     PLUGIN = "PLUGIN"
-    STATIC = "STATIC"
+    FILE = "FILE"
 
 
 class AuthPermission(str, Enum):

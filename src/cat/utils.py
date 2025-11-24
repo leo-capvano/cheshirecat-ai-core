@@ -79,13 +79,10 @@ def get_base_url():
     """Base url for the installation."""
     return get_env("CCAT_URL")
 
+
 def get_api_url():
     """Base url for the API."""
     return urljoin(get_base_url(), "api/v2/")
-
-def get_static_url():
-    """Static files url."""
-    return urljoin(get_base_url(), "static/")
 
 
 def get_base_path():
@@ -103,14 +100,14 @@ def get_data_path():
     return os.path.join(get_project_path(), "data")
 
 
+def get_uploads_path():
+    """Allows exposing the static files' path."""
+    return os.path.join(get_data_path(), "files")
+
+
 def get_plugins_path():
     """Allows exposing the plugins' path."""
     return os.path.join(get_project_path(), "plugins")
-
-
-def get_static_path():
-    """Allows exposing the static files' path."""
-    return os.path.join(get_project_path(), "static")
 
 
 def explicit_error_message(e):

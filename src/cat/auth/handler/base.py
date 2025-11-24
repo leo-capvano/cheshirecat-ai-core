@@ -39,7 +39,7 @@ class BaseAuth(ABC):
         # TODOV2: should include plugins defined permissions
         return {
             AuthResource.CHAT: all_permissions,
-            AuthResource.STATIC: all_permissions,
+            AuthResource.FILE: all_permissions,
         }
         
     def is_jwt(self, token: str) -> bool:

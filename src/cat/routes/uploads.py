@@ -16,7 +16,7 @@ from cat.auth import check_permissions, AuthResource, AuthPermission
 
 # TODOV2: test these routes
 
-router = APIRouter(prefix="/static", tags=["Static Files"])
+router = APIRouter(prefix="/uploads", tags=["Uploads"])
 
 
 class UploadedFile(BaseModel):
@@ -31,7 +31,7 @@ class UploadedFileResponse(BaseModel):
 @router.post("")
 async def upload_file(
     file: UploadFile = File(...),
-    cat=check_permissions(AuthResource.STATIC, AuthPermission.WRITE)
+    cat=check_permissions(AuthResource.FILE, AuthPermission.WRITE)
 ) -> UploadedFileResponse:
     hashed_user_id = str(uuid5(NAMESPACE_URL, str(cat.user_id)))
     save_dir = os.path.join(utils.get_static_path(), hashed_user_id)
@@ -66,7 +66,7 @@ async def upload_file(
 
 @router.get("")
 async def get_static_files(
-    cat=check_permissions(AuthResource.STATIC, AuthPermission.LIST)
+    cat=check_permissions(AuthResource.FILE, AuthPermission.LIST)
 ) -> List[UploadedFileResponse]:
     """Retrieve list of static file URLs uploaded by a specific user."""
 
@@ -88,7 +88,7 @@ async def get_static_files(
 @router.get("/{path:path}")
 async def get_static_file(
     path: str = Path(...),
-    cat=check_permissions(AuthResource.STATIC, AuthPermission.READ)
+    cat=check_permissions(AuthResource.FILE, AuthPermission.READ)
 )-> FileResponse:
     static_dir = utils.get_static_path()
     full_path = os.path.join(static_dir, path)
