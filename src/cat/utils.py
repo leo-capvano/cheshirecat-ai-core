@@ -81,11 +81,11 @@ def get_base_url():
 
 def get_api_url():
     """Base url for the API."""
-    return urljoin(get_base_url(), "api/v2")
+    return urljoin(get_base_url(), "api/v2/")
 
 def get_static_url():
     """Static files url."""
-    return urljoin(get_base_url(), "static")
+    return urljoin(get_base_url(), "static/")
 
 
 def get_base_path():

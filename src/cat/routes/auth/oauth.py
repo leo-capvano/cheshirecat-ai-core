@@ -15,8 +15,7 @@ from cat.env import get_env
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
-# TODOAUTH TODOV2 /token/verify
-# TODOAUTH TODOV2 /token/refresh
+# TODOAUTH TODOV2 /token/verify endpoint
 
 @router.get("/logout")
 def logout(r: Request) -> RedirectResponse:
@@ -91,7 +90,11 @@ async def oauth_callback(r: Request, name: str):
    # read origin cookie (fallback to base_url), then remove it and set JWT cookie
     origin_url = r.cookies.get("origin_url") or utils.get_base_url()
     response = RedirectResponse(origin_url)
-    response.delete_cookie("origin_url", samesite="lax", secure="https" in utils.get_base_url())
+    response.delete_cookie(
+        "origin_url",
+        samesite="lax",
+        secure="https" in utils.get_base_url()
+    )
     response.set_cookie(
         "access_token",
         token,

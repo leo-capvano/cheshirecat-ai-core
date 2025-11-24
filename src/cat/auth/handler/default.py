@@ -70,7 +70,8 @@ class DefaultAuth(BaseAuth):
         query_params: Dict 
     ) -> User | None:
         
-        # mock idp, not sure how to simulate the code
+        # mock idp, not calling /token endpoint
+        #  not sure how to simulate the code
         if query_params["code"] == "1":
             return 
         
