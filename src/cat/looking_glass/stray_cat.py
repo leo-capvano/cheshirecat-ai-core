@@ -331,8 +331,6 @@ class StrayCat(BaseModel):
         self.chat_request = chat_request
         self.chat_response = ChatResponse()
 
-        log.info(self.chat_request.model_dump())
-
         # Run a totally custom reply (skips all the side effects of the framework)
         fast_reply = await self.execute_hook(
             "fast_reply", {}
@@ -366,7 +364,6 @@ class StrayCat(BaseModel):
             self.mcp = None
 
         # Return final reply
-        log.info(self.chat_response.model_dump())
         return self.chat_response
 
 
