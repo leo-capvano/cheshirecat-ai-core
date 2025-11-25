@@ -1,8 +1,10 @@
 from typing import List
+from copy import deepcopy
 from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException
 
 from cat import log
+from cat.mad_hatter.registry import registry_search_plugins
 from cat.mad_hatter.plugin_manifest import PluginManifest
 from cat.auth import AuthPermission, AuthResource, check_permissions
 

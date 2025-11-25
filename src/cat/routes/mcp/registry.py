@@ -54,7 +54,7 @@ async def public_registry(
             server = RegistryConnector(**rs)
             if server.supports_http_streaming() and server.is_latest():
                 servers.append(server)
-        except:
+        except Exception:
             pass
     
     return Page(

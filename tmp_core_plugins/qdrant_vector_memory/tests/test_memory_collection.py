@@ -1,4 +1,5 @@
-# tests.utils import send_websocket_message, get_collections_names_and_point_count
+
+from .test_memory_utils import send_websocket_message, get_collections_names_and_point_count
 
 def test_memory_collections_created(client):
     # get collections

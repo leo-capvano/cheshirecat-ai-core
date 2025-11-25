@@ -15,8 +15,8 @@ def test_get_all_plugin_settings(client, just_installed_plugin, admin_headers):
     response = client.get("/plugins/settings", headers=admin_headers)
     json = response.json()
 
-    installed_plugins = get_core_plugins_ids().union({"mock_plugin"})
-
+    installed_plugins = ["core_plugin", "mock_plugin"]
+    
     assert response.status_code == 200
     assert isinstance(json["settings"], list)
     assert len(json["settings"]) == len(installed_plugins)

@@ -82,7 +82,7 @@ class CatTool:
     def __repr__(self) -> str:
         return f"CatTool(name={self.name}, input_schema={self.input_schema}, internal={self.is_internal})"
 
-    async def execute(self, cat: 'StrayCat', tool_call) -> Message:
+    async def execute(self, cat, tool_call) -> Message:
         """
         Execute a CatTool with the provided tool_call data structure (which is returned by the LLM).
         Will emit AGUI events for tool execution and return a Message with role="tool".

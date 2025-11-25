@@ -21,7 +21,8 @@ def test_plugin_install(mad_hatter: MadHatter, plugin_is_flat):
     new_plugin_zip_path = create_mock_plugin_zip(flat=plugin_is_flat)
     mad_hatter.install_plugin(new_plugin_zip_path)
 
-    core_plugins = get_core_plugins_info()["ids"]
+    core_plugins = []
+    assert core_plugins == 1 # TODOV2 fix these tests
 
     # archive extracted
     assert os.path.exists(os.path.join(paths.PLUGINS_PATH, "mock_plugin"))

@@ -1,8 +1,9 @@
 from typing import List, Tuple
 from datetime import time, timedelta
 
-from langchain.docstore.document import Document
+from langchain_core.documents import Document
 
+from cat import log
 from cat.utils import BaseModelDict, verbal_timedelta
 
 #########################################################

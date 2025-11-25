@@ -1,12 +1,17 @@
 import os
 import pytest
 import time
+import jwt
+
 from cat.env import get_env
 from cat.auth import AuthPermission, AuthResource
 
 from tests.utils import send_websocket_message, send_http_message
 
 # TODOAUTH: test token refresh / invalidation / logoff
+def is_jwt(token):
+    assert False
+    # load this function from auth handler
 
 JWT_ALGO = "HS256"
 

@@ -1,12 +1,13 @@
 import sys
 import socket
-from cat.utils import extract_domain_from_url, is_https
+import time
 
 from qdrant_client import QdrantClient
 
 from cat import log
 from cat.env import get_env
 from cat.utils import get_data_path
+from cat.utils import extract_domain_from_url, is_https
 from cat.mad_hatter.decorators import hook
 
 from .vector_memory_collection import VectorMemoryCollection
@@ -18,7 +19,7 @@ def after_cat_bootstrap(cat):
     return
     ########
 
-
+    """
     # Load Memory and add it to CheshireCat core
 
     # Get embedder size (langchain classes do not store it)
@@ -42,6 +43,7 @@ def after_cat_bootstrap(cat):
         embedder_name=embedder_name,
         embedder_size=embedder_size
     )
+    """
 
 
 @hook
