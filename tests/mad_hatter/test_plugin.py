@@ -6,7 +6,6 @@ import shutil
 from inspect import isfunction
 
 from tests.utils import get_mock_plugin_info
-from tests.mocks.mock_plugin.mock_form import PizzaOrder, PizzaForm
 
 from cat.mad_hatter.mad_hatter import Plugin
 from cat.mad_hatter.decorators import CatHook, CatTool, CatEndpoint

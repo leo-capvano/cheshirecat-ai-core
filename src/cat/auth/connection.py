@@ -4,7 +4,6 @@
 
 from abc import ABC, abstractmethod
 from typing import AsyncGenerator
-from urllib.parse import urlencode
 
 from fastapi import (
     Request,
@@ -22,7 +21,6 @@ from cat.auth import (
     User,
 )
 from cat.looking_glass.stray_cat import StrayCat
-from cat import log
 
 
 class BaseConnection(ABC):

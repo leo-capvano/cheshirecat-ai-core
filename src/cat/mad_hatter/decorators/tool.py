@@ -1,9 +1,7 @@
 import time
 from uuid import uuid4
-from inspect import signature
 from dataclasses import asdict
 from typing import Callable, List, Dict
-from functools import wraps
 
 from fastmcp.tools.tool import FunctionTool, ParsedFunction
 from fastmcp.client.client import CallToolResult

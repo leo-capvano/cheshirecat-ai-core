@@ -1,4 +1,4 @@
-from typing import Any, Literal
+from typing import Literal
 from fastmcp.client import auth as mcp_auth
 from pydantic import BaseModel, HttpUrl, field_serializer
 

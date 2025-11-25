@@ -1,7 +1,6 @@
 import sys
 
 from cat import log
-from cat.env import get_env
 from cat.factory import Factory
 from cat.protocols.model_context.client import MCPClients
 from cat.mad_hatter.mad_hatter import MadHatter

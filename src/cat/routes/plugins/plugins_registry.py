@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import List
 from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException
 
@@ -62,7 +62,7 @@ async def registry_install_plugin(
 
     try:
         plugin = await cat.mad_hatter.install_plugin(payload.url)
-    except Exception as e:
+    except Exception:
         log.error("Could not install plugin from registry")
         raise HTTPException(status_code=500, detail="Could not install plugin from registry")
 

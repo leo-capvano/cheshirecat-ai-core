@@ -1,9 +1,6 @@
-from typing import Dict
 from cachetools import TTLCache
-from slugify import slugify
 from fastmcp import FastMCP, Client
 
-from cat import log
 
 # necessary in case of empty client config
 empty_server = FastMCP("EmptyServer")

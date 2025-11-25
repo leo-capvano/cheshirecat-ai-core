@@ -1,6 +1,5 @@
 import pytest
 
-from cat.mad_hatter.mad_hatter import MadHatter
 from cat.agents.main_agent import MainAgent
 from cat.agents import AgentOutput
 

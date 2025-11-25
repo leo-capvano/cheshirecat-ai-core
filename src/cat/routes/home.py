@@ -1,6 +1,6 @@
 import json
 from fastapi import APIRouter, Body
-from fastapi.responses import StreamingResponse, RedirectResponse
+from fastapi.responses import StreamingResponse
 
 from cat.types import ChatRequest, ChatResponse
 from cat.auth import AuthResource, AuthPermission, check_permissions

@@ -2,7 +2,6 @@ import time
 import pytest
 import pytest_asyncio
 import os
-import shutil
 from typing import Any, Generator
 
 from asgi_lifespan import LifespanManager

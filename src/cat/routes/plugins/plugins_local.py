@@ -1,11 +1,9 @@
 import aiofiles
 import mimetypes
-from copy import deepcopy
-from typing import Dict, List
+from typing import List
 from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException, UploadFile
 from cat import log
-from cat.mad_hatter.registry import registry_search_plugins, registry_download_plugin
 from cat.auth import AuthPermission, AuthResource, check_permissions
 from cat.mad_hatter.plugin_manifest import PluginManifest
 

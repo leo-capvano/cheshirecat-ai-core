@@ -13,7 +13,7 @@ from packaging.requirements import Requirement
 from cat.mad_hatter.decorators import CatTool, CatHook, CatPluginDecorator, CatEndpoint
 from cat.mad_hatter.plugin_manifest import PluginManifest
 from cat.db.models import KeyValueDB
-from cat import utils, log, paths
+from cat import log, paths
 
 
 # Empty class to represent basic plugin Settings model

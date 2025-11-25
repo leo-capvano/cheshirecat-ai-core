@@ -4,8 +4,6 @@ from pydantic import BaseModel
 from cat.mad_hatter.decorators import hook, plugin
 from cat.env import get_env
 
-from .embedders import configs as embedders_configs
-from .llms import configs as llms_configs
 
 # TODOV2: make discovery automatic by checking class type
 

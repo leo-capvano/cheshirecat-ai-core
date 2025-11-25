@@ -1,12 +1,11 @@
 from typing import Dict, List
 from pydantic import BaseModel
-from fastapi import Query, Body, Request, APIRouter, HTTPException
+from fastapi import Query, Body, Request, HTTPException
 import time
 
 from cat.mad_hatter.decorators import endpoint
-from cat.auth import AuthPermission, AuthResource, check_permissions
+from cat.auth import AuthPermission, check_permissions
 from cat.looking_glass.stray_cat import StrayCat
-from cat import log
 
 from ..vector_memory import VectorMemory
 

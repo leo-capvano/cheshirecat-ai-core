@@ -7,10 +7,10 @@ from typing import List
 from pydantic import BaseModel
 
 from fastapi import UploadFile, File, Path
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
-from cat import utils, paths, urls
+from cat import paths, urls
 from cat.auth import check_permissions, AuthResource, AuthPermission
 
 # TODOV2: test these routes

@@ -1,5 +1,4 @@
 import os
-from cat.env import get_env
 
 # NOTE: do not move this file out of root package folder
 BASE_PATH    = os.path.dirname(os.path.abspath(__file__))

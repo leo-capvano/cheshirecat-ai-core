@@ -1,9 +1,7 @@
-from uuid import UUID, uuid4
+from uuid import uuid4
 import time
 from langchain_core.callbacks.base import BaseCallbackHandler
 from cat.protocols.agui import events
-from cat.env import get_env
-from cat import log
 
 
 class NewTokenHandler(BaseCallbackHandler):

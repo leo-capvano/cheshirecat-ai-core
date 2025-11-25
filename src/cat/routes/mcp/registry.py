@@ -1,5 +1,5 @@
 from typing import List, Optional, Dict
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel
 import httpx
 
 from fastapi import APIRouter, Query
