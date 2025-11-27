@@ -15,7 +15,7 @@
   ```bash
   uv init --bare mycat
   cd mycat
-  uv python pin 3.13 # temporary fix for libs not yet supported in >=3.13
+  uv python pin 3.13
   uv add cheshire-cat-ai
   uv run cat
   ```
