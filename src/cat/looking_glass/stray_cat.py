@@ -56,7 +56,6 @@ class StrayCat(BaseModel):
         # pointer to CheshireCat instance
         self._ccat = ccat
 
-
     def __repr__(self):
         return f"StrayCat(user_id={self.user_id}, user_name={self.user.name})"
 
@@ -65,128 +64,6 @@ class StrayCat(BaseModel):
     async def __send_ws_json(self, data: Any):
         if self.message_callback:
             await self.message_callback(data)
-
-
-    # TODOV2: take away `ws` and simplify these methods so it is only one
-    async def send_ws_message(self, content: str | dict, msg_type: MSG_TYPES = "notification"):
-        """Send a message via websocket.
-
-        This method is useful for sending a message via websocket directly without passing through the LLM.  
-        In case there is no connection the message is skipped and a warning is logged.
-
-        Parameters
-        ----------
-        content : str
-            The content of the message.
-        msg_type : str
-            The type of the message. Should be either `notification` (default), `chat`, `chat_token` or `error`
-
-        Examples
-        --------
-        Send a notification via websocket
-        >>> await cat.send_ws_message("Hello, I'm a notification!")
-
-        Send a chat message via websocket
-        >>> await cat.send_ws_message("Meooow!", msg_type="chat")
-        
-        Send an error message via websocket
-        >>> await cat.send_ws_message("Something went wrong", msg_type="error")
-
-        Send custom data
-        >>> await cat.send_ws_message({"What day it is?": "It's my unbirthday"})
-        """
-
-        options = get_args(MSG_TYPES)
-
-        if msg_type not in options:
-            raise ValueError(
-                f"The message type `{msg_type}` is not valid. Valid types: {', '.join(options)}"
-            )
-
-        if msg_type == "error":
-            await self.__send_ws_json(
-                {"type": msg_type, "name": "GenericError", "description": str(content)}
-            )
-        else:
-            await self.__send_ws_json({"type": msg_type, "content": content})
-
-
-    async def send_chat_message(self, message: str | ChatResponse):
-        """Sends a chat message to the user using the active WebSocket connection.  
-        In case there is no connection the message is skipped and a warning is logged
-
-        Parameters
-        ----------
-        message: str, CatMessage
-            Message to send
-        save: bool | optional
-            Save the message in the conversation history. Defaults to False.
-
-        Examples
-        --------
-        Send a chat message during conversation
-        >>> cat.send_chat_message("Hello, dear!")
-
-        Using a `CatMessage` object
-        >>> message = CatMessage(text="Hello, dear!", user_id=cat.user_id)
-        ... cat.send_chat_message(message)
-        """
-
-        if isinstance(message, str):
-            message = ChatResponse(text=message, user_id=self.user_id)
-
-        await self.__send_ws_json(message.model_dump())
-
-
-    async def send_notification(self, content: str):
-        """Sends a notification message to the user using the active WebSocket connection.  
-        In case there is no connection the message is skipped and a warning is logged
-
-        Parameters
-        ----------
-        content: str
-            Message to send
-
-        Examples
-        --------
-        Send a notification to the user
-        >>> cat.send_notification("It's late!")
-        """
-        await self.send_ws_message(content=content, msg_type="notification")
-
-
-    async def send_error(self, error: Union[str, Exception]):
-        """Sends an error message to the user using the active WebSocket connection.
-
-        In case there is no connection the message is skipped and a warning is logged
-
-        Parameters
-        ----------
-        error: str, Exception
-            Message to send
-
-        Examples
-        --------
-        Send an error message to the user
-        >>> cat.send_error("Something went wrong!")
-        or
-        >>> cat.send_error(CustomException("Something went wrong!"))
-        """
-
-        if isinstance(error, str):
-            error_message = {
-                "type": "error",
-                "name": "GenericError",
-                "description": str(error),
-            }
-        else:
-            error_message = {
-                "type": "error",
-                "name": error.__class__.__name__,
-                "description": str(error),
-            }
-
-        await self.__send_ws_json(error_message)
 
     async def agui_event(self, event: events.BaseEvent):
         await self.__send_ws_json(dict(event))
