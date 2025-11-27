@@ -1,9 +1,6 @@
 from typing import Any, Dict
 from pydantic import BaseModel
 
-from cat.auth.handler.default import DefaultAuth
-from cat.protocols.future.llm import LLMDefault
-from cat.agents.default import DefaultAgent
 
 
 class FactoryCategory(BaseModel):
@@ -16,6 +13,11 @@ class FactoryCategory(BaseModel):
 class Factory:
 
     def __init__(self):
+
+        # Import here to avoid circular dependencies
+        from cat.auth.handler.default import DefaultAuth
+        from cat.protocols.future.llm import LLMDefault
+        from cat.agents.default import DefaultAgent
 
         self.categories = {
             "auth_handler" : FactoryCategory(
@@ -45,11 +47,9 @@ class Factory:
 
         for category_name, category in self.categories.items():
             category.objects = await cat.mad_hatter.execute_hook(
-                f"factory_allowed_{category_name}s", {}, cat=cat
+                f"factory_allowed_{category_name}s", {}, cat
             )
-            # TODOV2: should add type checks
-            # TODOV2: if agents, objects[slug].cat = cat
-
+            # TODOV2: should add type checks (have method in FactoryCategory)
 
             if category.keep_default or (category.at_least_one and len(category.objects) == 0):
                 category.objects["default"] = category.default

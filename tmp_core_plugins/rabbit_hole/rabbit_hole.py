@@ -39,7 +39,7 @@ class RabbitHole:
 
         # no access to StrayCat yet
         self.__file_handlers = self.__cat.mad_hatter.execute_hook(
-            "rabbithole_instantiates_parsers", self.__file_handlers, cat=self.__cat
+            "rabbithole_instantiates_parsers", self.__file_handlers, self.__cat
         )
 
     def __reload_text_splitter(self):
@@ -55,7 +55,7 @@ class RabbitHole:
 
         # no access to StrayCat yet
         self.__text_splitter = self.__cat.mad_hatter.execute_hook(
-            "rabbithole_instantiates_splitter", self.__text_splitter, cat=self.__cat
+            "rabbithole_instantiates_splitter", self.__text_splitter, self.__cat
         )
 
     def ingest_memory(
@@ -343,7 +343,7 @@ class RabbitHole:
 
         # hook the docs before they are stored in the vector memory
         docs = cat.mad_hatter.execute_hook(
-            "before_rabbithole_stores_documents", docs, cat=cat
+            "before_rabbithole_stores_documents", docs, cat
         )
 
         # classic embed
@@ -366,7 +366,7 @@ class RabbitHole:
                 doc.metadata[k] = v
 
             doc = cat.mad_hatter.execute_hook(
-                "before_rabbithole_insert_memory", doc, cat=cat
+                "before_rabbithole_insert_memory", doc, cat
             )
             inserting_info = f"{d + 1}/{len(docs)}):    {doc.page_content}"
             if doc.page_content != "":
@@ -387,7 +387,7 @@ class RabbitHole:
 
         # hook the points after they are stored in the vector memory
         cat.mad_hatter.execute_hook(
-            "after_rabbithole_stored_documents", source, stored_points, cat=cat
+            "after_rabbithole_stored_documents", source, stored_points, cat
         )
 
         # notify client
@@ -433,7 +433,7 @@ class RabbitHole:
         """
         # do something on the text before it is split
         text = cat.mad_hatter.execute_hook(
-            "before_rabbithole_splits_text", text, cat=cat
+            "before_rabbithole_splits_text", text, cat
         )
 
         # hooks decide the test splitter (see @property .text_splitter)
@@ -454,7 +454,7 @@ class RabbitHole:
 
         # do something on the text after it is split
         docs = cat.mad_hatter.execute_hook(
-            "after_rabbithole_splitted_text", docs, cat=cat
+            "after_rabbithole_splitted_text", docs, cat
         )
 
         return docs

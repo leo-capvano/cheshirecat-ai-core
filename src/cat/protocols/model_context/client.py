@@ -41,7 +41,7 @@ class MCPClients():
             "mcpServers": {}
         }
 
-        for slug, server_config in cat._ccat.mcps:
+        for slug, server_config in cat.ccat.mcps:
             config["mcpServers"][slug] = {
                 "url": str(server_config.url)
             }

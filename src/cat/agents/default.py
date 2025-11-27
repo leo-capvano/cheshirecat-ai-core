@@ -3,21 +3,21 @@ from .base import BaseAgent
 
 class DefaultAgent(BaseAgent):
 
-    async def execute(self, cat):
+    async def execute(self):
 
         while True:
-            llm_mex: Message = await cat.llm(
+            llm_mex: Message = await self.llm(
                 # delegate prompt construction to plugins
-                await cat.get_system_prompt(),
+                await self.get_system_prompt(),
                 # pass conversation messages
-                messages=cat.chat_request.messages + cat.chat_response.messages,
+                messages=self.chat_request.messages + self.chat_response.messages,
                 # pass tools (both internal and MCP)
-                tools=await cat.list_tools(),
+                tools=await self.list_tools(),
                 # whether to stream or not
-                stream=cat.chat_request.stream,
+                stream=self.chat_request.stream,
             )
 
-            cat.chat_response.messages.append(llm_mex)
+            self.chat_response.messages.append(llm_mex)
             
             if len(llm_mex.tool_calls) == 0:
                 # No tool calls, exit
@@ -28,8 +28,8 @@ class DefaultAgent(BaseAgent):
                 # TODOV2: tools may return an artifact, resource or elicitation
                 for tool_call in llm_mex.tool_calls:
                     # actually executing the tool
-                    tool_message = await cat.call_tool(tool_call)
+                    tool_message = await self.call_tool(tool_call)
                     # append tool message
-                    cat.chat_response.messages.append(tool_message)
+                    self.chat_response.messages.append(tool_message)
 
                     # if t.return_direct: TODOV2 recover return_direct

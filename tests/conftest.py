@@ -133,6 +133,7 @@ def stray(async_client):
     )
     stray_cat = StrayCat(user)
     # TODOV2: update to new data structure
+    # TODOV2: remember mixin_init
     stray_cat.working_memory.user_message_json = {"user_id": user.id, "text": "meow"}
     yield stray_cat
 

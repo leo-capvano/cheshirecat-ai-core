@@ -14,7 +14,7 @@ def stray_cat(async_client):
         id="Alice",
         name="Alice" # TODOV2: user_id should be unique, user name anything
     )
-    yield StrayCat(user)
+    yield StrayCat() # update with mixin usage
 
 
 def test_stray_initialization(stray_cat):

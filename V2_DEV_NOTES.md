@@ -146,6 +146,7 @@
   - there are less env variables, as many things are delegated to plugins (which can decide whether to use them or not).
   - `CCAT_CORE_HOST`, `CCAT_CORE_PORT` and `CCAT_CORE_USE_SECURE_PROTOCOLS` have been collapsed into one single env variable `CCAT_URL` with default value `http://localhost:1865`
   - can get main paths and urls from `cat.paths` and `cat.urls`
+  - `StrayCat` and `BaseAgent` share `CatMixin` to use both llm, invoking agents, chat_request/response and access to `CheshireCat` via `self.ccat`
 
 ## Hooks
 
@@ -161,6 +162,7 @@ Both `cat.chat_request` and `cat.chat_response` are cleared at each message. Use
       return chat_response
   ```
 - `before_agent_starts` hook now has no argument aside `cat`, as all context/agent_input is directly stored and inserted into prompt based on the content of working memory (you can hook this via `agent_prompt_suffix`)
+- all hooks take two arguments, a value meant to be edited and the object calling the hook (being `CheshireCat`, `StrayCat` or `BaseAgent`)
 
 
 ## Tools

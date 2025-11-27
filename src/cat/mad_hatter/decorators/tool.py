@@ -107,7 +107,7 @@ class CatTool:
         if self.is_internal:
             # internal tool
             tool_result: str = await run_sync_or_async(
-                self.func, **tool_call["args"], cat=cat
+                self.func, **tool_call["args"], cat=cat # TODOV2: cat optional
             )
         else:
             # MCP tool

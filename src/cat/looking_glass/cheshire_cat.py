@@ -51,13 +51,13 @@ class CheshireCat:
             await self.mad_hatter.find_plugins()
             
             # allows plugins to do something before cat components are loaded
-            await self.mad_hatter.execute_hook("before_cat_bootstrap", cat=self)
+            await self.mad_hatter.execute_hook("before_cat_bootstrap", None, self)
             
             # init MCP clients cache
             self.mcp_clients = MCPClients()
 
             # allows plugins to do something after the cat bootstrap is complete
-            await self.mad_hatter.execute_hook("after_cat_bootstrap", cat=self)
+            await self.mad_hatter.execute_hook("after_cat_bootstrap", None, self)
 
         except Exception:
             log.error("Error during CheshireCat bootstrap. Exiting.")
@@ -79,7 +79,7 @@ class CheshireCat:
         self.refresh_endpoints()
 
         # allow plugins to hook the refresh (e.g. to embed tools)
-        await self.mad_hatter.execute_hook("after_mad_hatter_refresh", cat=self)
+        await self.mad_hatter.execute_hook("after_mad_hatter_refresh", None, self)
 
     def refresh_endpoints(self):
         """Sync plugin endpoints in the fastapi app."""

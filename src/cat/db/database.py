@@ -9,7 +9,7 @@ from cat.env import get_env
 DB_URL = get_env("CCAT_SQL")
 
 if DB_URL.startswith("sqlite"):
-    # sqlite:///data/sqlite/core.db
+    # sqlite:///data/core/core.db
     dialect, path = DB_URL.split(":///")
     os.makedirs(os.path.dirname(path), exist_ok=True)
     db_path = os.path.abspath(path)

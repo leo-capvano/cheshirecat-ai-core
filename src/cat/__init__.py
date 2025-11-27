@@ -1,7 +1,8 @@
 from .log import log
 from .mad_hatter.decorators import hook, tool, plugin, endpoint
-from .agents.base import BaseAgent
+from .looking_glass.cheshire_cat import CheshireCat
 from .looking_glass.stray_cat import StrayCat
+from .agents.base import BaseAgent
 
 __all__ = [
     "log",
@@ -10,5 +11,6 @@ __all__ = [
     "plugin",
     "endpoint",
     "BaseAgent",
-    "StrayCat"
+    "StrayCat",
+    "CheshireCat",
 ]

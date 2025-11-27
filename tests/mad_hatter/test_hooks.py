@@ -31,5 +31,5 @@ def test_hook_discovery(mad_hatter):
 def test_hook_priority_execution(mad_hatter):
     fake_message = ChatResponse(text="Priorities:", user_id="Alice")
 
-    out = mad_hatter.execute_hook("before_cat_sends_message", fake_message, cat=None)
+    out = mad_hatter.execute_hook("before_cat_sends_message", fake_message, None)
     assert out.text == "Priorities: priority 3 priority 2"

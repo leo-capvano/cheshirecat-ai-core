@@ -6,7 +6,7 @@ def get_supported_env_variables():
 
     return {
         "CCAT_URL": "http://localhost:1865",
-        "CCAT_SQL": "sqlite:///data/sqlite/core.db", # TODOV2: db could be encrypted by default # postgresql+asyncpg://user:password@localhost/dbname
+        "CCAT_SQL": "sqlite:///data/core/core.db", # TODOV2: db could be encrypted by default # postgresql+asyncpg://user:password@localhost/dbname
         "CCAT_API_KEY": None, # TODOV2: not sure about the None default
         "CCAT_JWT_SECRET": "meow_jwt",
         "CCAT_JWT_EXPIRE_MINUTES": str(60 * 24),  # JWT expires after 1 day

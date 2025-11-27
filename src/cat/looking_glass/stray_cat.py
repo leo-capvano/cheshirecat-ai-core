@@ -1,24 +1,20 @@
 
 import asyncio
+from copy import deepcopy
 import time
 from uuid import uuid4
 from collections.abc import AsyncGenerator
-from typing import Literal, get_args, List, Dict, Union, Any, Callable
+from typing import Any, Callable
 from pydantic import BaseModel, ConfigDict
 
 from cat.protocols.agui import events
-from cat.auth import User
-from cat.looking_glass.cheshire_cat import CheshireCat
-from cat.protocols.future.llm_wrapper import LLMWrapper
-from cat.types import Message, ChatRequest, ChatResponse
-from cat.mad_hatter.decorators import CatTool
-from cat import utils
+from cat.types import ChatRequest, ChatResponse
+from cat.mixin.runtime import CatMixin
+
 from cat import log
 
-MSG_TYPES = Literal["notification", "chat", "error", "chat_token"]
 
-# The Stray cat goes around tools, hooks and endpoints... making troubles
-class StrayCat(BaseModel):
+class StrayCat(BaseModel, CatMixin):
     """Session object containing user data, conversation state and many utility pointers.
     The framework creates an instance for every http request and websocket connection, making it available for plugins.
 
@@ -33,153 +29,17 @@ class StrayCat(BaseModel):
     
     """
 
-    chat_request: ChatRequest | None = None
-    """The ChatRequest object coming from the client, containining the request for this conversation turn."""
-    
-    chat_response: ChatResponse | None = None
-    """ChatResponse object that will go out to the client once the conversation turn is finished.
-        It is available since the beginning of the Cat flow."""
-    
     model_config = ConfigDict(extra='allow')
 
-    def __init__(
-        self,
-        user: User,
-        ccat: CheshireCat
-    ):
-        
-        super().__init__()
-
-        # user data
-        self.user = user
-
-        # pointer to CheshireCat instance
-        self._ccat = ccat
 
     def __repr__(self):
-        return f"StrayCat(user_id={self.user_id}, user_name={self.user.name})"
+        return f"StrayCat(user_name={self.user.name})"
 
-    # TODOV2: method should be one and should be `send_message`.
-    #         Stray should not know about websockets or anything network related
-    async def __send_ws_json(self, data: Any):
-        if self.message_callback:
-            await self.message_callback(data)
-
-    async def agui_event(self, event: events.BaseEvent):
-        await self.__send_ws_json(dict(event))
-    
-    async def llm(
-            self,
-            system_prompt: str,
-            model: str | None = None,
-            messages: list[Message] = [],
-            tools: list[CatTool] = [],
-            stream: bool = True,
-        ) -> Message:
-        """Generate a response using the Large Language Model.
-
-        Parameters
-        ----------
-        system_prompt : str
-            The system prompt (context, personality, or a simple instruction/request).
-        prompt_variables : dict
-            Structured info to hydrate the system_prompt.
-        messages : list[Message]
-            Chat messages so far, as a list of `HumanMessage` and `CatMessage`.
-        tools : TODOV2
-        model : str | None
-            LLM to use, in the format `vendor:model`, e.g. `openai:gpt-5`.
-            If None, uses default LLM as in the settings.
-        stream : bool
-            Whether to stream the tokens via websocket or not.
-
-        Returns
-        -------
-        str
-            The generated LLM response.
-
-        Examples
-        -------
-        Detect profanity in a message
-        >>> 
-        ... cat.llm(f"Does this message contain profanity: '{message}'?  Reply with 'yes' or 'no'.")
-        "no"
-
-        Run the LLM and stream the tokens via websocket
-        >>> cat.llm("Tell me which way to go?", stream=True)
-        "It doesn't matter which way you go"
-        """
-        
-        if model:
-            _llm = self._ccat.llms[model]
-        else:
-            _llm = self._llm
-
-        new_mex: Message = await LLMWrapper.invoke(
-            self,
-            model=_llm,
-            system_prompt=system_prompt,
-            messages=messages,
-            tools=tools,
-            stream=stream
-        )
-        return new_mex
-    
-
-    async def execute_hook(self, hook_name, default_value):
-        return await self.mad_hatter.execute_hook(
-            hook_name,
-            default_value,
-            cat=self
-        )
-    
-    async def execute_agent(self, slug):
-        await self._ccat.agents[slug].execute(self)
-
-    async def get_system_prompt(self) -> str:
-
-        # obtain prompt parts from plugins
-        # TODOV2: give better naming to these hooks
-        prompt_prefix = await self.execute_hook(
-            "agent_prompt_prefix",
-            self.chat_request.system_prompt
-        )
-        prompt_suffix = await self.execute_hook(
-            "agent_prompt_suffix", ""
-        )
-
-        return prompt_prefix + prompt_suffix
-
-
-    async def list_tools(self) -> List[CatTool]:
-        """
-        Get both plugins' tools and MCP tools in CatTool format.
-        """
-
-        mcp_tools = await self.mcp.list_tools()
-        mcp_tools = [
-            CatTool.from_fastmcp(t, self.mcp.call_tool)
-            for t in mcp_tools
-        ]
-        return mcp_tools + self.mad_hatter.tools
-    
-
-    # TODO: should support MCP notation call_tool("name", {a: 32})
-    async def call_tool(self, tool_call, *args, **kwargs): # TODO: annotate CatToolResult?
-        """Call a tool."""
-
-        name = tool_call["name"]
-        for t in await self.list_tools():
-            if t.name == name:
-                return await t.execute(self, tool_call)
-            
-        raise Exception(f"Tool {name} not found")
-            
 
     async def __call__(
         self,
         chat_request: ChatRequest,
-        message_callback: Callable | None = None
+        stream_callback: Callable | None = None
     ) -> ChatResponse:
         """Run the conversation turn.
 
@@ -190,7 +50,7 @@ class StrayCat(BaseModel):
         ----------
         chat_request : ChatRequest
             ChatRequest object received from the client via http or websocket.
-        message_callback : Callable | None
+        stream_callback : Callable | None
             A function that will be used to emit messages via http (streaming) or websocket.
             If None, this method will not emit messages and will only return the final ChatResponse.
 
@@ -198,47 +58,35 @@ class StrayCat(BaseModel):
         -------
         chat_response : ChatResponse | None
             ChatResponse object, the Cat's answer to be sent back to the client.
-            If message_callback is passed, this method will return None and emit the final response via the message_callback
+            If stream_callback is passed, this method will return None and emit the final response via the stream_callback
         """
 
-        # Store message_callback to send messages back to the client
-        self.message_callback = message_callback
+        # Store stream_callback to send messages back to the client
+        self.stream_callback = stream_callback
 
         # Both request and response are available during the whole run
         self.chat_request = chat_request
         self.chat_response = ChatResponse()
 
         # Run a totally custom reply (skips all the side effects of the framework)
-        fast_reply = await self.execute_hook(
-            "fast_reply", {}
+        fast_reply = await self.execute_hook("fast_reply", {})
+        if fast_reply != {}: 
+            return fast_reply # TODOV2: this probably breaks pydantic validation on the output
+
+        # hook to modify/enrich user input
+        # TODOV2: shuold be compatible with the old `user_message_json`
+        self.chat_request = await self.execute_hook(
+            "before_cat_reads_message", self.chat_request
         )
-        if fast_reply != {}: # TODOV2: dunno if this breaks pydantic validation on the output
-            return fast_reply
-        
-        #return self._ccat.mcp_clients.get_user_client(
-        #    self.user_id, config
-        #)
-        async with self._ccat.mcp_clients.get_user_client(self) as mcp_client:
-            
-            # store reference for easy access
-            self.mcp = mcp_client
 
-            # hook to modify/enrich user input
-            # TODOV2: shuold be compatible with the old `user_message_json`
-            self.chat_request = await self.execute_hook(
-                "before_cat_reads_message", self.chat_request
-            )
+        # run agent(s). They will populate the ChatResponse
+        requested_agent = self.chat_request.agent
+        await self.execute_agent(requested_agent)
 
-            # run agent(s). They will populate the ChatResponse
-            requested_agent = self.chat_request.agent
-            await self.execute_agent(requested_agent)
-
-            # run final response through plugins
-            self.chat_response = await self.execute_hook(
-                "before_cat_sends_message", self.chat_response
-            )
-
-            self.mcp = None
+        # run final response through plugins
+        self.chat_response = await self.execute_hook(
+            "before_cat_sends_message", self.chat_response
+        )
 
         # Return final reply
         return self.chat_response
@@ -312,129 +160,3 @@ class StrayCat(BaseModel):
             )
             log.error(e)
             raise e
-
-
-
-    async def classify(
-        self, sentence: str, labels: List[str] | Dict[str, List[str]], score_threshold: float = 0.5
-    ) -> str | None:
-        """Classify a sentence.
-
-        Parameters
-        ----------
-        sentence : str
-            Sentence to be classified.
-        labels : List[str] or Dict[str, List[str]]
-            Possible output categories and optional examples.
-
-        Returns
-        -------
-        label : str
-            Sentence category.
-
-        Examples
-        -------
-        >>> cat.classify("I feel good", labels=["positive", "negative"])
-        "positive"
-
-        Or giving examples for each category:
-
-        >>> example_labels = {
-        ...     "positive": ["I feel nice", "happy today"],
-        ...     "negative": ["I feel bad", "not my best day"],
-        ... }
-        ... cat.classify("it is a bad day", labels=example_labels)
-        "negative"
-
-        """
-
-        if isinstance(labels, dict):
-            labels_names = labels.keys()
-            examples_list = "\n\nExamples:"
-            for label, examples in labels.items():
-                for ex in examples:
-                    examples_list += f'\n"{ex}" -> "{label}"'
-        else:
-            labels_names = labels
-            examples_list = ""
-
-        labels_list = '"' + '", "'.join(labels_names) + '"'
-
-        prompt = f"""Classify this sentence:
-"{sentence}"
-
-Allowed classes are:
-{labels_list}{examples_list}
-
-"{sentence}" -> """
-
-        response = await self.llm(prompt).content.text # TODOV2: not tested
-
-        # find the closest match and its score with levenshtein distance
-        best_label, score = min(
-            ((label, utils.levenshtein_distance(response, label)) for label in labels_names),
-            key=lambda x: x[1],
-        )
-
-        return best_label if score < score_threshold else None
-    
-    @property
-    def user_id(self) -> str:
-        """The user's id. Complete user object is under `cat.user`.
-        
-        Returns
-        -------
-        user_id : str
-            Current user's id.
-        """
-        return self.user.id
-
-    @property
-    def agent(self):
-        """Instance of the agent invoked via endpoint.
-        """
-        slug = self.chat_request.agent
-        if slug not in self._ccat.agents:
-            raise Exception(f'Agent "{slug}" not found')
-        return self._ccat.agents[slug]
-
-    @property
-    def _llm(self):
-        """
-        Low level LLM instance.
-        Only use it if you know what you are doing, prefer method `cat.llm(prompt)` otherwise.
-        """
-        slug = self.chat_request.model
-        if slug not in self._ccat.llms:
-            raise Exception(f'Model "{slug}" not found')
-        return self._ccat.llms[slug]
-
-    @property
-    def mad_hatter(self):
-        """Gives access to the `MadHatter` plugin manager.
-
-        Returns
-        -------
-        mad_hatter : MadHatter
-            Module to manage plugins.
-        """
-        return self._ccat.mad_hatter
-    
-    @property
-    def plugin(self):
-        """Access plugin object (used from within a plugin).
-
-        Examples
-        --------
-
-        Obtain the path in which your plugin is located
-        >>> cat.plugin.path
-        /home/my_cat/plugins/my_plugin
-
-        Obtain plugin settings
-        >>> await cat.plugin.load_settings()
-        {"num_cats": 44, "rows": 6, "remainder": 2}
-        """
-
-        return self._ccat.plugin
-        

@@ -230,40 +230,19 @@ class MadHatter:
         await self.refresh_caches()
 
 
-    async def execute_hook(self, hook_name, *args, cat) -> Any:
+    async def execute_hook(self, hook_name, default_value, caller) -> Any:
         """Execute a hook."""
 
         # check if hook is supported
         if hook_name not in self.hooks.keys():
             log.debug(f"Hook {hook_name} not present in any plugin")
-            if len(args)==0:
-                return
-            else:
-                return args[0]
-
-        # Hook has no arguments (aside cat)
-        #  no need to pipe
-        if len(args) == 0:
-            for hook in self.hooks[hook_name]:
-                try:
-                    log.debug(
-                        f"Executing {hook.plugin_id}::{hook.name} with priority {hook.priority}"
-                    )
-                    await utils.run_sync_or_async(
-                        hook.function,
-                        cat=cat
-                    )
-                except Exception:
-                    log.error(f"Error in plugin {hook.plugin_id}::{hook.name}")
-                    plugin_obj = self.plugins[hook.plugin_id]
-                    log.warning(plugin_obj.plugin_specific_error_message())
-            return
+            return default_value
 
         # Hook with arguments.
         #  First argument is passed to `execute_hook` is the pipeable one.
         #  We call it `tea_cup` as every hook called will receive it as an input,
         #  can add sugar, milk, or whatever, and return it for the next hook
-        tea_cup = deepcopy(args[0])
+        value = deepcopy(default_value)
 
         # run hooks
         for hook in self.hooks[hook_name]:
@@ -273,22 +252,20 @@ class MadHatter:
                 log.debug(
                     f"Executing {hook.plugin_id}::{hook.name} with priority {hook.priority}"
                 )
-                tea_spoon = await utils.run_sync_or_async(
+                tmp_value = await utils.run_sync_or_async(
                     hook.function,
-                    deepcopy(tea_cup),
-                    *deepcopy(args[1:]),
-                    cat=cat
+                    deepcopy(value),
+                    caller,
                 )
-                # log.debug(f"Hook {hook.plugin_id}::{hook.name} returned {tea_spoon}")
-                if tea_spoon is not None:
-                    tea_cup = tea_spoon
+                if tmp_value is not None:
+                    value = tmp_value
             except Exception:
                 log.error(f"Error in plugin {hook.plugin_id}::{hook.name}")
                 plugin_obj = self.plugins[hook.plugin_id]
                 log.warning(plugin_obj.plugin_specific_error_message())
 
         # tea_cup has passed through all hooks. Return final output
-        return tea_cup
+        return value
 
 
     def get_plugin(self) -> Plugin:

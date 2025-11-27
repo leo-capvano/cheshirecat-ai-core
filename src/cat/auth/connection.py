@@ -54,7 +54,11 @@ class BaseConnection(ABC):
             )
             if user and isinstance(user, User):
                 # create new StrayCat
-                cat = StrayCat(user, connection.app.state.ccat)
+                cat = StrayCat()
+                await cat.init_mixin(
+                    connection.app.state.ccat,
+                    user
+                )
                 
                 # StrayCat is passed to the endpoint
                 yield cat
