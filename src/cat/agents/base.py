@@ -31,7 +31,13 @@ class BaseAgent(ABC, CatMixin):
             CatTool.from_fastmcp(t, self.mcp.call_tool)
             for t in mcp_tools
         ]
-        return mcp_tools + self.mad_hatter.tools
+
+        tools = await self.execute_hook(
+            "agent_allowed_tools",
+            mcp_tools + self.mad_hatter.tools
+        )
+
+        return tools
     
     async def call_tool(self, tool_call, *args, **kwargs):
         """Call a tool."""
