@@ -1,5 +1,5 @@
-from copy import deepcopy
 from typing import Callable
+from copy import deepcopy
 
 from cat import log
 from cat.looking_glass.cheshire_cat import CheshireCat
@@ -26,7 +26,8 @@ class CatMixin(LLMMixin, EventStreamMixin):
         chat_response: ChatResponse = ChatResponse(),
         stream_callback: Callable = lambda x: None
     ):
-        """Initialize mixin with user and CheshireCat instance."""
+        """Initialize mixin with user, CheshireCat instance,
+        chat context, stream callback and plugin defined properties."""
         
         self.ccat = ccat
         self.user = user
@@ -34,6 +35,7 @@ class CatMixin(LLMMixin, EventStreamMixin):
         self.chat_response = chat_response
         self.stream_callback = stream_callback
 
+        # plugins can attach properties to stray and agents
         plugin_extensions = await self.execute_hook(
             "cat_mixin", {}
         )
@@ -52,18 +54,19 @@ class CatMixin(LLMMixin, EventStreamMixin):
             default_value,
             self
         )
-    
-    async def execute_agent(self, slug):
 
-        # get agent by slug
+    async def get_agent(self, slug):
+        """
+        Get an agent by its slug.
+        It is initialized with references to ccat and the current user and chat.
+        Returns a copy to avoid instance pollution.
+        """
+        
         agent = self.ccat.agents.get(slug)
         if not agent:
             raise Exception(f'Agent "{slug}" not found')
         
-        # make a copy of the agent to avoid pollution
         agent_copy = deepcopy(agent)
-
-        # initialize mixin
         await agent_copy.init_mixin(
             ccat=self.ccat,
             user=self.user,
@@ -71,17 +74,8 @@ class CatMixin(LLMMixin, EventStreamMixin):
             chat_response=self.chat_response,
             stream_callback=self.stream_callback
         )
-        
-        # run in MCP context
-        async with self.ccat.mcp_clients.get_user_client(self) as mcp_client:
-            agent_copy.mcp = mcp_client
-
-            # run hooks and agent
-            await self.execute_hook("before_agent_execution", agent_copy)
-            await self.execute_hook(f"before_{slug}_agent_execution", agent_copy)
-            await agent_copy.execute()
-            await self.execute_hook(f"after_{slug}_agent_execution", agent_copy)
-            await self.execute_hook("after_agent_execution", agent_copy) 
+        agent_copy.slug = slug
+        return agent_copy
 
     @property
     def user_id(self) -> str:
@@ -105,3 +99,8 @@ class CatMixin(LLMMixin, EventStreamMixin):
     def plugin(self):
         """Access plugin object (used from within a plugin)."""
         return self.ccat.plugin
+    
+    @property
+    def mcpqqqqq(self):
+        """Gives access to the MCP client for this user/session."""
+        return self._mcp

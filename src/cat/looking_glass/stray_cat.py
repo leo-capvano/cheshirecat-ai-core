@@ -1,6 +1,5 @@
 
 import asyncio
-from copy import deepcopy
 import time
 from uuid import uuid4
 from collections.abc import AsyncGenerator
@@ -15,26 +14,16 @@ from cat import log
 
 
 class StrayCat(BaseModel, CatMixin):
-    """Session object containing user data, conversation state and many utility pointers.
+    """
+    Session object used as entry point for agent(s) execution.
     The framework creates an instance for every http request and websocket connection, making it available for plugins.
 
     You will be interacting with an instance of this class directly from within your plugins:
 
      - in `@hook`, `@tool` and `@endpoint` decorated functions will be passed as argument `cat` or `stray`
-
-    Parameters
-    ----------
-    user : User
-        User object.
-    
     """
 
-    model_config = ConfigDict(extra='allow')
-
-
-    def __repr__(self):
-        return f"StrayCat(user_name={self.user.name})"
-
+    model_config = ConfigDict(extra='allow') # tmp BaseModel to make it work with new tools
 
     async def __call__(
         self,
@@ -80,8 +69,11 @@ class StrayCat(BaseModel, CatMixin):
         )
 
         # run agent(s). They will populate the ChatResponse
-        requested_agent = self.chat_request.agent
-        await self.execute_agent(requested_agent)
+        slug = self.chat_request.agent
+        agent = await self.get_agent(slug)
+        
+        # run agent
+        await agent()
 
         # run final response through plugins
         self.chat_response = await self.execute_hook(
