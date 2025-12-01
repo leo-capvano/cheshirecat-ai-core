@@ -79,6 +79,7 @@
   await cat.plugin.load_settings() # load_settings now is async
   ```
 - plugin `settings_schema` is not overridable, only `settings_model` (as no one was using it)
+  
 
 
 ## Network
@@ -150,6 +151,7 @@
 
 ## Hooks
 
+- hooks `priority` fixed, the ones with a higher number go first
 - you have now in `cat.chat_request` an object of type `ChatRequest`, containing user input and convo history, and in `cat.chat_response` an object of type `ChatResponse`.  
 `cat.chat_response` is available since the beginning of the message flow. This is to avoid patterns in which devs stored in working memory stuff to be added later on in the final response via `before_cat_send_message`. Now you can store output data directly in `cat.chat_response` and the client will receive that data.  
 Both `cat.chat_request` and `cat.chat_response` are cleared at each message. Use `cat.working_memory` (if we decide to reimplement it) to store arbitrary information across the whole conversation.
