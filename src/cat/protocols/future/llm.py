@@ -1,6 +1,6 @@
 from langchain_core.language_models.chat_models import SimpleChatModel
 
-class LLMDefault(SimpleChatModel):
+class DefaultLLM(SimpleChatModel):
     """Defaul LLM, replying a constant string. Used before a proper one is added."""
 
     @property

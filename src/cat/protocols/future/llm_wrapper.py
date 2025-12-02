@@ -74,7 +74,6 @@ class LLMWrapper:
             print("-" * 50)
         
         return new_mex
-        # TODOV2: have a couple of try/except to manage crashes
 
     @classmethod
     def langchainfy_message(cls, message):
@@ -154,6 +153,7 @@ class LLMWrapper:
             else:
                 print(message.content.text)
 
+    # TODOV2: move under LLMMixin and avoid using langchain objects
     @classmethod
     def parse_json(cls, json_string: str, pydantic_model: BaseModel = None) -> dict:
         # instantiate parser

@@ -2,7 +2,6 @@ from typing import Any, Dict
 from pydantic import BaseModel
 
 
-
 class FactoryCategory(BaseModel):
     default: Any
     keep_default: bool
@@ -16,7 +15,7 @@ class Factory:
 
         # Import here to avoid circular dependencies
         from cat.auth.handler.default import DefaultAuth
-        from cat.protocols.future.llm import LLMDefault
+        from cat.protocols.future.llm import DefaultLLM
         from cat.agents.default import DefaultAgent
 
         self.categories = {
@@ -26,7 +25,7 @@ class Factory:
                 at_least_one=True
             ),
             "llm" : FactoryCategory(
-                default = LLMDefault(),
+                default = DefaultLLM(),
                 keep_default=False,
                 at_least_one=True
             ),
