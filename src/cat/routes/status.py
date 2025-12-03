@@ -17,6 +17,7 @@ class StatusResponse(BaseModel):
 class FactoryStatusResponse(BaseModel):
     llms: List[str]
     agents: List[str]
+    embedders: List[str]
     mcps: List[str]
 
 
@@ -46,6 +47,7 @@ async def factory_status(
 
     return FactoryStatusResponse(
         llms=ccat.llms.keys(),
+        embedders=ccat.embedders.keys(),
         agents=ccat.agents.keys(),
         mcps=ccat.mcps.keys()
     )

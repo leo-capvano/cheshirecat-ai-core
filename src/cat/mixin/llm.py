@@ -19,13 +19,18 @@ class LLMMixin:
         """Generate a response using the Large Language Model."""
         
         if model:
-            _llm = self.ccat.llms[model]
+            slug = model
+        elif hasattr(self, "chat_request"):
+            slug = self.chat_request.model
         else:
-            _llm = self._llm
+            raise Exception("No LLM specified for generation.")
+
+        if slug not in self.ccat.llms:
+            raise Exception(f'LLM "{slug}" not found')
 
         new_mex: Message = await LLMWrapper.invoke(
             self,
-            model=_llm,
+            model=self.ccat.llms[slug],
             system_prompt=system_prompt,
             messages=messages,
             tools=tools,

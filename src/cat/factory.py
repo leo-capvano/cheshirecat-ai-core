@@ -16,6 +16,8 @@ class Factory:
         # Import here to avoid circular dependencies
         from cat.auth.handler.default import DefaultAuth
         from cat.protocols.future.llm import DefaultLLM
+        from cat.protocols.future.embedder import DefaultEmbedder
+        #from cat.protocols.future.memory import DefaultMemory
         from cat.agents.default import DefaultAgent
 
         self.categories = {
@@ -26,6 +28,11 @@ class Factory:
             ),
             "llm" : FactoryCategory(
                 default = DefaultLLM(),
+                keep_default=False,
+                at_least_one=True
+            ),
+            "embedder" : FactoryCategory(
+                default = DefaultEmbedder(),
                 keep_default=False,
                 at_least_one=True
             ),

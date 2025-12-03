@@ -83,14 +83,6 @@ class CatMixin(LLMMixin, EventStreamMixin):
         return self.user.id
 
     @property
-    def _llm(self):
-        """Low level LLM instance."""
-        slug = self.chat_request.model
-        if slug not in self.ccat.llms:
-            raise Exception(f'Model "{slug}" not found')
-        return self.ccat.llms[slug]
-
-    @property
     def mad_hatter(self):
         """Gives access to the `MadHatter` plugin manager."""
         return self.ccat.mad_hatter
