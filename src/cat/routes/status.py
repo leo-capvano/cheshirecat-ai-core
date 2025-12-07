@@ -1,10 +1,11 @@
-from typing import List
+from typing import List, Dict
 from importlib import metadata
 from pydantic import BaseModel
 
 from fastapi import APIRouter, Request
 
 from cat.auth import AuthPermission, AuthResource, check_permissions
+from cat.mad_hatter.decorators import FactoryObjectMetadata
 
 router = APIRouter(prefix="/status", tags=["Status"])
 
@@ -15,9 +16,10 @@ class StatusResponse(BaseModel):
     auth_handlers: List[str]
 
 class FactoryStatusResponse(BaseModel):
-    llms: List[str]
-    agents: List[str]
-    embedders: List[str]
+    agents: Dict[str, FactoryObjectMetadata]
+    models: Dict[str, FactoryObjectMetadata]
+    #llms: List[str]
+    #embedders: List[str]
     mcps: List[str]
 
 
@@ -45,10 +47,19 @@ async def factory_status(
 
     ccat = r.app.state.ccat
 
+    agents = {}
+    for slug, A in ccat.agents.items():
+        agents[slug] = A.get_factory_metadata()
+
+    models = {}
+    for slug, vendor in ccat.models.items():
+        models[slug] = vendor.get_factory_metadata()
+        models[slug].llms = list(vendor.llms.keys())
+        models[slug].embedders = list(vendor.embedders.keys())
+
     return FactoryStatusResponse(
-        llms=ccat.llms.keys(),
-        embedders=ccat.embedders.keys(),
-        agents=ccat.agents.keys(),
+        agents=agents,
+        models=models,
         mcps=ccat.mcps.keys()
     )
 

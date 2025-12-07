@@ -11,10 +11,12 @@ from cat.db.models import KeyValueDB
 from cat.mad_hatter.plugin_extractor import PluginExtractor
 from cat.mad_hatter.registry import registry_download_plugin
 from cat.mad_hatter.plugin import Plugin
-from cat.mad_hatter.decorators.hook import CatHook
-from cat.mad_hatter.decorators.tool import CatTool
-from cat.mad_hatter.decorators.endpoint import CatEndpoint
-
+from cat.mad_hatter.decorators import (
+    CatHook,
+    CatTool,
+    CatEndpoint,
+    CatFactoryObject
+)
 
 # This class is responsible for plugins functionality:
 # - loading
@@ -34,6 +36,7 @@ class MadHatter:
         self.hooks: Dict[str, List[CatHook]] = {}
         self.tools: List[CatTool] = []
         self.endpoints: List[CatEndpoint] = []
+        self.factory_objects: Dict[str, CatFactoryObject] = {}
 
         # callback out of the hook system to notify other components about a refresh
         self.on_refresh_callbacks: List[Callable] = []
@@ -158,13 +161,21 @@ class MadHatter:
         self.hooks = {}
         self.tools = []
         self.endpoints = []
+        self.factory_objects = {}
 
         for _, plugin in self.plugins.items():
             # load decorated funcs from plugins (only active ones have them populated)
             self.tools += plugin.tools
             self.endpoints += plugin.endpoints
+            
+            # index factory objects by type and slug
+            for fo in plugin.factory_objects:
+                log.critical(fo)
+                if not fo.factory_type in self.factory_objects:
+                    self.factory_objects[fo.factory_type] = {}
+                self.factory_objects[fo.factory_type][fo.slug] = fo
 
-            # cache hooks (indexed by hook name)
+            # index hooks by name
             for h in plugin.hooks:
                 if h.name not in self.hooks.keys():
                     self.hooks[h.name] = []

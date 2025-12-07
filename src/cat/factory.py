@@ -26,21 +26,6 @@ class Factory:
                 keep_default=False,
                 at_least_one=True
             ),
-            "llm" : FactoryCategory(
-                default = DefaultLLM(),
-                keep_default=False,
-                at_least_one=True
-            ),
-            "embedder" : FactoryCategory(
-                default = DefaultEmbedder(),
-                keep_default=False,
-                at_least_one=True
-            ),
-            "agent" : FactoryCategory(
-                default = DefaultAgent(),
-                keep_default=True,
-                at_least_one=True
-            ),
             "mcp" : FactoryCategory(
                 default = None,
                 keep_default=False,

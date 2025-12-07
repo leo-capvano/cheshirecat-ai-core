@@ -2,9 +2,11 @@ from typing import List
 
 from cat.types import Message
 from cat.mixin.runtime import CatMixin
-from cat.mad_hatter.decorators import CatTool
+from cat.mad_hatter.decorators import CatTool, CatFactoryObject
 
-class BaseAgent(CatMixin):
+class BaseAgent(CatMixin, CatFactoryObject):
+
+    factory_type = "agent"
 
     async def __call__(self):
         """Main entry point for the agent, to run an agent like a function."""

@@ -6,11 +6,14 @@ import tempfile
 import importlib
 import subprocess
 from typing import Dict, List, Callable
-from inspect import getmembers
+from inspect import getmembers, isclass
 from pydantic import BaseModel
 from packaging.requirements import Requirement
 
-from cat.mad_hatter.decorators import CatTool, CatHook, CatPluginDecorator, CatEndpoint
+from cat.mad_hatter.decorators import (
+    CatTool, CatHook, CatPluginDecorator,
+    CatEndpoint, CatFactoryObject
+)
 from cat.mad_hatter.plugin_manifest import PluginManifest
 from cat.db.models import KeyValueDB
 from cat import log, paths
@@ -57,6 +60,7 @@ class Plugin:
         self._hooks: List[CatHook] = []  # list of plugin hooks
         self._tools: List[CatTool] = []  # list of plugin tools
         self._endpoints: List[CatEndpoint] = [] # list of plugin endpoints
+        self._factory_objects: List[CatFactoryObject] = [] # list of plugin factory objects
 
         # list of @plugin decorated functions overriding default plugin behaviour
         self._plugin_overrides = {}
@@ -97,6 +101,7 @@ class Plugin:
         self._hooks = []
         self._tools = []
         self._endpoints = []
+        self._factory_objects = []
         self._plugin_overrides = {}
 
         # TODOV2: remove settings from DB?
@@ -251,6 +256,7 @@ class Plugin:
         hooks = []
         tools = []
         endpoints = []
+        factory_objects = []
         plugin_overrides = []
 
         # TODOV2: this for should probably go in mad_hatter
@@ -274,6 +280,7 @@ class Plugin:
                 hooks += getmembers(plugin_module, self._is_cat_hook)
                 tools += getmembers(plugin_module, self._is_cat_tool)
                 endpoints += getmembers(plugin_module, self._is_custom_endpoint)
+                factory_objects += getmembers(plugin_module, self._is_cat_factory_object)
                 plugin_overrides += getmembers(plugin_module, self._is_cat_plugin_override)
 
             except Exception:
@@ -285,6 +292,7 @@ class Plugin:
         self._hooks = list(map(self._clean_hook, hooks))
         self._tools = list(map(self._clean_tool, tools))
         self._endpoints = list(map(self._clean_endpoint, endpoints))
+        self._factory_objects = list(map(self._clean_factory_object, factory_objects))
         self._plugin_overrides = {override.name: override for override in list(map(self._clean_plugin_override, plugin_overrides))}
 
 
@@ -317,6 +325,14 @@ class Plugin:
             route.plugin_id = self._id
             route.endpoint.plugin_id = self._id # this works
         return e
+    
+    def _clean_factory_object(self, factory_object: CatFactoryObject):
+        f = factory_object[1]
+        f.plugin_id = self._id
+        f.slug = f.slug or f.__name__.lower()
+        f.name = f.name or f.__name__
+        f.description = f.description or f.__doc__ or "No description."
+        return f
 
     def _clean_plugin_override(self, plugin_override):
         return plugin_override[1]
@@ -332,6 +348,14 @@ class Plugin:
     @staticmethod
     def _is_cat_tool(obj):
         return isinstance(obj, CatTool)
+    
+    # a plugin factory object is any class found in a plugin descending from CatFactoryObject
+    @staticmethod
+    def _is_cat_factory_object(obj):
+        return isclass(obj) \
+            and issubclass(obj, CatFactoryObject) \
+            and not obj is CatFactoryObject \
+            and not CatFactoryObject in obj.__bases__
 
     # a plugin override function has to be decorated with @plugin
     # (which returns an instance of CatPluginDecorator)
@@ -368,6 +392,10 @@ class Plugin:
     @property
     def endpoints(self):
         return self._endpoints
+    
+    @property
+    def factory_objects(self):
+        return self._factory_objects
     
     @property
     def overrides(self):

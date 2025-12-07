@@ -71,10 +71,22 @@ class CheshireCat:
         await self.factory.load_objects(self)
 
         self.auth_handlers = self.factory.get_objects("auth_handler")
-        self.llms = self.factory.get_objects("llm")
-        self.embedders = self.factory.get_objects("embedder")
-        #self.memories = self.factory.get_objects("memory")
-        self.agents = self.factory.get_objects("agent")
+        
+        self.models = {}
+        model_vendors = self.mad_hatter.factory_objects.get("model", {})
+        model_vendors["default"] = DefaultLLMVendor
+        for slug, V in model_vendors.items():
+            # instantiate directly
+            vendor = V()
+            await vendor.setup(self)
+            vendor.llms = await vendor.get_llms()
+            vendor.embedders = await vendor.get_embedders()
+            self.models[slug] = vendor
+
+        self.agents = self.mad_hatter.factory_objects["agent"]
+        from cat.agents.default import DefaultAgent
+        self.agents["default"] = DefaultAgent
+
         self.mcps = self.factory.get_objects("mcp")
 
         # update endpoints

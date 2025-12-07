@@ -68,7 +68,7 @@ class CatTool:
         cls,
         t: FunctionTool,
         mcp_client_func: Callable
-    ) -> 'CatTool':
+    ) -> "CatTool":
         
         return cls(
             func = mcp_client_func,

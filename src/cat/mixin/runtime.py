@@ -62,21 +62,22 @@ class CatMixin(LLMMixin, EventStreamMixin):
         Returns a copy to avoid instance pollution.
         """
         
-        agent = self.ccat.agents.get(slug)
-        if not agent:
+        AgentClass = self.ccat.agents.get(slug)
+        if not AgentClass:
             raise Exception(f'Agent "{slug}" not found')
         
-        agent_copy = deepcopy(agent)
-        await agent_copy.init_mixin(
+        agent = AgentClass()
+
+        await agent.init_mixin(
             ccat=self.ccat,
             user=self.user,
             chat_request=self.chat_request,
             chat_response=self.chat_response,
             stream_callback=self.stream_callback
         )
-        agent_copy.slug = slug
-        return agent_copy
 
+        return agent
+    
     @property
     def user_id(self) -> str:
         """The user's id. Complete user object is under `self.user`."""
