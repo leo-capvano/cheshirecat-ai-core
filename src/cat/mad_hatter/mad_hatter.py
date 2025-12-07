@@ -170,7 +170,6 @@ class MadHatter:
             
             # index factory objects by type and slug
             for fo in plugin.factory_objects:
-                log.critical(fo)
                 if not fo.factory_type in self.factory_objects:
                     self.factory_objects[fo.factory_type] = {}
                 self.factory_objects[fo.factory_type][fo.slug] = fo

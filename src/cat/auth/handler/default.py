@@ -14,6 +14,10 @@ from ..user import User
 class DefaultAuth(BaseAuth):
     """Defaul auth handler, only admin user, based on environment variables."""
 
+    slug = "default"
+    name = "Default Auth handler"
+    description = "Default auth handler, only admin user, based on environment variables."
+
     def get_admin(self) -> User:
         return User(
             id=uuid5(NAMESPACE_DNS, "admin"),

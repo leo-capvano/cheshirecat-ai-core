@@ -328,10 +328,11 @@ class Plugin:
     
     def _clean_factory_object(self, factory_object: CatFactoryObject):
         f = factory_object[1]
-        f.plugin_id = self._id
+        f.factory_type = f.factory_type
         f.slug = f.slug or f.__name__.lower()
         f.name = f.name or f.__name__
         f.description = f.description or f.__doc__ or "No description."
+        f.plugin_id = self._id
         return f
 
     def _clean_plugin_override(self, plugin_override):

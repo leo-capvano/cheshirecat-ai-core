@@ -1,7 +1,6 @@
 import sys
 
 from cat import log
-from cat.factory import Factory
 from cat.protocols.model_context.client import MCPClients
 from cat.mad_hatter.mad_hatter import MadHatter
 
@@ -37,9 +36,6 @@ class CheshireCat:
             # reference to the cat in fastapi state
             fastapi_app.state.ccat = self
 
-            # init Factory
-            self.factory = Factory()
-
             # instantiate MadHatter
             self.mad_hatter = MadHatter()
             self.mad_hatter.on_refresh_callbacks.append(
@@ -66,28 +62,43 @@ class CheshireCat:
         log.welcome()
 
     async def on_mad_hatter_refresh(self):
-
-        # Get factory objects from plugins
-        await self.factory.load_objects(self)
-
-        self.auth_handlers = self.factory.get_objects("auth_handler")
+        
+        # avoid circular imports
+        from cat.auth.handler.default import DefaultAuth
+        from cat.agents.default import DefaultAgent
+        from cat.protocols.future.provider import DefaultModels
+        
+        auth_handlers = self.mad_hatter.factory_objects.get("auth", {})
+        if len(auth_handlers) == 0:
+            auth_handlers["default"] = DefaultAuth
+        # instantiate directly
+        self.auth_handlers = {}
+        for slug, A in auth_handlers.items():
+            self.auth_handlers[slug] = A()
         
         self.models = {}
+        self.llms = {}
+        self.embedders = {}
         model_vendors = self.mad_hatter.factory_objects.get("model", {})
-        model_vendors["default"] = DefaultLLMVendor
+        if len(model_vendors) == 0:
+            model_vendors["default"] = DefaultModels
         for slug, V in model_vendors.items():
             # instantiate directly
             vendor = V()
             await vendor.setup(self)
-            vendor.llms = await vendor.get_llms()
-            vendor.embedders = await vendor.get_embedders()
+            vendor.llms = await vendor.get_llms(self) # TODOV2: should pass Stray for filtering
+            vendor.embedders = await vendor.get_embedders(self)
             self.models[slug] = vendor
+            
+            # indexes by model slug
+            self.llms.update(vendor.llms)
+            self.embedders.update(vendor.embedders)
 
-        self.agents = self.mad_hatter.factory_objects["agent"]
-        from cat.agents.default import DefaultAgent
+        # agents are instantiated per request
+        self.agents = self.mad_hatter.factory_objects.get("agent", {})
         self.agents["default"] = DefaultAgent
 
-        self.mcps = self.factory.get_objects("mcp")
+        self.mcps = self.mad_hatter.factory_objects.get("mcp", {})
 
         # update endpoints
         self.refresh_endpoints()

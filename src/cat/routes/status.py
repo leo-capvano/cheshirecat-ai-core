@@ -13,7 +13,7 @@ router = APIRouter(prefix="/status", tags=["Status"])
 class StatusResponse(BaseModel):
     status: str
     version: str
-    auth_handlers: List[str]
+    auth_handlers: Dict[str, FactoryObjectMetadata]
 
 class FactoryStatusResponse(BaseModel):
     agents: Dict[str, FactoryObjectMetadata]
@@ -31,10 +31,14 @@ async def status(
 
     ccat = r.app.state.ccat
 
+    auth_handlers = {}
+    for slug, ah in ccat.auth_handlers.items():
+        auth_handlers[slug] = ah.get_factory_metadata()
+        
     return StatusResponse(
         status = "We're all mad here, dear!",
         version = metadata.version("cheshire-cat-ai"),
-        auth_handlers=ccat.auth_handlers.keys(),
+        auth_handlers=auth_handlers,
     )
 
 

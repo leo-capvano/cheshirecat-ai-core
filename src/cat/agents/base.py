@@ -4,7 +4,7 @@ from cat.types import Message
 from cat.mixin.runtime import CatMixin
 from cat.mad_hatter.decorators import CatTool, CatFactoryObject
 
-class BaseAgent(CatMixin, CatFactoryObject):
+class BaseAgent(CatFactoryObject, CatMixin):
 
     factory_type = "agent"
 
