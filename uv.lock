@@ -259,7 +259,7 @@ wheels = [
 
 [[package]]
 name = "cheshire-cat-ai"
-version = "2.0.7"
+version = "2.0.8"
 source = { editable = "." }
 dependencies = [
     { name = "ag-ui-protocol" },
