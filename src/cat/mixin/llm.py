@@ -1,7 +1,7 @@
 from typing import List, Dict
 from cat.types import Message
 from cat.protocols.future.llm_wrapper import LLMWrapper
-from cat.mad_hatter.decorators import CatTool
+from cat.mad_hatter.decorators import Tool
 from cat import utils
 
 
@@ -13,7 +13,7 @@ class LLMMixin:
         system_prompt: str,
         model: str | None = None,
         messages: list[Message] = [],
-        tools: list[CatTool] = [],
+        tools: list[Tool] = [],
         stream: bool = True,
     ) -> Message:
         """Generate a response using the Large Language Model."""

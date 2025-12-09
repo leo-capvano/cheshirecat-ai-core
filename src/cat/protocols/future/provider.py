@@ -3,12 +3,12 @@ from typing import Dict
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.embeddings import Embeddings
 
-from cat.mad_hatter.decorators import CatFactoryObject
+from cat.mad_hatter.decorators import FactoryObject
 
 from .llm import DefaultLLM
 from .embedder import DefaultEmbedder
 
-class BaseModelProvider(CatFactoryObject):
+class BaseModelProvider(FactoryObject):
     """Base LLM class for all LLM implementations."""
     
     factory_type = "model"

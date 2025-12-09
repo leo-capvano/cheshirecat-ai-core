@@ -11,8 +11,8 @@ from pydantic import BaseModel
 from packaging.requirements import Requirement
 
 from cat.mad_hatter.decorators import (
-    CatTool, CatHook, CatPluginDecorator,
-    CatEndpoint, CatFactoryObject
+    Tool, Hook, PluginDecorator,
+    Endpoint, FactoryObject
 )
 from cat.mad_hatter.plugin_manifest import PluginManifest
 from cat.db.models import KeyValueDB
@@ -57,10 +57,10 @@ class Plugin:
         # Cache of decorated functions contained in the plugin.
         #   The MadHatter will cache them for easier access,
         #   but they are created and stored in each plugin instance
-        self._hooks: List[CatHook] = []  # list of plugin hooks
-        self._tools: List[CatTool] = []  # list of plugin tools
-        self._endpoints: List[CatEndpoint] = [] # list of plugin endpoints
-        self._factory_objects: List[CatFactoryObject] = [] # list of plugin factory objects
+        self._hooks: List[Hook] = []  # list of plugin hooks
+        self._tools: List[Tool] = []  # list of plugin tools
+        self._endpoints: List[Endpoint] = [] # list of plugin endpoints
+        self._factory_objects: List[FactoryObject] = [] # list of plugin factory objects
 
         # list of @plugin decorated functions overriding default plugin behaviour
         self._plugin_overrides = {}
@@ -305,18 +305,18 @@ class Plugin:
         return f"Error in {name} plugin, contact the creator"
 
 
-    def _clean_hook(self, hook: CatHook):
+    def _clean_hook(self, hook: Hook):
         # getmembers returns a tuple
         h = hook[1]
         h.plugin_id = self._id
         return h
 
-    def _clean_tool(self, tool: CatTool):
+    def _clean_tool(self, tool: Tool):
         t = tool[1]
         t.plugin_id = self._id
         return t
 
-    def _clean_endpoint(self, endpoint: CatEndpoint):
+    def _clean_endpoint(self, endpoint: Endpoint):
         e = endpoint[1]
         # writing it at all levels (even at low level function) because
         #  fastapi rebuild the routes when doing `app.include_router`
@@ -326,7 +326,7 @@ class Plugin:
             route.endpoint.plugin_id = self._id # this works
         return e
     
-    def _clean_factory_object(self, factory_object: CatFactoryObject):
+    def _clean_factory_object(self, factory_object: FactoryObject):
         f = factory_object[1]
         f.factory_type = f.factory_type
         f.slug = f.slug or f.__name__.lower()
@@ -339,36 +339,36 @@ class Plugin:
         return plugin_override[1]
 
     # a plugin hook function has to be decorated with @hook
-    # (which returns an instance of CatHook)
+    # (which returns an instance of Hook)
     @staticmethod
     def _is_cat_hook(obj):
-        return isinstance(obj, CatHook)
+        return isinstance(obj, Hook)
 
     # a plugin tool function has to be decorated with @tool
-    # (which returns an instance of CatTool)
+    # (which returns an instance of Tool)
     @staticmethod
     def _is_cat_tool(obj):
-        return isinstance(obj, CatTool)
+        return isinstance(obj, Tool)
     
-    # a plugin factory object is any class found in a plugin descending from CatFactoryObject
+    # a plugin factory object is any class found in a plugin descending from FactoryObject
     @staticmethod
     def _is_cat_factory_object(obj):
         return isclass(obj) \
-            and issubclass(obj, CatFactoryObject) \
-            and not obj is CatFactoryObject \
-            and not CatFactoryObject in obj.__bases__
+            and issubclass(obj, FactoryObject) \
+            and not obj is FactoryObject \
+            and not FactoryObject in obj.__bases__
 
     # a plugin override function has to be decorated with @plugin
-    # (which returns an instance of CatPluginDecorator)
+    # (which returns an instance of PluginDecorator)
     @staticmethod
     def _is_cat_plugin_override(obj):
-        return isinstance(obj, CatPluginDecorator)
+        return isinstance(obj, PluginDecorator)
 
     # a plugin custom endpoint has to be decorated with @endpoint
-    # (which returns an instance of CatEndpoint)
+    # (which returns an instance of Endpoint)
     @staticmethod
     def _is_custom_endpoint(obj):
-        return isinstance(obj, CatEndpoint)
+        return isinstance(obj, Endpoint)
     
     @property
     def path(self):

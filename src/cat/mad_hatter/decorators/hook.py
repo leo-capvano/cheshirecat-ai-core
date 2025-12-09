@@ -2,7 +2,7 @@ from typing import Union, Callable
 
 
 # class to represent a @hook
-class CatHook:
+class Hook:
     def __init__(self, name: str, func: Callable, priority: int):
         self.function = func
         self.name = name
@@ -10,17 +10,17 @@ class CatHook:
         self.plugin_id = None
 
     def __repr__(self) -> str:
-        return f"CatHook(plugin={self.plugin_id}, name={self.name}, priority={self.priority})"
+        return f"Hook(plugin={self.plugin_id}, name={self.name}, priority={self.priority})"
 
 
 # @hook decorator. Any function in a plugin decorated by @hook and named properly (among list of available hooks) is used by the Cat
 # @hook priority defaults to 1, the higher the more important. Hooks in the default core plugin have all priority=0 so they are automatically overwritten from plugins
 def hook(*args: Union[str, Callable], priority: int = 1) -> Callable:
-    """`@hook` decorator to make `CatHook` objects out of functions."""
+    """`@hook` decorator to make `Hook` objects out of functions."""
 
     def _make_with_name(hook_name: str) -> Callable:
-        def _make_hook(func: Callable[[str], str]) -> CatHook:
-            hook_ = CatHook(name=hook_name, func=func, priority=priority)
+        def _make_hook(func: Callable[[str], str]) -> Hook:
+            hook_ = Hook(name=hook_name, func=func, priority=priority)
             return hook_
 
         return _make_hook
@@ -36,7 +36,7 @@ def hook(*args: Union[str, Callable], priority: int = 1) -> Callable:
     elif len(args) == 0:
         # if there are no arguments, then we use the function name as the hook name
         # Example usage: @hook(priority=2)
-        def _partial(func: Callable[[str], str]) -> CatHook:
+        def _partial(func: Callable[[str], str]) -> Hook:
             return _make_with_name(func.__name__)(func)
 
         return _partial

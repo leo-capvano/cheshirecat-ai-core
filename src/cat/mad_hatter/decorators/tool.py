@@ -12,7 +12,7 @@ from cat.types import Message, TextContent
 from cat.utils import run_sync_or_async
 
 
-class CatTool:
+class Tool:
     """Cat tool uniforming @tool decorated functions in plugins and MCP tools."""
 
     def __init__(
@@ -45,7 +45,7 @@ class CatTool:
         func: Callable,
         return_direct: bool = False,
         examples: List[str] = []
-    ) -> 'CatTool':
+    ) -> 'Tool':
         
         parsed_function = ParsedFunction.from_function(
             func,
@@ -68,7 +68,7 @@ class CatTool:
         cls,
         t: FunctionTool,
         mcp_client_func: Callable
-    ) -> "CatTool":
+    ) -> "Tool":
         
         return cls(
             func = mcp_client_func,
@@ -80,11 +80,11 @@ class CatTool:
         )
     
     def __repr__(self) -> str:
-        return f"CatTool(name={self.name}, input_schema={self.input_schema}, internal={self.is_internal})"
+        return f"Tool(name={self.name}, input_schema={self.input_schema}, internal={self.is_internal})"
 
     async def execute(self, cat, tool_call) -> Message:
         """
-        Execute a CatTool with the provided tool_call data structure (which is returned by the LLM).
+        Execute a Tool with the provided tool_call data structure (which is returned by the LLM).
         Will emit AGUI events for tool execution and return a Message with role="tool".
 
         Parameters
@@ -196,17 +196,17 @@ class CatTool:
         )
 
 
-def tool(*args, return_direct: bool = False, examples: List[str] = []) -> CatTool:
+def tool(*args, return_direct: bool = False, examples: List[str] = []) -> Tool:
 
     if len(args) == 1 and callable(args[0]):
-        return CatTool.from_decorated_function(
+        return Tool.from_decorated_function(
             args[0],
             return_direct=return_direct,
             examples=examples
         )
     else:
         def wrapper(func):
-            return CatTool.from_decorated_function(
+            return Tool.from_decorated_function(
                 func,
                 return_direct=return_direct,
                 examples=examples

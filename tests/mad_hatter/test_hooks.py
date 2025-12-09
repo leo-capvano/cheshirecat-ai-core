@@ -1,6 +1,6 @@
 import pytest
 
-from cat.mad_hatter.decorators import CatHook
+from cat.mad_hatter.decorators import Hook
 from cat.types import ChatResponse
 
 from tests.utils import create_mock_plugin_zip, get_mock_plugin_info
@@ -24,7 +24,7 @@ def test_hook_discovery(mad_hatter):
 
     assert len(mock_plugin_hooks) == get_mock_plugin_info()["hooks"]
     for h in mock_plugin_hooks:
-        assert isinstance(h, CatHook)
+        assert isinstance(h, Hook)
         assert h.plugin_id == "mock_plugin"
 
 

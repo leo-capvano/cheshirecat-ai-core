@@ -122,7 +122,7 @@
       system_prompt: str,
       model: str | None = None,
       messages: list[Message] = [],
-      tools: list[CatTool] = [],
+      tools: list[Tool] = [],
       stream: bool = True,
   ) -> Message:
   ```
@@ -169,9 +169,9 @@ Both `cat.chat_request` and `cat.chat_response` are cleared at each message. Use
 
 ## Tools
 
-- From now on we need to talk about internal and external (MCP) tools. Both are automatically converted to `CatTool` and made available to the agents via `await self.list_tools()`.
+- From now on we need to talk about internal and external (MCP) tools. Both are automatically converted to `Tool` and made available to the agents via `await self.list_tools()`.
 - Tools can now accept multiple arguments, positional and keyword, thanks to the implemntation provided by Emanuele Morrone (@pingdred)
-- Tool output can be a string, but now we allow also custom data structures and files via CatToolOutput (Yet TODO). Tools will be able to return images, audio, files and resources of any kind - even UI pieces.
+- Tool output can be a string, but now we allow also custom data structures and files via ToolOutput (Yet TODO). Tools will be able to return images, audio, files and resources of any kind - even UI pieces.
 
 
 ## Auth
@@ -211,7 +211,7 @@ Auth system semplifications (TODO review):
       resources = await self.list_resources()
   ```
 
-  Note `list_tools` gives a list of `CatTool` objects, which uniform both intenral plugin tools and MCP tools.
+  Note `list_tools` gives a list of `Tool` objects, which uniform both intenral plugin tools and MCP tools.
 - you can connect to the cat only MCP servers that have http transport. Do not even try to ask me to run stdio based servers inside the cat. Use a proper proxy and aggregator for your local stuff, for example [MetaMCP](https://docs.metamcp.com/en).
 
 

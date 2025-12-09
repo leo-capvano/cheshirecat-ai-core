@@ -4,7 +4,7 @@ from cat.auth import User
 from cat.types import ChatResponse, ChatRequest
 from cat.looking_glass.stray_cat import StrayCat
 from cat.memory.working_memory import WorkingMemory
-from cat.mad_hatter.decorators.hook import CatHook
+from cat.mad_hatter.decorators.hook import Hook
 
 from tests.utils import get_chat_request
 
@@ -95,7 +95,7 @@ async def test_stray_fast_reply_hook(stray_cat):
         if user_msg in stray_cat.chat_request.messages[-1].content.text:
             return ChatResponse(user_id=cat.user_id, text=fast_reply_msg)
 
-    fast_reply_hook = CatHook(name="fast_reply", func=fast_reply_hook, priority=0)
+    fast_reply_hook = Hook(name="fast_reply", func=fast_reply_hook, priority=0)
     fast_reply_hook.plugin_id = "fast_reply_hook"
     stray_cat.mad_hatter.hooks["fast_reply"] = [fast_reply_hook]
 

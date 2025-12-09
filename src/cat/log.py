@@ -14,7 +14,7 @@ def get_log_level():
     return get_env("CCAT_LOG_LEVEL")
 
 
-class CatLogEngine:
+class LogEngine:
     """The log engine.
 
     Engine to filter the logs in the terminal according to the level of severity.
@@ -218,4 +218,4 @@ class CatLogEngine:
             self.error("This error is just for demonstration purposes.")
 
 # logger instance
-log = CatLogEngine()
+log = LogEngine()

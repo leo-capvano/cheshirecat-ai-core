@@ -12,18 +12,14 @@ from cat.mad_hatter.plugin_extractor import PluginExtractor
 from cat.mad_hatter.registry import registry_download_plugin
 from cat.mad_hatter.plugin import Plugin
 from cat.mad_hatter.decorators import (
-    CatHook,
-    CatTool,
-    CatEndpoint,
-    CatFactoryObject
+    Hook,
+    Tool,
+    Endpoint,
+    FactoryObject
 )
 
-# This class is responsible for plugins functionality:
-# - loading
-# - prioritizing
-# - executing
 class MadHatter:
-    """Plugin manager"""
+    """Plugin manager."""
 
     def __init__(self):
 
@@ -33,10 +29,10 @@ class MadHatter:
         self.plugins: Dict[str, Plugin] = {}
 
         # caches for decorated functions
-        self.hooks: Dict[str, List[CatHook]] = {}
-        self.tools: List[CatTool] = []
-        self.endpoints: List[CatEndpoint] = []
-        self.factory_objects: Dict[str, CatFactoryObject] = {}
+        self.hooks: Dict[str, List[Hook]] = {}
+        self.tools: List[Tool] = []
+        self.endpoints: List[Endpoint] = []
+        self.factory_objects: Dict[str, FactoryObject] = {}
 
         # callback out of the hook system to notify other components about a refresh
         self.on_refresh_callbacks: List[Callable] = []
@@ -155,8 +151,9 @@ class MadHatter:
 
         await self.refresh_caches()
 
-    # Load decorated functions from active plugins into MadHatter
     async def refresh_caches(self):
+        """Load decorated functions from active plugins into MadHatter."""
+        
         # emptying caches
         self.hooks = {}
         self.tools = []
@@ -193,12 +190,14 @@ class MadHatter:
         return plugin_id in self.plugins.keys()
 
     async def get_active_plugins(self):
+        """Get list of active plugins from DB."""
         active_plugins = await KeyValueDB.objects().where(
             KeyValueDB.key == "active_plugins"
         ).first().output(load_json=True)
         return active_plugins.value
     
     async def set_active_plugins(self, active_plugins):
+        """Set DB list of active plugins."""
         ap = await KeyValueDB.objects().where(
             KeyValueDB.key == "active_plugins"
         ).first()
@@ -279,7 +278,7 @@ class MadHatter:
 
 
     def get_plugin(self) -> Plugin:
-        """Internal use only. Plugins should use `cat.plugin`."""
+        """Internal use only. Plugins should use `cat.plugin` or `agent.plugin`."""
 
         stack = inspect.stack()
         norm_plugins_path = os.path.normpath(paths.PLUGINS_PATH)

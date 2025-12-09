@@ -13,7 +13,7 @@ from langchain_core.messages import (
 )
 
 from cat.types import Message, TextContent
-from cat.mad_hatter.decorators import CatTool
+from cat.mad_hatter.decorators import Tool
 from cat.env import get_env
 from cat import log
 from .llm_callbacks import NewTokenHandler
@@ -29,7 +29,7 @@ class LLMWrapper:
             model: BaseChatModel,
             system_prompt: str,
             messages: list[Message] = [],
-            tools: list[CatTool] = [],
+            tools: list[Tool] = [],
             stream: bool = False
         ) -> Message:
 
@@ -120,8 +120,8 @@ class LLMWrapper:
         )
 
     @classmethod
-    def langchainfy_tool(cls, tool: CatTool):
-        """Convert CatTool to a langchain compatible StructuredTool object"""
+    def langchainfy_tool(cls, tool: Tool):
+        """Convert Tool to a langchain compatible StructuredTool object"""
         return StructuredTool(
             name=tool.name.strip().replace(" ", "_"),
             description=tool.description,

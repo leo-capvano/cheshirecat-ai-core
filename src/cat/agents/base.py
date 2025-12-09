@@ -2,9 +2,9 @@ from typing import List
 
 from cat.types import Message
 from cat.mixin.runtime import CatMixin
-from cat.mad_hatter.decorators import CatTool, CatFactoryObject
+from cat.mad_hatter.decorators import Tool, FactoryObject
 
-class BaseAgent(CatFactoryObject, CatMixin):
+class BaseAgent(FactoryObject, CatMixin):
 
     factory_type = "agent"
 
@@ -64,12 +64,12 @@ class BaseAgent(CatFactoryObject, CatMixin):
 
         return prompt_prefix + prompt_suffix
 
-    async def list_tools(self) -> List[CatTool]:
-        """Get both plugins' tools and MCP tools in CatTool format."""
+    async def list_tools(self) -> List[Tool]:
+        """Get both plugins' tools and MCP tools in Tool format."""
 
         mcp_tools = await self.mcp.list_tools()
         mcp_tools = [
-            CatTool.from_fastmcp(t, self.mcp.call_tool)
+            Tool.from_fastmcp(t, self.mcp.call_tool)
             for t in mcp_tools
         ]
 

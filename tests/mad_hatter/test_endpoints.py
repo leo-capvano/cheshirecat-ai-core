@@ -1,6 +1,6 @@
 import pytest
 from tests.utils import get_mock_plugin_info
-from cat.mad_hatter.decorators import CatEndpoint
+from cat.mad_hatter.decorators import Endpoint
 
 
 def test_endpoints_discovery(mad_hatter_with_mock_plugin):
@@ -13,7 +13,7 @@ def test_endpoints_discovery(mad_hatter_with_mock_plugin):
 
     # basic properties
     for h in mock_plugin_endpoints:
-        assert isinstance(h, CatEndpoint)
+        assert isinstance(h, Endpoint)
         assert h.plugin_id == "mock_plugin"
         assert h in mad_hatter_with_mock_plugin.endpoints
 
@@ -115,7 +115,7 @@ def test_endpoints_deactivation_or_uninstall(switch_type, mad_hatter_with_mock_p
 
     # custom endpoints are registered in mad_hatter
     for h in mad_hatter_with_mock_plugin.plugins["mock_plugin"].endpoints:
-        assert isinstance(h, CatEndpoint)
+        assert isinstance(h, Endpoint)
         assert h.plugin_id == "mock_plugin"
         assert h in mad_hatter_with_mock_plugin.endpoints
 

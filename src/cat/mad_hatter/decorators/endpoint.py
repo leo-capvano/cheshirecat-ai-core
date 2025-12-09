@@ -2,17 +2,17 @@ from typing import Callable
 from fastapi import APIRouter
 
 
-class CatEndpoint(APIRouter):
+class Endpoint(APIRouter):
 
     def __repr__(self) -> str:
         if hasattr(self, 'plugin_id'):
             plugin = self.plugin_id # will be added by mad hatter
         else:
             plugin = "unkwown"
-        return f"CatEndpoint(plugin={plugin} routes={self.routes})"
+        return f"Endpoint(plugin={plugin} routes={self.routes})"
 
 
-class CatEndpointDecorator:
+class EndpointDecorator:
 
     def _wrap(self, method: str, path: str, **kwargs):
 
@@ -21,7 +21,7 @@ class CatEndpointDecorator:
             prefix = kwargs.pop("prefix", "")
             full_path = f"{prefix}{path}"
 
-            router = CatEndpoint()
+            router = Endpoint()
             router.add_api_route(
                 path=full_path,
                 endpoint=func,
@@ -57,10 +57,10 @@ class CatEndpointDecorator:
                 "The function decorated with @endpoint.router must return an APIRouter instance."
             )
 
-        ce = CatEndpoint()
+        ce = Endpoint()
         ce.include_router(returned_router)
         return ce
 
 # TODOV2: endpoints with the same function name collide, even with different paths
 
-endpoint = CatEndpointDecorator()
+endpoint = EndpointDecorator()

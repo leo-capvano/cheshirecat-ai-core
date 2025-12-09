@@ -111,7 +111,7 @@ class CheshireCat:
     def refresh_endpoints(self):
         """Sync plugin endpoints in the fastapi app."""
 
-        # remove all CatEndpoint routes from fastapi app
+        # remove all plugin Endpoint routes from fastapi app
         routes_to_remove = []
         for route in self.fastapi_app.routes:
             if hasattr(route.endpoint, 'plugin_id'):

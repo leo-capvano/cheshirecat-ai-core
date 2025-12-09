@@ -8,7 +8,7 @@ from inspect import isfunction
 from tests.utils import get_mock_plugin_info
 
 from cat.mad_hatter.mad_hatter import Plugin
-from cat.mad_hatter.decorators import CatHook, CatTool, CatEndpoint
+from cat.mad_hatter.decorators import Hook, Tool, Endpoint
 from cat import paths
 
 
@@ -79,7 +79,7 @@ def test_activate_plugin(plugin):
     # hooks
     assert len(plugin.hooks) == get_mock_plugin_info()["hooks"]
     for hook in plugin.hooks:
-        assert isinstance(hook, CatHook)
+        assert isinstance(hook, Hook)
         assert hook.plugin_id == "mock_plugin"
         assert hook.name in [
             "factory_allowed_llms",
@@ -97,7 +97,7 @@ def test_activate_plugin(plugin):
     # tools
     assert len(plugin.tools) == get_mock_plugin_info()["tools"]
     tool = plugin.tools[0]
-    assert isinstance(tool, CatTool)
+    assert isinstance(tool, Tool)
     assert tool.plugin_id == "mock_plugin"
     assert tool.name == "mock_tool"
     assert tool.description == "Used to test mock tools. Input is the topic."
@@ -111,7 +111,7 @@ def test_activate_plugin(plugin):
     # endpoints
     assert len(plugin.endpoints) == get_mock_plugin_info()["endpoints"]
     for endpoint in plugin.endpoints:
-        assert isinstance(endpoint, CatEndpoint)
+        assert isinstance(endpoint, Endpoint)
         assert endpoint.plugin_id == "mock_plugin"
 
     # overrides by @plugin decorator

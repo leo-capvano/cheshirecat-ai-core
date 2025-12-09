@@ -12,7 +12,7 @@ class FactoryObjectMetadata(BaseModel):
     # allow extra fields
     model_config = ConfigDict(extra="allow")
 
-class CatFactoryObject:
+class FactoryObject:
     """Base class for factory objects (model, agent, auth handler, etc.)."""
     
     slug: str | None = None
