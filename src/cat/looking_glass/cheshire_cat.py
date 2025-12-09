@@ -60,6 +60,7 @@ class CheshireCat:
             sys.exit()
 
     async def on_mad_hatter_refresh(self):
+        """Refresh CheshireCat components when MadHatter is refreshed."""
         
         # avoid circular imports
         from cat.auth.handler.default import DefaultAuth

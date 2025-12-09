@@ -13,11 +13,21 @@ class BaseAgent(FactoryObject, CatMixin):
 
         async with self.ccat.mcp_clients.get_user_client(self) as mcp_client:
             self.mcp = mcp_client
-            await self.execute_hook("before_agent_execution", self.chat_request)
-            await self.execute_hook(f"before_{self.slug}_agent_execution", self.chat_request)
+            self.chat_request = await self.execute_hook(
+                "before_agent_execution", self.chat_request
+            )
+            self.chat_request = await self.execute_hook(
+                f"before_{self.slug}_agent_execution", self.chat_request
+            )
+            
             await self.execute()
-            await self.execute_hook(f"after_{self.slug}_agent_execution", self.chat_response)
-            await self.execute_hook("after_agent_execution", self.chat_response) 
+            
+            self.chat_response = await self.execute_hook(
+                f"after_{self.slug}_agent_execution", self.chat_response
+            )
+            self.chat_response = await self.execute_hook(
+                "after_agent_execution", self.chat_response
+            ) 
 
     async def execute(self):
         """Agentic loop."""
