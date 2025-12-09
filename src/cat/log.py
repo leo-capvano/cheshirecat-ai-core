@@ -163,7 +163,9 @@ class CatLogEngine:
         from cat import paths
         cat_address = get_env("CCAT_URL")
 
-        if not os.path.exists( paths.DATA_PATH + "/.welcome" ):
+        if os.path.exists( paths.DATA_PATH + "/.welcome" ):
+            print("\n^._.^\n")
+        else:
             print("\n\n")
             with open(paths.BASE_PATH + "/welcome.txt", "r") as f:
                 print(f.read())
@@ -172,12 +174,8 @@ class CatLogEngine:
             print(f"\n\n{left_margin} WEB UI:           {cat_address}")
             print(f"{left_margin} API PLAYGROUND:   {cat_address}/docs\n\n")
             open( paths.DATA_PATH + "/.welcome", "w").close()
-        else:
-            print("\n^._.^\n")
-
 
         # self.log_examples()
-
 
     def colored_text(self, text: str, color: str):
         """Get colored text.

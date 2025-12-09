@@ -59,8 +59,6 @@ class CheshireCat:
             log.error("Error during CheshireCat bootstrap. Exiting.")
             sys.exit()
 
-        log.welcome()
-
     async def on_mad_hatter_refresh(self):
         
         # avoid circular imports
@@ -107,6 +105,8 @@ class CheshireCat:
 
         # allow plugins to hook the refresh (e.g. to embed tools)
         await self.mad_hatter.execute_hook("after_mad_hatter_refresh", None, self)
+
+        log.welcome()
 
     def refresh_endpoints(self):
         """Sync plugin endpoints in the fastapi app."""
