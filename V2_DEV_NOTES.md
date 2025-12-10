@@ -86,7 +86,7 @@
 ## Network
 
 - endpoints are placed under `/api/v2`. Plugins with custom endpoints can follow the convention or not. Root route `/` is not occupied by core and can be used from a plugin to serve a custom frontend - like the default `ui` plugin does.
-- new `POST /message` endpoint that supports streaming (GIVE EXAMPLE), accepting `ChatRequest` and returning `ChatResponse` under both http and websocket. You can access this data structures in plugins with `cat.chat_request` and `cat.chat_response`. From within an agent, `self.chat_request` and `self.chat_response`. Note if you have a multi agent setup, all the agents will share this data structure. Any number of messages and custom data can be appended to `chat_response.messages` and `chat_response.custom`.
+- new `POST /message` endpoint that supports streaming (GIVE EXAMPLE), accepting `ChatRequest` and returning `ChatResponse` under both http and websocket. You can access this data structures in plugins with `cat.request` and `cat.response`. From within an agent, `self.request` and `self.response`. Note if you have a multi agent setup, all the agents will share this data structure. Any number of messages and custom data can be appended to `response.messages` and `response.custom`.
 - When a client calls the cat, it can specify which agent to use in `ChatRequest.agent`. Default is `default`, which is similar to the old one, this time can run multiple tools in a row and builds prompt for each step. No more double prompt (there was one for tools and one for memory).
 - conversation history endpoints (GET and POST) have been deleted and there is a new CRUD for chat sessions in plugin `ui`, which also includes the new multi-chat, multi-agent and multi-context frontend. Convo history as a recommended practice, must be passed via ws or http via `ChatRequest.messages` (similar to OpenAI or Ollama).
 - when calling the Cat via websocket and http streaming, all tokens, notifications, agent steps, errors and other lifecycle events (including final response) will be sent following the [AG-UI](https://docs.ag-ui.com/concepts/events) protocol. 
@@ -128,7 +128,7 @@
   ) -> Message:
   ```
 - `StrayCat.working_memory.history` is not present anymore; in case we want to reimplment it `working_memory` should be a property getter/setter in `StrayCat` reading and writing a JSON to DB.
-- Conversation history (and other context information) is passed by the client and easily found in `cat.chat_request.messages`; history construction is delegated to clients and plugins (so you can decide whether to keep it stored client side, cat side - with custom endpoints - or another service side).
+- Conversation history (and other context information) is passed by the client and easily found in `cat.request.messages`; history construction is delegated to clients and plugins (so you can decide whether to keep it stored client side, cat side - with custom endpoints - or another service side).
 - A specialized factory is responsible to collect objects (auth handlers, LLMs, Agents) from plugins. The factory uses hooks to make this collection.
 - `CatForm` used via the `@form` decorator is not included in core and have been moved to a plugin `form`. It was interesting to do research on this, but we ended up overengineering them: LLMs are way more powerful now and MCP has `elicitation` directly baked into tools. Furthermore, most of function calling fine tuning nowadays make the LLM itself ask for more info by inspecting the tool signature.
 - Core DB is a simple SQL (supports both sqlite and postgres) and it is used to store settings, chats, contexts and plugin settings. No more `metadata.json`, no `qdrant` in core, no memory/file caches.
@@ -148,21 +148,21 @@
   - there are less env variables, as many things are delegated to plugins (which can decide whether to use them or not).
   - `CCAT_CORE_HOST`, `CCAT_CORE_PORT` and `CCAT_CORE_USE_SECURE_PROTOCOLS` have been collapsed into one single env variable `CCAT_URL` with default value `http://localhost:1865`
   - can get main paths and urls from `cat.paths` and `cat.urls`
-  - `StrayCat` and `BaseAgent` share `CatMixin` to use both llm, invoking agents, chat_request/response and access to `CheshireCat` via `self.ccat`
+  - `StrayCat` and `BaseAgent` share `CatMixin` to use both llm, invoking agents, request/response and access to `CheshireCat` via `self.ccat`
 
 ## Hooks
 
 - hooks `priority` fixed, the ones with a higher number go first
-- you have now in `cat.chat_request` an object of type `ChatRequest`, containing user input and convo history, and in `cat.chat_response` an object of type `ChatResponse`.  
-`cat.chat_response` is available since the beginning of the message flow. This is to avoid patterns in which devs stored in working memory stuff to be added later on in the final response via `before_cat_send_message`. Now you can store output data directly in `cat.chat_response` and the client will receive that data.  
-Both `cat.chat_request` and `cat.chat_response` are cleared at each message. Use `cat.working_memory` (if we decide to reimplement it) to store arbitrary information across the whole conversation.
+- you have now in `cat.request` an object of type `ChatRequest`, containing user input and convo history, and in `cat.response` an object of type `ChatResponse`.  
+`cat.response` is available since the beginning of the message flow. This is to avoid patterns in which devs stored in working memory stuff to be added later on in the final response via `before_cat_send_message`. Now you can store output data directly in `cat.response` and the client will receive that data.  
+Both `cat.request` and `cat.response` are cleared at each message. Use `cat.working_memory` (if we decide to reimplement it) to store arbitrary information across the whole conversation.
 - hooks can be declared sync, as in v1, and also async. The async version is recommended and the sync one will trigger a warning. Example:
   ```python
   @hook
-  async def before_cat_sends_message(chat_response, cat):
+  async def before_cat_sends_message(response, cat):
       mex = await cat.llm("...")
-      chat_response.append(mex)
-      return chat_response
+      response.append(mex)
+      return response
   ```
 - `before_agent_starts` hook now has no argument aside `cat`, as all context/agent_input is directly stored and inserted into prompt based on the content of working memory (you can hook this via `agent_prompt_suffix`)
 - all hooks take two arguments, a value meant to be edited and the object calling the hook (being `CheshireCat`, `StrayCat` or `BaseAgent`)

@@ -12,7 +12,7 @@ def get_mock_plugin_info():
         "endpoints": 7
     }
 
-def get_chat_request(msg="meow"):
+def get_request(msg="meow"):
     return ChatRequest(
         messages=[
             Message(

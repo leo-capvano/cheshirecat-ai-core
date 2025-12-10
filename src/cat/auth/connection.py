@@ -12,7 +12,7 @@ from fastapi import (
     WebSocketException,
     Depends
 )
-from fastapi.requests import HTTPConnection
+
 from fastapi.security.api_key import APIKeyHeader
 
 from cat.auth import (
@@ -23,7 +23,7 @@ from cat.auth import (
 from cat.looking_glass.stray_cat import StrayCat
 
 
-class BaseConnection(ABC):
+class Connection(ABC):
 
     def __init__(
             self,
@@ -39,26 +39,24 @@ class BaseConnection(ABC):
         pass
 
     @abstractmethod
-    def not_allowed(self, connection: HTTPConnection):
+    def not_allowed(self, connection: Request | WebSocket):
         pass
 
     async def authorize(
         self,
-        connection: HTTPConnection,
+        connection: Request | WebSocket,
         credential: str | None
     ) -> AsyncGenerator[StrayCat | None, None]:
         
-        for ah in connection.app.state.ccat.auth_handlers.values():
+        ccat = connection.app.state.ccat
+        
+        for ah in ccat.auth_handlers.values():
             user: User = await ah.authorize_user_from_credential(
                 credential, self.resource, self.permission
             )
             if user and isinstance(user, User):
                 # create new StrayCat
-                cat = StrayCat()
-                await cat.init_mixin(
-                    connection.app.state.ccat,
-                    user
-                )
+                cat = StrayCat(ccat=ccat, user=user)
                 
                 # StrayCat is passed to the endpoint
                 yield cat
@@ -69,7 +67,7 @@ class BaseConnection(ABC):
         self.not_allowed()
 
 
-class HTTPConnection(BaseConnection):
+class HTTPConnection(Connection):
 
     async def __call__(
         self,
@@ -97,7 +95,7 @@ class HTTPConnection(BaseConnection):
         
 
 # TODOV2: do websockets support headers now?
-class WebsocketConnection(BaseConnection):
+class WebsocketConnection(Connection):
 
     async def __call__(
         self,

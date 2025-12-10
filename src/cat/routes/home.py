@@ -10,7 +10,7 @@ router = APIRouter(prefix="", tags=["Home"])
       
 @router.post("/message")
 async def message(
-    chat_request: ChatRequest = Body(
+    request: ChatRequest = Body(
         ..., 
         example={
             "agent": "default",
@@ -28,11 +28,11 @@ async def message(
     cat=check_permissions(AuthResource.CHAT, AuthPermission.EDIT),
 ) -> ChatResponse:
     
-    if chat_request.stream:
+    if request.stream:
         async def event_stream():
-            async for msg in cat.run(chat_request):
+            async for msg in cat.run(request):
                 yield f"data: {json.dumps(dict(msg))}\n\n"
 
         return StreamingResponse(event_stream(), media_type="text/event-stream")
     else:
-        return await cat(chat_request)
+        return await cat(request)

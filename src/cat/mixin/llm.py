@@ -20,8 +20,8 @@ class LLMMixin:
         
         if model:
             slug = model
-        elif hasattr(self, "chat_request"):
-            slug = self.chat_request.model
+        elif hasattr(self, "request"):
+            slug = self.request.model
         else:
             raise Exception("No LLM specified for generation.")
 

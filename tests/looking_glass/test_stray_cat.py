@@ -6,7 +6,7 @@ from cat.looking_glass.stray_cat import StrayCat
 from cat.memory.working_memory import WorkingMemory
 from cat.mad_hatter.decorators.hook import Hook
 
-from tests.utils import get_chat_request
+from tests.utils import get_request
 
 @pytest.fixture(scope="function")
 def stray_cat(async_client):
@@ -36,7 +36,7 @@ async def test_stray_nlp(stray_cat):
 @pytest.mark.asyncio
 async def test_stray_call_with_text(stray_cat):
 
-    reply = await stray_cat( get_chat_request() )
+    reply = await stray_cat( get_request() )
 
     assert isinstance(reply, ChatResponse)
     assert "You did not configure" in reply.text
@@ -46,7 +46,7 @@ async def test_stray_call_with_text(stray_cat):
 @pytest.mark.asyncio
 async def test_stray_call_with_text_and_image(stray_cat):
     
-    reply = await stray_cat( get_chat_request() )
+    reply = await stray_cat( get_request() )
 
     assert isinstance(reply, ChatResponse)
     assert "You did not configure" in reply.text
@@ -92,7 +92,7 @@ async def test_stray_fast_reply_hook(stray_cat):
     fast_reply_msg = "This is a fast reply"
 
     def fast_reply_hook(fast_reply: dict, cat):
-        if user_msg in stray_cat.chat_request.messages[-1].content.text:
+        if user_msg in stray_cat.request.messages[-1].content.text:
             return ChatResponse(user_id=cat.user_id, text=fast_reply_msg)
 
     fast_reply_hook = Hook(name="fast_reply", func=fast_reply_hook, priority=0)
@@ -119,4 +119,4 @@ async def test_stray_fast_reply_hook(stray_cat):
     assert res.text == fast_reply_msg
 
     # there should be NO side effects
-    assert stray_cat.chat_request.messages[-1].content.text == user_msg
+    assert stray_cat.request.messages[-1].content.text == user_msg

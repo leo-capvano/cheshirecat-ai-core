@@ -8,14 +8,14 @@ from .convo import UserMessage
 @hook(priority=-1000)
 def fast_reply(_, cat):
 
-    if not isinstance(cat.chat_request, ChatRequest):
+    if not isinstance(cat.request, ChatRequest):
         # legacy `user_message_json`
-        user_message_json = UserMessage.model_validate(cat.chat_request)
+        user_message_json = UserMessage.model_validate(cat.request)
         # Impose user_id as the one authenticated
         # (ws message may contain a fake id)
         user_message_json.user_id = cat.user_id
 
-        cat.chat_request = ChatRequest(
+        cat.request = ChatRequest(
             messages = [
                 Message(
                     role="user",

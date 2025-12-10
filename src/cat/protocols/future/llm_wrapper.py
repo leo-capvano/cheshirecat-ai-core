@@ -25,7 +25,7 @@ class LLMWrapper:
     @classmethod
     async def invoke(
             cls,
-            cat,
+            caller,
             model: BaseChatModel,
             system_prompt: str,
             messages: list[Message] = [],
@@ -36,11 +36,13 @@ class LLMWrapper:
         # should we stream the tokens?
         callbacks = []
         if stream:
-            callbacks.append(NewTokenHandler(cat))
+            callbacks.append(
+                NewTokenHandler(caller.agui_event)
+            )
             # TODOV2: tool choice tokens are not streamed
         
         # Add callbacks from plugins
-        await cat.execute_hook(
+        callbacks = await caller.execute_hook(
             "llm_callbacks", callbacks
         )
 

@@ -54,7 +54,7 @@ def before_cat_sends_message(msg, cat):
 
     # why this response?
     msg.why = MessageWhy(
-        input=cat.chat_request.messages[-1].content.text,
+        input=cat.request.messages[-1].content.text,
         intermediate_steps=intermediate_steps,
         # agent_output=agent_output,
         memory={

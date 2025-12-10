@@ -6,14 +6,16 @@ from collections.abc import AsyncGenerator
 from typing import Any, Callable
 from pydantic import BaseModel, ConfigDict
 
+from cat.auth.user import User
+from cat.looking_glass.cheshire_cat import CheshireCat
+from cat.agents.bus import AgentBus
 from cat.protocols.agui import events
 from cat.types import ChatRequest, ChatResponse
-from cat.mixin.runtime import CatMixin
 
 from cat import log
 
 
-class StrayCat(BaseModel, CatMixin):
+class StrayCat(BaseModel):
     """
     Session object used as entry point for agent(s) execution.
     The framework creates an instance for every http request and websocket connection, making it available for plugins.
@@ -23,12 +25,19 @@ class StrayCat(BaseModel, CatMixin):
      - in `@hook`, `@tool` and `@endpoint` decorated functions will be passed as argument `cat` or `stray`
     """
 
-    model_config = ConfigDict(extra='allow') # tmp BaseModel to make it work with new tools
+    ccat: CheshireCat
+    user: User
+
+    # tmp BaseModel to make it work with new tools
+    model_config = ConfigDict(
+        extra='allow',
+        arbitrary_types_allowed=True
+    )
 
     async def __call__(
         self,
-        chat_request: ChatRequest,
-        stream_callback: Callable | None = None
+        request: ChatRequest,
+        stream_callback: Callable = lambda x: None
     ) -> ChatResponse:
         """Run the conversation turn.
 
@@ -37,7 +46,7 @@ class StrayCat(BaseModel, CatMixin):
 
         Parameters
         ----------
-        chat_request : ChatRequest
+        request : ChatRequest
             ChatRequest object received from the client via http or websocket.
         stream_callback : Callable | None
             A function that will be used to emit messages via http (streaming) or websocket.
@@ -45,43 +54,49 @@ class StrayCat(BaseModel, CatMixin):
 
         Returns
         -------
-        chat_response : ChatResponse | None
+        response : ChatResponse | None
             ChatResponse object, the Cat's answer to be sent back to the client.
             If stream_callback is passed, this method will return None and emit the final response via the stream_callback
         """
 
-        # Store stream_callback to send messages back to the client
-        self.stream_callback = stream_callback
+        bus = AgentBus(
+            ccat=self.ccat,
+            user=self.user,
+            # Both request and response are available during the whole run
+            request=request,
+            response=ChatResponse(),
+            # callback to stream data back to the client
+            stream_callback=stream_callback
+        )
 
-        # Both request and response are available during the whole run
-        self.chat_request = chat_request
-        self.chat_response = ChatResponse()
-
+        # TODOV2: fast_reply hook has no access to messages
         # Run a totally custom reply (skips all the side effects of the framework)
-        fast_reply = await self.execute_hook("fast_reply", {})
-        if fast_reply != {}: 
+        fast_reply = await self.mad_hatter.execute_hook(
+            "fast_reply", {}, caller=self)
+        if fast_reply != {}:
             return fast_reply # TODOV2: this probably breaks pydantic validation on the output
 
         # hook to modify/enrich user input
         # TODOV2: shuold be compatible with the old `user_message_json`
-        self.chat_request = await self.execute_hook(
-            "before_cat_reads_message", self.chat_request
+        bus.request = await self.mad_hatter.execute_hook(
+            "before_cat_reads_message", bus.request, caller=self
         )
 
         # run agent(s). They will populate the ChatResponse
-        slug = self.chat_request.agent
-        agent = await self.get_agent(slug)
-        
-        # run agent
+        slug = bus.request.agent
+        AgentClass = self.ccat.agents.get(slug)
+        if not AgentClass:
+            raise Exception(f'Agent "{slug}" not found')
+        agent = AgentClass(bus)
         await agent()
 
         # run final response through plugins
-        self.chat_response = await self.execute_hook(
-            "before_cat_sends_message", self.chat_response
+        bus.response = await self.mad_hatter.execute_hook(
+            "before_cat_sends_message", bus.response, caller=self
         )
 
         # Return final reply
-        return self.chat_response
+        return bus.response
 
 
     async def run(
@@ -94,7 +109,7 @@ class StrayCat(BaseModel, CatMixin):
 
         # unique id for this run
         run_id = str(uuid4())
-        thread_id = str(uuid4())
+        thread_id = "_"
 
         # AGUI event for agent run start
         yield events.RunStartedEvent(
@@ -152,3 +167,17 @@ class StrayCat(BaseModel, CatMixin):
             )
             log.error(e)
             raise e
+        
+    # TODOV2:
+    # recover legacy V1 properties and methods for easier plugin migration
+    # (use log.deprecation_warning inside each of them)
+            
+    @property
+    def user_id(self) -> str:
+        """Get the user ID."""
+        return self.user.id
+    
+    @property
+    def mad_hatter(self):
+        """Gives access to the `MadHatter` plugin manager."""
+        return self.ccat.mad_hatter

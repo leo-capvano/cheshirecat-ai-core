@@ -82,15 +82,15 @@ class Tool:
     def __repr__(self) -> str:
         return f"Tool(name={self.name}, input_schema={self.input_schema}, internal={self.is_internal})"
 
-    async def execute(self, cat, tool_call) -> Message:
+    async def execute(self, agent, tool_call) -> Message:
         """
         Execute a Tool with the provided tool_call data structure (which is returned by the LLM).
         Will emit AGUI events for tool execution and return a Message with role="tool".
 
         Parameters
         ----------
-        cat : StrayCat
-            Session object.
+        agent : Agent
+            Agent calling the tool.
         tool_call : dict
             Dictionary representing the choice of tool and its args (produced by LLM)
 
@@ -101,24 +101,24 @@ class Tool:
         """
 
         # Emit AGUI events
-        await self.emit_agui_tool_start_events(cat, tool_call)
+        await self.emit_agui_tool_start_events(agent, tool_call)
 
         # execute the tool
         if self.is_internal:
             # internal tool
             tool_result: str = await run_sync_or_async(
-                self.func, **tool_call["args"], cat=cat # TODOV2: cat optional
+                self.func, **tool_call["args"], cat=agent # TODOV2: cat optional
             )
         else:
             # MCP tool
-            async with cat.mcp:
+            async with agent.mcp:
                 tool_result: CallToolResult = await self.func(self.name, tool_call["args"])
         
         # Standardize output
         tool_result = self.standardize_output(tool_call, tool_result) 
         
         # Emit AGUI events
-        await self.emit_agui_tool_end_events(cat, tool_call, tool_result)
+        await self.emit_agui_tool_end_events(agent, tool_call, tool_result)
 
         # TODOV2: should return something analogous to:
         #   https://modelcontextprotocol.info/specification/2024-11-05/server/tools/#tool-result
@@ -138,7 +138,7 @@ class Tool:
                 structured_content=None
             )
         elif isinstance(tool_result, Message):
-            # returning the output of cat.llm directly
+            # returning the output of .llm() directly
             tool_result = CallToolResult(
                 content = [tool_result.content],
                 structured_content=None
@@ -160,15 +160,15 @@ class Tool:
             )
         )
 
-    async def emit_agui_tool_start_events(self, cat, tool_call):
-        await cat.agui_event(
+    async def emit_agui_tool_start_events(self, agent, tool_call):
+        await agent.agui_event(
             events.ToolCallStartEvent(
                 timestamp=int(time.time()),
                 tool_call_id=str(tool_call["id"]),
                 tool_call_name=tool_call["name"]
             )
         )
-        await cat.agui_event(
+        await agent.agui_event(
             events.ToolCallArgsEvent(
                 timestamp=int(time.time()),
                 tool_call_id=str(tool_call["id"]),
@@ -177,14 +177,14 @@ class Tool:
             )
         )
     
-    async def emit_agui_tool_end_events(self, cat, tool_call, tool_output):
-        await cat.agui_event(
+    async def emit_agui_tool_end_events(self, agent, tool_call, tool_output):
+        await agent.agui_event(
             events.ToolCallEndEvent(
                 timestamp=int(time.time()),
                 tool_call_id=str(tool_call["id"]) # may be more than one?
             )
         )
-        await cat.agui_event(
+        await agent.agui_event(
             events.ToolCallResultEvent(
                 type=EventType.TOOL_CALL_RESULT, # bug in the lib, this should not be necessary
                 timestamp=int(time.time()),
