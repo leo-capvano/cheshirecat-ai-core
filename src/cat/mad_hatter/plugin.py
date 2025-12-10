@@ -155,7 +155,7 @@ class Plugin:
             db_settings = await KeyValueDB.objects().where(
                 KeyValueDB.key == f"{self.id}_plugin_settings"
             ).first().output(load_json=True)
-            db_settings.value = {**old_settings, **settings}
+            db_settings.value = {**old_settings, **settings} # TODOV2: why not full replace?
             await db_settings.save()
             return db_settings.value
         except Exception:

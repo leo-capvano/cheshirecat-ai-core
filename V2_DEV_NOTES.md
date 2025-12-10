@@ -79,6 +79,7 @@
   await cat.plugin.load_settings() # load_settings now is async
   ```
 - plugin `settings_schema` is not overridable, only `settings_model` (as no one was using it)
+- `vector_memory` creates separate collections for each used embedders, and if you switch back vectors are still there
   
 
 
@@ -230,26 +231,25 @@ Auth system semplifications (TODO review):
 ### auth
 
 - SSO infrastructure implementation
-- security must be always ON, also on a fresh installation, with a default jwt secret and API key. Pages in `/docs` should allow logging in
 - refine `BaseAuth`
 - when default auth is not active, `/auth/internal-idp` endpoint should return 403
 
 ### core plugins
 
-- recover core plugins as they are all broken
+- recover still missing core plugins
 - update core plugins so they attach to hooks exposed by core and provide their own hooks for other plugins
-- how do plugins check for support or the present of other plugins?
-- `qdrant_vector_memory` should deal with embedder changes, maybe reactivating the snapshot
+- how do plugins check for support or the presence of other plugins? (maybe `cat.get_plugin("vector_memory") -> Plugin | None`)
 
 ### tests
 
+- core tests deeply broken
 - core tests should only deal with core (also because plugin install dependencies is mocked!!!)
 - tests for plugins should be automatically executed
 
 ### settings
 
 - multipage plugin settings
-- user based settings
+- user based settings `cat.user.load_settings()`
 - `cat.plugin.load_settings` should allow to choose the format (`as_dict=True` otherwise return directly the pydantic obj)
 - `cat.plugin.save_settings` should accept both a dictionary or a pydantic model
 - `settings.py` file in project path alà django, and if not in any case get rid of `get_env`
@@ -257,17 +257,13 @@ Auth system semplifications (TODO review):
 ### other
 
 - AG-UI should send `event: {xxx}`, leave `data: {xxx}` for the legacy messaging style 
-- internal user_id should be forced to be uuid
 - some packages used by core occupy a lot of space and do basically nothing (find alts)
   `du -h .venv/lib/python3.13/site-packages --max-depth=1 | sort -hr`
 - `@hook` decorator should support autocomplete for the hooks names, and allow custom strings
 - check for memory leaks (see Luca Gobbi's setup for locust)
 - `cat` argument in hooks and tools should be optional
-- update to langchain v1
-- root endpoint `/` should offer the webui (at the moment static assets urls for the SPA conflict with other endpoints)
 - wrap internal tables (key value store) in easy to use get/set methods (the user related one accessible directly from `User` object)
-- endpoint with path arguments are not deactivated (not listed in fastapi_app.routes)
-- as main / volume fodlers, ditch `static` in favour of `data/db` + `data/files` + `plugins`. When plugins serve actual static files, they can have the files inside of them. If they serve files for users, they can use the `data/files` folder and related utilities
+- static folder segregated by user already in `/data/uploads`, but endpoints broken
 
 
 ## Questions
