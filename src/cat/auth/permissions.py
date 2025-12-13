@@ -22,7 +22,10 @@ class AuthPermission(str, Enum):
     DELETE = "DELETE"
 
 
-def check_permissions(resource: AuthResource | str, permission: AuthPermission | str):
+def check_permissions(
+        resource: AuthResource | str,
+        permission: AuthPermission | str
+    ) -> Depends:
     """
     Helper function to inject a StrayCat (cat) into endpoints after checking for required permissions.
 

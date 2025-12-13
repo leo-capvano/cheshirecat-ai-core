@@ -33,7 +33,7 @@ async def status(
 
     auth_handlers = {}
     for slug, ah in ccat.auth_handlers.items():
-        auth_handlers[slug] = ah.get_factory_metadata()
+        auth_handlers[slug] = ah.get_service_metadata()
         
     return StatusResponse(
         status = "We're all mad here, dear!",
@@ -53,11 +53,11 @@ async def factory_status(
 
     agents = {}
     for slug, A in ccat.agents.items():
-        agents[slug] = A.get_factory_metadata()
+        agents[slug] = A.get_service_metadata()
 
     models = {}
     for slug, vendor in ccat.models.items():
-        models[slug] = vendor.get_factory_metadata()
+        models[slug] = vendor.get_service_metadata()
         models[slug].llms = list(vendor.llms.keys())
         models[slug].embedders = list(vendor.embedders.keys())
 

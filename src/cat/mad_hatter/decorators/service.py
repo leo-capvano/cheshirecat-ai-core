@@ -13,7 +13,7 @@ class ServiceMetadata(BaseModel):
     model_config = ConfigDict(extra="allow")
 
 class Service:
-    """Base class for factory objects (model, agent, auth handler, etc.)."""
+    """Base class for plugin defined services (model, agent, auth handler, etc.)."""
     
     slug: str | None = None
     name: str | None = None
@@ -22,7 +22,7 @@ class Service:
     service_type: str | None = None
 
     @classmethod
-    def get_factory_metadata(cls) -> ServiceMetadata:
+    def get_service_metadata(cls) -> ServiceMetadata:
         return ServiceMetadata(
             slug=cls.slug,
             name=cls.name,

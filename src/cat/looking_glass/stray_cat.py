@@ -8,7 +8,6 @@ from pydantic import BaseModel, ConfigDict
 
 from cat.auth.user import User
 from cat.looking_glass.cheshire_cat import CheshireCat
-from cat.agents.bus import AgentBus
 from cat.protocols.agui import events
 from cat.types import ChatRequest, ChatResponse
 
@@ -17,12 +16,12 @@ from cat import log
 
 class StrayCat(BaseModel):
     """
-    Session object used as entry point for agent(s) execution.
+    Request context used as entry point for agent(s) execution.
     The framework creates an instance for every http request and websocket connection, making it available for plugins.
 
     You will be interacting with an instance of this class directly from within your plugins:
 
-     - in `@hook`, `@tool` and `@endpoint` decorated functions will be passed as argument `cat` or `stray`
+     - in `@hook`, `@tool` and `@endpoint` decorated functions will be passed as argument `ctx` (in version 1 was called `cat`)
     """
 
     ccat: CheshireCat
@@ -59,16 +58,6 @@ class StrayCat(BaseModel):
             If stream_callback is passed, this method will return None and emit the final response via the stream_callback
         """
 
-        bus = AgentBus(
-            ccat=self.ccat,
-            user=self.user,
-            # Both request and response are available during the whole run
-            request=request,
-            response=ChatResponse(),
-            # callback to stream data back to the client
-            stream_callback=stream_callback
-        )
-
         # TODOV2: fast_reply hook has no access to messages
         # Run a totally custom reply (skips all the side effects of the framework)
         fast_reply = await self.mad_hatter.execute_hook(
@@ -78,28 +67,31 @@ class StrayCat(BaseModel):
 
         # hook to modify/enrich user input
         # TODOV2: shuold be compatible with the old `user_message_json`
-        bus.request = await self.mad_hatter.execute_hook(
-            "before_cat_reads_message", bus.request, caller=self
+        request = await self.mad_hatter.execute_hook(
+            "before_cat_reads_message", request, caller=self
         )
 
         # run agent(s). They will populate the ChatResponse
-        slug = bus.request.agent
+        slug = request.agent
         AgentClass = self.ccat.agents.get(slug)
         if not AgentClass:
             raise Exception(f'Agent "{slug}" not found')
-        agent = AgentClass(bus)
-        await agent()
+        agent = AgentClass(
+            ccat=self.ccat,
+            user=self.user,
+            stream_callback=stream_callback
+        )
+        response: ChatResponse = await agent(request)
 
         # run final response through plugins
-        bus.response = await self.mad_hatter.execute_hook(
-            "before_cat_sends_message", bus.response, caller=self
+        response = await self.mad_hatter.execute_hook(
+            "before_cat_sends_message", response, caller=self
         )
 
         # Return final reply
-        return bus.response
+        return response
 
-
-    async def run(
+    async def stream(
         self,
         request: ChatRequest,
     ) -> AsyncGenerator[Any, None]:
@@ -108,7 +100,7 @@ class StrayCat(BaseModel):
         """
 
         # unique id for this run
-        run_id = str(uuid4())
+        run_id = str(uuid4()) # TODOV2: can be generated in ChatRequest construction
         thread_id = "_"
 
         # AGUI event for agent run start
@@ -125,7 +117,10 @@ class StrayCat(BaseModel):
         async def runner() -> None:
             try:
                 # Main entry point to StrayCat.__call__, contains the main AI flow
-                final_reply = await self(request, callback)
+                final_reply = await self(
+                    request,
+                    stream_callback=callback
+                )
 
                 # AGUI event for agent run finish
                 await callback(
@@ -145,7 +140,6 @@ class StrayCat(BaseModel):
                     )
                 )
                 log.error(e)
-                raise e
             finally:
                 await queue.put(None)
 
@@ -166,7 +160,6 @@ class StrayCat(BaseModel):
                 message=str(e)
             )
             log.error(e)
-            raise e
         
     # TODOV2:
     # recover legacy V1 properties and methods for easier plugin migration

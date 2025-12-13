@@ -30,7 +30,7 @@ async def message(
     
     if request.stream:
         async def event_stream():
-            async for msg in cat.run(request):
+            async for msg in cat.stream(request):
                 yield f"data: {json.dumps(dict(msg))}\n\n"
 
         return StreamingResponse(event_stream(), media_type="text/event-stream")

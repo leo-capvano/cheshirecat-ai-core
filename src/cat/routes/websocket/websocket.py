@@ -21,7 +21,7 @@ async def websocket_endpoint(
             # Receive the next message from WebSocket.
             user_message = await websocket.receive_json()
 
-            async for msg in cat.run(user_message):
+            async for msg in cat.stream(user_message):
                 await websocket.send_json(msg)
 
     except WebSocketDisconnect:

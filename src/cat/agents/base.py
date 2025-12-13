@@ -1,55 +1,71 @@
 from typing import List, Any
 
-from cat.types import Message
-from cat.agents.bus import AgentBus
+from cat.auth.user import User
+from cat.looking_glass.cheshire_cat import CheshireCat
+from cat.types import Message, ChatRequest, ChatResponse
 from cat.mixin.llm import LLMMixin
 from cat.mixin.stream import EventStreamMixin
 from cat.mad_hatter.decorators import Tool, Service
+#from cat.looking_glass.stray_cat import StrayCat
 
 class Agent(Service, LLMMixin, EventStreamMixin):
 
     service_type = "agent"
 
-    def __init__(self, bus: AgentBus):
-        self._bus = bus
+    def __init__(self, ccat: CheshireCat, user: User, stream_callback):
+        self.ccat = ccat
+        self.user = user
+        self.stream_callback = stream_callback
 
-    async def __call__(self, payload: Any = None) -> Any:
+    async def __call__(self, request: ChatRequest) -> ChatResponse:
         """
         Main entry point for the agent, to run an agent like a function.
-        Calling agent can specify a payload to pass directly.
-        """
+        Calls main lifecycle hooks and delegates actual agent logic to `execute()`.
+        Sets request and response as instance attributes for easy access within the agent.
         
-        self.payload = payload
+        Parameters
+        ----------
+        request : ChatRequest
+            ChatRequest object received from the client or from another agent.
+
+        Returns
+        -------
+        response : ChatResponse
+            ChatResponse object, the agent's answer.
+        """
+
+        self.request = request
+        self.response = ChatResponse()
         
         async with self.ccat.mcp_clients.get_user_client(self) as mcp_client:
             self.mcp = mcp_client
-            self._bus.request = await self.execute_hook(
-                "before_agent_execution", self._bus.request
+            
+            self.request = await self.execute_hook(
+                "before_agent_execution", self.request
             )
-            self._bus.request = await self.execute_hook(
-                f"before_{self.slug}_agent_execution", self._bus.request
+            self.request = await self.execute_hook(
+                f"before_{self.slug}_agent_execution", self.request
             )
             
-            out = await self.execute()
+            await self.execute()
             
-            self._bus.response = await self.execute_hook(
-                f"after_{self.slug}_agent_execution", self._bus.response
+            self.response = await self.execute_hook(
+                f"after_{self.slug}_agent_execution", self.response
             )
-            self._bus.response = await self.execute_hook(
-                "after_agent_execution", self._bus.response
+            self.response = await self.execute_hook(
+                "after_agent_execution", self.response
             )
 
-            return out
-
-    async def execute(self) -> Any:
+        return self.response
+        
+    async def execute(self):
         """
-        Main agent logic, just running a loop over tools and updating ChatResponse.
-        Ignores calling agent payload and returns None.
+        Main agent logic, just runs `self.loop()`.
         Override in subclasses for custom behavior.
         """
-        await self.inner_loop()
+        await self.loop()
 
-    async def inner_loop(self) -> None:
+    async def loop(self):
         """
         Agentic loop.
         Runs LLM generations and tool calls until the LLM stops generating tool calls.
@@ -82,7 +98,6 @@ class Agent(Service, LLMMixin, EventStreamMixin):
                     tool_message = await self.call_tool(tool_call)
                     # append tool message
                     self.response.messages.append(tool_message)
-
                     # if t.return_direct: TODOV2 recover return_direct
 
     async def get_system_prompt(self) -> str:
@@ -156,63 +171,46 @@ class Agent(Service, LLMMixin, EventStreamMixin):
         if not AgentClass:
             raise Exception(f'Agent "{slug}" not found')
         
-        return AgentClass(self._bus)
+        return AgentClass(
+            ccat=self.ccat,
+            user=self.user,
+            stream_callback=self.stream_callback
+        )
     
-    async def call_agent(self, slug, payload: Any=None) -> Any:
+    async def call_agent(self, slug, request: ChatRequest) -> ChatResponse:
         """
         Call an agent by its slug. Shortcut for:
         ```python
         a = self.get_agent("my_agent")
-        await a()
-        await a({"foo": "bar"}) # with optional payload
-        out = await a()         # in case the agent returns something in .execute()
+        response = await a(request)
         ```
         """
         
         agent = self.get_agent(slug)
-        return await agent(payload)
+        return await agent(request)
 
     @property
     def plugin(self):
         """Access plugin object (used from within a plugin)."""
-        return self._bus.ccat.plugin
+        return self.ccat.plugin
     
     @property
     def mcpqqqqq(self):
         """Gives access to the MCP client."""
         return self._mcp
-    
-    @property
-    def ccat(self):
-        """Gives access to the CheshireCat instance."""
-        return self._bus.ccat
 
     @property
     def mad_hatter(self):
         """Gives access to the `MadHatter` plugin manager."""
-        return self._bus.ccat.mad_hatter
-    
-    @property
-    def user(self):
-        """Gives access to the current user."""
-        return self._bus.user
+        return self.ccat.mad_hatter
     
     @property
     def user_id(self) -> str:
         """Get the user ID."""
-        return self._bus.user.id
+        return self.user.id
     
-    @property
-    def request(self):
-        """Gives access to the current ChatRequest."""
-        return self._bus.request
     
-    @property
-    def response(self):
-        """Gives access to the current ChatResponse."""
-        return self._bus.response
-    
-    @property
-    def stream_callback(self):
-        """Gives access to the stream callback function."""
-        return self._bus.stream_callback
+    # @property
+    # def stream_callback(self):
+    #     """Gives access to the stream callback function."""
+    #     return self.ctx.stream_callback
