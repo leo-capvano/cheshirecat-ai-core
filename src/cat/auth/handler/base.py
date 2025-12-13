@@ -14,7 +14,7 @@ from cat.auth.user import User
 from cat.env import get_env
 from cat import log
 
-class BaseAuth(ABC, FactoryObject):
+class Auth(ABC, FactoryObject):
     """
     Base class to build custom Auth systems.
     """

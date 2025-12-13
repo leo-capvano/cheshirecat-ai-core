@@ -47,7 +47,7 @@
 ## Agents
 
 - Version 2 supports multiple agents, and the agent to be run can be chosen *per message*. So many agents can intervene in a single chat and they can communicate.
-- you can declare an agent in your plugin subclassing the `BaseAgent` class and registering it via hook `factory_allowed_agents`. A minimal agent only needs to implement the `execute` method:
+- you can declare an agent in your plugin subclassing the `Agent` class and registering it via hook `factory_allowed_agents`. A minimal agent only needs to implement the `execute` method:
   ```python
   TODO example
   ```
@@ -140,15 +140,15 @@
   ```
 - Imports for most frequent used primitives are now simplified:
   ```python
-  from cat import hook, tool, endpoint, log, BaseAgent, ...
-  from cat.auth import check_permissions, User, BaseAuth
+  from cat import hook, tool, endpoint, log, Agent, ...
+  from cat.auth import check_permissions, User, Auth
   ```
 - factory explanation XXX
 - Environment variables:
   - there are less env variables, as many things are delegated to plugins (which can decide whether to use them or not).
   - `CCAT_CORE_HOST`, `CCAT_CORE_PORT` and `CCAT_CORE_USE_SECURE_PROTOCOLS` have been collapsed into one single env variable `CCAT_URL` with default value `http://localhost:1865`
   - can get main paths and urls from `cat.paths` and `cat.urls`
-  - `StrayCat` and `BaseAgent` share `CatMixin` to use both llm, invoking agents, request/response and access to `CheshireCat` via `self.ccat`
+  - `StrayCat` and `Agent` share `CatMixin` to use both llm, invoking agents, request/response and access to `CheshireCat` via `self.ccat`
 
 ## Hooks
 
@@ -165,7 +165,7 @@ Both `cat.request` and `cat.response` are cleared at each message. Use `cat.work
       return response
   ```
 - `before_agent_starts` hook now has no argument aside `cat`, as all context/agent_input is directly stored and inserted into prompt based on the content of working memory (you can hook this via `agent_prompt_suffix`)
-- all hooks take two arguments, a value meant to be edited and the object calling the hook (being `CheshireCat`, `StrayCat` or `BaseAgent`)
+- all hooks take two arguments, a value meant to be edited and the object calling the hook (being `CheshireCat`, `StrayCat` or `Agent`)
 
 
 ## Tools
@@ -190,7 +190,7 @@ Auth system semplifications (TODO review):
 - You need to authenticate also to see `/docs` and there is a little form to do it in the page
 - it is now possible to have `@endpoint` with custom resource and permissions. They can be defined on the endpoint and must be matched by user permissions (which can be assigned via Auth handler)
 - A new installation by default only recognizes one user called `admin` with full permissions. Internal identity provider will ask directly for `CCAT_API_KEY` if you set one. This setup is perfect for development and personal usage, while for production either you use the Cat as a pure microservice, or implement SSO methods in your Auth handler.
-- Auth handlers can be added by plugins by subclassing `BaseAuth` and registering it via hook `factory_allowed_auth_handlers`.
+- Auth handlers can be added by plugins by subclassing `Auth` and registering it via hook `factory_allowed_auth_handlers`.
 - default Auth handler will not be active if other custom auth handlers are present
 - if more than one custom auth handler is defined, they will be executed in sequence, and if one allows the request, access is granted. It's your responsibility to make sure only the desired auth handler(s) are active (they are also listed from endpoint `GET /status` for an easy check)
 - Utilities to add and edit users have been eradicated from the framework, due to many complications, numerous niche requests from community, and the half baked solution that resulted in v1. Now Auth handlers can recognize users communicating with your identity provider of choice, core will ony deal with the `User` object as translated by the handler.
@@ -231,7 +231,7 @@ Auth system semplifications (TODO review):
 ### auth
 
 - SSO infrastructure implementation
-- refine `BaseAuth`
+- refine `Auth`
 - when default auth is not active, `/auth/internal-idp` endpoint should return 403
 
 ### core plugins

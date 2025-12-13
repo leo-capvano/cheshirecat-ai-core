@@ -5,13 +5,13 @@ from typing import Dict
 from cat import urls
 from cat.env import get_env
 
-from .base import BaseAuth
+from .base import Auth
 from ..permissions import (
     AuthPermission, AuthResource
 )
 from ..user import User
 
-class DefaultAuth(BaseAuth):
+class DefaultAuth(Auth):
     """Defaul auth handler, only admin user, based on environment variables."""
 
     slug = "default"

@@ -6,7 +6,7 @@ from cat.mixin.llm import LLMMixin
 from cat.mixin.stream import EventStreamMixin
 from cat.mad_hatter.decorators import Tool, FactoryObject
 
-class BaseAgent(FactoryObject, LLMMixin, EventStreamMixin):
+class Agent(FactoryObject, LLMMixin, EventStreamMixin):
 
     factory_type = "agent"
 
@@ -146,7 +146,7 @@ class BaseAgent(FactoryObject, LLMMixin, EventStreamMixin):
             self
         )
 
-    async def get_agent(self, slug):
+    def get_agent(self, slug):
         """
         Get an agent by its slug.
         Every call to this method returns a new instance.
@@ -157,6 +157,20 @@ class BaseAgent(FactoryObject, LLMMixin, EventStreamMixin):
             raise Exception(f'Agent "{slug}" not found')
         
         return AgentClass(self._bus)
+    
+    async def call_agent(self, slug, payload: Any=None) -> Any:
+        """
+        Call an agent by its slug. Shortcut for:
+        ```python
+        a = self.get_agent("my_agent")
+        await a()
+        await a({"foo": "bar"}) # with optional payload
+        out = await a()         # in case the agent returns something in .execute()
+        ```
+        """
+        
+        agent = self.get_agent(slug)
+        return await agent(payload)
 
     @property
     def plugin(self):
@@ -202,4 +216,3 @@ class BaseAgent(FactoryObject, LLMMixin, EventStreamMixin):
     def stream_callback(self):
         """Gives access to the stream callback function."""
         return self._bus.stream_callback
-    

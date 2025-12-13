@@ -1,4 +1,4 @@
-from .handler.base import BaseAuth
+from .handler.base import Auth
 from .user import User
 from .permissions import (
     AuthPermission,
@@ -7,7 +7,7 @@ from .permissions import (
 )
 
 __all__ = [
-    "BaseAuth",
+    "Auth",
     "AuthPermission",
     "AuthResource",
     "check_permissions",

@@ -12,14 +12,14 @@ from .messages import Message
 from .chats import ChatRequest, ChatResponse
 
 __all__ = [
-    Resource,
-    ContentBlock,
-    TextContent,
-    ImageContent,
-    AudioContent,
-    ResourceLink,
-    EmbeddedResource,
-    Message,
-    ChatRequest,
-    ChatResponse
+    "Resource",
+    "ContentBlock",
+    "TextContent",
+    "ImageContent",
+    "AudioContent",
+    "ResourceLink",
+    "EmbeddedResource",
+    "Message",
+    "ChatRequest",
+    "ChatResponse"
 ]

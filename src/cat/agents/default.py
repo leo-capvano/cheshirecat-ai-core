@@ -1,6 +1,6 @@
-from .base import BaseAgent
+from .base import Agent
 
-class DefaultAgent(BaseAgent):
+class DefaultAgent(Agent):
     """Default agent."""
 
     slug = "default"

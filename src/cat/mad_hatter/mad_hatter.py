@@ -37,6 +37,21 @@ class MadHatter:
         # callback out of the hook system to notify other components about a refresh
         self.on_refresh_callbacks: List[Callable] = []
 
+        #self._ensure_plugins_path_importable()
+
+
+    #def _ensure_plugins_path_importable(self):
+    #    """Let plugins import each other constructs."""
+    #    
+    #    init_file = os.path.join(paths.PLUGINS_PATH, "__init__.py")
+    #    if not os.path.exists(init_file):
+    #        with open(init_file, "w") as f:
+    #            f.write("# Do not remove this file, it makes the plugins folder importable.\n")
+    #
+    #    plugins_parent = os.path.dirname(paths.PLUGINS_PATH)
+    #    if plugins_parent not in os.sys.path:
+    #        os.sys.path.insert(0, plugins_parent)
+
     async def install_plugin(self, plugin_origin, activate=True) -> Plugin:
         """
         Install a plugin.

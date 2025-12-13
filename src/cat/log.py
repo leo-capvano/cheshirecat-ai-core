@@ -1,5 +1,3 @@
-"""The log engine."""
-
 import os
 import sys
 import json
@@ -57,11 +55,7 @@ class LogEngine:
         return record["level"].no >= logger.level(self.LOG_LEVEL).no
 
     def default_log(self):
-        """Set the same debug level to all the project dependencies.
-
-        Returns
-        -------
-        """
+        """Set the same debug level to all the project dependencies."""
 
         level = "<level>{level}:</level>"
         # time = "<green>[{time:YYYY-MM-DD HH:mm:ss.SSS}]</green>"
