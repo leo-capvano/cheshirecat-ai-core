@@ -1,3 +1,3 @@
-from cat.protocols.future.provider import BaseModelProvider
+from cat.protocols.future.provider import ModelProvider
 
-__all__ = ["BaseModelProvider"]
+__all__ = ["ModelProvider"]

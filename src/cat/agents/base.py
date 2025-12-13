@@ -4,11 +4,11 @@ from cat.types import Message
 from cat.agents.bus import AgentBus
 from cat.mixin.llm import LLMMixin
 from cat.mixin.stream import EventStreamMixin
-from cat.mad_hatter.decorators import Tool, FactoryObject
+from cat.mad_hatter.decorators import Tool, Service
 
-class Agent(FactoryObject, LLMMixin, EventStreamMixin):
+class Agent(Service, LLMMixin, EventStreamMixin):
 
-    factory_type = "agent"
+    service_type = "agent"
 
     def __init__(self, bus: AgentBus):
         self._bus = bus

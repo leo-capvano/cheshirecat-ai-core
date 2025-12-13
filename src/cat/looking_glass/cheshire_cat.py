@@ -67,7 +67,7 @@ class CheshireCat:
         from cat.agents.default import DefaultAgent
         from cat.protocols.future.provider import DefaultModels
         
-        auth_handlers = self.mad_hatter.factory_objects.get("auth", {})
+        auth_handlers = self.mad_hatter.services.get("auth", {})
         if len(auth_handlers) == 0:
             auth_handlers["default"] = DefaultAuth
         # instantiate directly
@@ -78,7 +78,7 @@ class CheshireCat:
         self.models = {}
         self.llms = {}
         self.embedders = {}
-        model_vendors = self.mad_hatter.factory_objects.get("model", {})
+        model_vendors = self.mad_hatter.services.get("model", {})
         if len(model_vendors) == 0:
             model_vendors["default"] = DefaultModels
         for slug, V in model_vendors.items():
@@ -93,11 +93,11 @@ class CheshireCat:
             self.llms.update(vendor.llms)
             self.embedders.update(vendor.embedders)
 
-        # agents are instantiated per request
-        self.agents = self.mad_hatter.factory_objects.get("agent", {})
+        # agents are instantiated per request, just store classes
+        self.agents = self.mad_hatter.services.get("agent", {})
         self.agents["default"] = DefaultAgent
 
-        self.mcps = self.mad_hatter.factory_objects.get("mcp", {})
+        self.mcps = self.mad_hatter.services.get("mcp", {})
 
         # update endpoints
         self.refresh_endpoints()

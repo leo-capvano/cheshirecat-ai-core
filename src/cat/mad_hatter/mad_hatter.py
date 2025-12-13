@@ -15,7 +15,7 @@ from cat.mad_hatter.decorators import (
     Hook,
     Tool,
     Endpoint,
-    FactoryObject
+    Service
 )
 
 class MadHatter:
@@ -32,7 +32,7 @@ class MadHatter:
         self.hooks: Dict[str, List[Hook]] = {}
         self.tools: List[Tool] = []
         self.endpoints: List[Endpoint] = []
-        self.factory_objects: Dict[str, FactoryObject] = {}
+        self.services: Dict[str, Service] = {}
 
         # callback out of the hook system to notify other components about a refresh
         self.on_refresh_callbacks: List[Callable] = []
@@ -173,7 +173,7 @@ class MadHatter:
         self.hooks = {}
         self.tools = []
         self.endpoints = []
-        self.factory_objects = {}
+        self.services = {}
 
         for _, plugin in self.plugins.items():
             # load decorated funcs from plugins (only active ones have them populated)
@@ -181,10 +181,10 @@ class MadHatter:
             self.endpoints += plugin.endpoints
             
             # index factory objects by type and slug
-            for fo in plugin.factory_objects:
-                if not fo.factory_type in self.factory_objects:
-                    self.factory_objects[fo.factory_type] = {}
-                self.factory_objects[fo.factory_type][fo.slug] = fo
+            for s in plugin.services:
+                if not s.service_type in self.services:
+                    self.services[s.service_type] = {}
+                self.services[s.service_type][s.slug] = s
 
             # index hooks by name
             for h in plugin.hooks:

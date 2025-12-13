@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from fastapi import APIRouter, Request
 
 from cat.auth import AuthPermission, AuthResource, check_permissions
-from cat.mad_hatter.decorators import FactoryObjectMetadata
+from cat.mad_hatter.decorators import ServiceMetadata
 
 router = APIRouter(prefix="/status", tags=["Status"])
 
@@ -13,11 +13,11 @@ router = APIRouter(prefix="/status", tags=["Status"])
 class StatusResponse(BaseModel):
     status: str
     version: str
-    auth_handlers: Dict[str, FactoryObjectMetadata]
+    auth_handlers: Dict[str, ServiceMetadata]
 
 class FactoryStatusResponse(BaseModel):
-    agents: Dict[str, FactoryObjectMetadata]
-    models: Dict[str, FactoryObjectMetadata]
+    agents: Dict[str, ServiceMetadata]
+    models: Dict[str, ServiceMetadata]
     #llms: List[str]
     #embedders: List[str]
     mcps: List[str]

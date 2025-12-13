@@ -12,7 +12,7 @@ from packaging.requirements import Requirement
 
 from cat.mad_hatter.decorators import (
     Tool, Hook, PluginDecorator,
-    Endpoint, FactoryObject
+    Endpoint, Service
 )
 from cat.mad_hatter.plugin_manifest import PluginManifest
 from cat.db.models import KeyValueDB
@@ -60,7 +60,7 @@ class Plugin:
         self._hooks: List[Hook] = []  # list of plugin hooks
         self._tools: List[Tool] = []  # list of plugin tools
         self._endpoints: List[Endpoint] = [] # list of plugin endpoints
-        self._factory_objects: List[FactoryObject] = [] # list of plugin factory objects
+        self._services: List[Service] = [] # list of plugin factory objects
 
         # list of @plugin decorated functions overriding default plugin behaviour
         self._plugin_overrides = {}
@@ -101,7 +101,7 @@ class Plugin:
         self._hooks = []
         self._tools = []
         self._endpoints = []
-        self._factory_objects = []
+        self._services = []
         self._plugin_overrides = {}
 
         # TODOV2: remove settings from DB?
@@ -256,7 +256,7 @@ class Plugin:
         hooks = []
         tools = []
         endpoints = []
-        factory_objects = []
+        services = []
         plugin_overrides = []
 
         # TODOV2: this for should probably go in mad_hatter
@@ -280,7 +280,7 @@ class Plugin:
                 hooks += getmembers(plugin_module, self._is_cat_hook)
                 tools += getmembers(plugin_module, self._is_cat_tool)
                 endpoints += getmembers(plugin_module, self._is_custom_endpoint)
-                factory_objects += getmembers(plugin_module, self._is_cat_factory_object)
+                services += getmembers(plugin_module, self._is_cat_service)
                 plugin_overrides += getmembers(plugin_module, self._is_cat_plugin_override)
 
             except Exception:
@@ -292,7 +292,7 @@ class Plugin:
         self._hooks = list(map(self._clean_hook, hooks))
         self._tools = list(map(self._clean_tool, tools))
         self._endpoints = list(map(self._clean_endpoint, endpoints))
-        self._factory_objects = list(map(self._clean_factory_object, factory_objects))
+        self._services = list(map(self._clean_service, services))
         self._plugin_overrides = {override.name: override for override in list(map(self._clean_plugin_override, plugin_overrides))}
 
 
@@ -326,14 +326,14 @@ class Plugin:
             route.endpoint.plugin_id = self._id # this works
         return e
     
-    def _clean_factory_object(self, factory_object: FactoryObject):
-        f = factory_object[1]
-        f.factory_type = f.factory_type
-        f.slug = f.slug or f.__name__.lower()
-        f.name = f.name or f.__name__
-        f.description = f.description or f.__doc__ or "No description."
-        f.plugin_id = self._id
-        return f
+    def _clean_service(self, service: Service):
+        s = service[1]
+        s.service_type = s.service_type
+        s.slug = s.slug or s.__name__.lower()
+        s.name = s.name or s.__name__
+        s.description = s.description or s.__doc__ or "No description."
+        s.plugin_id = self._id
+        return s
 
     def _clean_plugin_override(self, plugin_override):
         return plugin_override[1]
@@ -350,13 +350,13 @@ class Plugin:
     def _is_cat_tool(obj):
         return isinstance(obj, Tool)
     
-    # a plugin factory object is any class found in a plugin descending from FactoryObject
+    # a plugin factory object is any class found in a plugin descending from Service
     @staticmethod
-    def _is_cat_factory_object(obj):
+    def _is_cat_service(obj):
         return isclass(obj) \
-            and issubclass(obj, FactoryObject) \
-            and not obj is FactoryObject \
-            and not FactoryObject in obj.__bases__
+            and issubclass(obj, Service) \
+            and not obj is Service \
+            and not Service in obj.__bases__
 
     # a plugin override function has to be decorated with @plugin
     # (which returns an instance of PluginDecorator)
@@ -395,8 +395,8 @@ class Plugin:
         return self._endpoints
     
     @property
-    def factory_objects(self):
-        return self._factory_objects
+    def services(self):
+        return self._services
     
     @property
     def overrides(self):

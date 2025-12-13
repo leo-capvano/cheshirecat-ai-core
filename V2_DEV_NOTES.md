@@ -47,8 +47,11 @@
 ## Agents
 
 - Version 2 supports multiple agents, and the agent to be run can be chosen *per message*. So many agents can intervene in a single chat and they can communicate.
-- you can declare an agent in your plugin subclassing the `Agent` class and registering it via hook `factory_allowed_agents`. A minimal agent only needs to implement the `execute` method:
+- you can declare an agent in your plugin subclassing the `Agent` and it will be automatically picked upo by core:
+
   ```python
+  from cat import Agent
+  
   TODO example
   ```
 - If you want to achieve automatic routing between agents, you can define a custom routing agent (embedding based routing, LLM based routing, etc.). By default, core only requires you to specify an agent in chat request and that the agent is registered.
@@ -96,7 +99,7 @@
 
 ## Models
 
-- from now on we only support chat models, text only or multimodal. Pure completion models are not supported anymore. If you need to use one, create your own LLM adapter and hook it via `factory_allowed_llms`.
+- from now on we only support chat models, text only or multimodal. Pure completion models are not supported anymore. If you need to use one, create your own LLM adapter and declare it subclassing `ModelProvider` .
 - Embedders are not present in core, so are not automatically associated with the chosen LLM vendor. You will need to configure that yourself via an plugin or a custom one.
 
 
@@ -152,7 +155,7 @@
 
 ## Hooks
 
-- hooks `priority` fixed, the ones with a higher number go first
+- hooks `priority` fixed, the ones with a higher number go first.
 - you have now in `cat.request` an object of type `ChatRequest`, containing user input and convo history, and in `cat.response` an object of type `ChatResponse`.  
 `cat.response` is available since the beginning of the message flow. This is to avoid patterns in which devs stored in working memory stuff to be added later on in the final response via `before_cat_send_message`. Now you can store output data directly in `cat.response` and the client will receive that data.  
 Both `cat.request` and `cat.response` are cleared at each message. Use `cat.working_memory` (if we decide to reimplement it) to store arbitrary information across the whole conversation.

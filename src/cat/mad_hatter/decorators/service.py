@@ -1,32 +1,32 @@
 
 from pydantic import BaseModel, ConfigDict
 
-class FactoryObjectMetadata(BaseModel):
+class ServiceMetadata(BaseModel):
     
     slug: str
     name: str
     description: str
     plugin_id: str | None
-    factory_type: str | None = None
+    service_type: str | None = None
 
     # allow extra fields
     model_config = ConfigDict(extra="allow")
 
-class FactoryObject:
+class Service:
     """Base class for factory objects (model, agent, auth handler, etc.)."""
     
     slug: str | None = None
     name: str | None = None
     description: str | None = None
     plugin_id: str | None = None
-    factory_type: str | None = None
+    service_type: str | None = None
 
     @classmethod
-    def get_factory_metadata(cls) -> FactoryObjectMetadata:
-        return FactoryObjectMetadata(
+    def get_factory_metadata(cls) -> ServiceMetadata:
+        return ServiceMetadata(
             slug=cls.slug,
             name=cls.name,
             description=cls.description,
             plugin_id=cls.plugin_id,
-            factory_type=cls.factory_type,
+            service_type=cls.service_type,
         )

@@ -3,18 +3,21 @@ from typing import Dict
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.embeddings import Embeddings
 
-from cat.mad_hatter.decorators import FactoryObject
+from cat.mad_hatter.decorators import Service
 
 from .llm import DefaultLLM
 from .embedder import DefaultEmbedder
 
-class BaseModelProvider(FactoryObject):
-    """Base LLM class for all LLM implementations."""
+# TODOV2: would be cool to:
+# - totally eradicate langchain from core
+# - allow plugins to expose also image generators, audo (stt and tts) and others.
+class ModelProvider(Service):
+    """Base class to expose deep learning models."""
     
-    factory_type = "model"
+    service_type = "model"
 
     async def setup(self, cat):
-        """Setup the vendor (e.g. load API keys from settings)."""
+        """Setup the vendor (e.g. load available model slugs, load API keys from settings)."""
         self.llms = {}
         self.embedders = {}
 
@@ -26,7 +29,7 @@ class BaseModelProvider(FactoryObject):
         """Return a dictionary: slug -> Embedder instance."""
         return self.embedders
     
-class DefaultModels(BaseModelProvider):
+class DefaultModels(ModelProvider):
     """Default model provider (placeholder models)."""
 
     slug = "default"

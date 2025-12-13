@@ -6,7 +6,7 @@ from pytz import utc
 import jwt
 from jwt.exceptions import InvalidTokenError
 
-from cat.mad_hatter.decorators import FactoryObject
+from cat.mad_hatter.decorators import Service
 from cat.auth.permissions import (
     AuthPermission, AuthResource
 )
@@ -14,12 +14,12 @@ from cat.auth.user import User
 from cat.env import get_env
 from cat import log
 
-class Auth(ABC, FactoryObject):
+class Auth(ABC, Service):
     """
     Base class to build custom Auth systems.
     """
 
-    factory_type = "auth"
+    service_type = "auth"
 
     def get_full_permissions(self) -> Dict[AuthResource, List[AuthPermission]]:
         """
