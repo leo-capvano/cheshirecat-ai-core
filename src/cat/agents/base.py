@@ -1,3 +1,5 @@
+import inspect
+from functools import wraps
 from typing import List, Any
 
 from cat.auth.user import User
@@ -7,6 +9,25 @@ from cat.mixin.llm import LLMMixin
 from cat.mixin.stream import EventStreamMixin
 from cat.mad_hatter.decorators import Tool, Service
 #from cat.looking_glass.stray_cat import StrayCat
+
+
+def agent_tool(func=None, *, return_direct=False, examples=None):
+
+    if examples is None:
+        examples = []
+
+    if func is None:
+        return lambda f: agent_tool(f, return_direct=return_direct, examples=examples)
+
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        return func(self, *args, **kwargs)
+
+    wrapper._is_agent_tool = True
+    wrapper._return_direct = return_direct
+    wrapper._examples = examples
+    return wrapper
+
 
 class Agent(Service, LLMMixin, EventStreamMixin):
 
@@ -128,17 +149,22 @@ class Agent(Service, LLMMixin, EventStreamMixin):
         return prompt_prefix + prompt_suffix
 
     async def list_tools(self) -> List[Tool]:
-        """Get both plugins' tools and MCP tools in Tool format."""
+        """Get plugins' tools, MCP tools, and agent's own tools in CatTool format."""
 
+        # Get MCP tools
         mcp_tools = await self.mcp.list_tools()
         mcp_tools = [
             Tool.from_fastmcp(t, self.mcp.call_tool)
             for t in mcp_tools
         ]
 
+        # Get agent's own tools decorated with @agent_tool
+        agent_tools = self.instantiate_agent_tools()
+
+        # Combine all tools
         tools = await self.execute_hook(
             "agent_allowed_tools",
-            mcp_tools + self.mad_hatter.tools
+            mcp_tools + self.mad_hatter.tools + agent_tools
         )
 
         return tools
@@ -208,8 +234,54 @@ class Agent(Service, LLMMixin, EventStreamMixin):
     def user_id(self) -> str:
         """Get the user ID."""
         return self.user.id
-    
-    
+
+    @classmethod
+    def get_agent_tools(cls):
+        """
+        Get all methods of the class that are decorated with @agent_tool.
+        """
+        agent_tools = {}
+        for name, func in inspect.getmembers(cls):
+            if inspect.isfunction(func) or inspect.ismethod(func):
+                if getattr(func, '_is_agent_tool', False):
+                    agent_tools[name] = func
+        return agent_tools
+
+    def instantiate_agent_tools(self) -> List[Tool]:
+        """
+        Instantiate agent tools as Tool instances.
+        """
+        agent_tools = []
+
+        for name, func in self.get_agent_tools().items():
+            # Create a bound method wrapper that includes self
+            def create_bound_wrapper(bound_func):
+                async def wrapper(**kwargs):
+                    # Call the bound method (already has self)
+                    return await bound_func(**kwargs) if inspect.iscoroutinefunction(bound_func) else bound_func(
+                        **kwargs)
+
+                return wrapper
+
+            # Bind the function to this instance
+            bound_method = func.__get__(self, self.__class__)
+            wrapped_func = create_bound_wrapper(bound_method)
+
+            # Create a Tool instance from the decorated function
+            tool = Tool.from_decorated_function(
+                func,
+                return_direct=getattr(func, '_return_direct', False),
+                examples=getattr(func, '_examples', [])
+            )
+
+            # Replace the func with our bound wrapper so it can be executed properly
+            tool.func = wrapped_func
+
+            agent_tools.append(tool)
+
+        return agent_tools
+
+
     # @property
     # def stream_callback(self):
     #     """Gives access to the stream callback function."""
