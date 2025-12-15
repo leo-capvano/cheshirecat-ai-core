@@ -254,7 +254,7 @@ class MadHatter:
         await self.refresh_caches()
 
 
-    async def execute_hook(self, hook_name, default_value, caller) -> Any:
+    async def execute_hook(self, hook_name, default_value, ctx) -> Any:
         """Execute a hook."""
 
         # check if hook is supported
@@ -279,7 +279,7 @@ class MadHatter:
                 tmp_value = await utils.run_sync_or_async(
                     hook.function,
                     deepcopy(value),
-                    caller,
+                    ctx,
                 )
                 if tmp_value is not None:
                     value = tmp_value
@@ -293,7 +293,7 @@ class MadHatter:
 
 
     def get_plugin(self) -> Plugin:
-        """Internal use only. Plugins should use `cat.plugin` or `agent.plugin`."""
+        """Internal use only. Plugins should use `ctx.plugin`."""
 
         stack = inspect.stack()
         norm_plugins_path = os.path.normpath(paths.PLUGINS_PATH)

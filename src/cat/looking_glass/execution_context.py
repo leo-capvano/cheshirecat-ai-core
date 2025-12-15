@@ -4,34 +4,69 @@ import time
 from uuid import uuid4
 from collections.abc import AsyncGenerator
 from typing import Any, Callable
-from pydantic import BaseModel, ConfigDict
 
 from cat.auth.user import User
 from cat.looking_glass.cheshire_cat import CheshireCat
 from cat.protocols.agui import events
 from cat.types import ChatRequest, ChatResponse
-
+from cat.mad_hatter.plugin import Plugin
+from cat.mad_hatter.decorators import Service
+from cat.agents.base import Agent
 from cat import log
 
 
-class StrayCat(BaseModel):
+class ExecutionContext:
     """
-    Request context used as entry point for agent(s) execution.
-    The framework creates an instance for every http request and websocket connection, making it available for plugins.
+    Request execution context.
+    It is instantiated  for every request and passed to plugins for easy access to:
+     - the main app `ccat`
+     - current `user`
+     - current `plugin`
+     - services offered by framework and plugins (llms, agents, memories, etc.)
 
     You will be interacting with an instance of this class directly from within your plugins:
 
-     - in `@hook`, `@tool` and `@endpoint` decorated functions will be passed as argument `ctx` (in version 1 was called `cat`)
+     - in `@hook`, `@tool` and `@endpoint` decorated functions will be passed as argument `ctx` (in version 1 was called `cat`).
+     - Agents have it under self.ctx.
     """
 
-    ccat: CheshireCat
-    user: User
+    def __init__(
+        self,
+        ccat: CheshireCat,
+        user: User | None = None
+    ):
+        """
+        Initialize the ExecutionContext.
+        
+        Parameters
+        ----------
+        ccat : CheshireCat
+            The main Cat application instance.
+            Gives access to all the plugins, services, agents, etc.
+        user : User | None
+            The current user instance.
+            During bootstrap and scheduled jobs can be None (no user in that scope).
+        """
+        self.ccat = ccat
+        self.user = user
+        self.stream_callback = lambda x: None
 
-    # tmp BaseModel to make it work with new tools
-    model_config = ConfigDict(
-        extra='allow',
-        arbitrary_types_allowed=True
-    )
+    def get_service(self, type: str, slug: str) -> Service | None:
+        """Get a service instance by type and slug.
+
+        Parameters
+        ----------
+        type : str
+            The type of the service (e.g. "llm", "memory", "agent", etc.)
+        slug : str
+            The slug of the service.
+
+        Returns
+        -------
+        service : Service | None
+            The service instance if found, else None.
+        """
+        return self.ccat.get_service(type, slug)
 
     async def __call__(
         self,
@@ -58,6 +93,9 @@ class StrayCat(BaseModel):
             If stream_callback is passed, this method will return None and emit the final response via the stream_callback
         """
 
+        # used to stream messages back to the client via queue
+        self.stream_callback = stream_callback
+
         # TODOV2: fast_reply hook has no access to messages
         # Run a totally custom reply (skips all the side effects of the framework)
         fast_reply = await self.mad_hatter.execute_hook(
@@ -76,11 +114,7 @@ class StrayCat(BaseModel):
         AgentClass = self.ccat.agents.get(slug)
         if not AgentClass:
             raise Exception(f'Agent "{slug}" not found')
-        agent = AgentClass(
-            ccat=self.ccat,
-            user=self.user,
-            stream_callback=stream_callback
-        )
+        agent = AgentClass(self)
         response: ChatResponse = await agent(request)
 
         # run final response through plugins
@@ -95,7 +129,7 @@ class StrayCat(BaseModel):
         self,
         request: ChatRequest,
     ) -> AsyncGenerator[Any, None]:
-        """Runs the Cat keeping a queue of its messages in order to stream them or send them via websocket.
+        """Run the execution keeping a queue of its messages in order to stream them or send them via websocket.
         Emits the main AGUI lifecycle events
         """
 
@@ -164,6 +198,14 @@ class StrayCat(BaseModel):
     # TODOV2:
     # recover legacy V1 properties and methods for easier plugin migration
     # (use log.deprecation_warning inside each of them)
+
+    async def execute_hook(self, hook_name, default_value):
+        """Execute a plugin hook."""
+        return await self.ccat.mad_hatter.execute_hook(
+            hook_name,
+            default_value,
+            ctx=self
+        )
             
     @property
     def user_id(self) -> str:
@@ -174,3 +216,13 @@ class StrayCat(BaseModel):
     def mad_hatter(self):
         """Gives access to the `MadHatter` plugin manager."""
         return self.ccat.mad_hatter
+    
+    @property
+    def plugin(self) -> Plugin:
+        """Get the current plugin. Can be None if called outside plugin scope."""
+        return self.ccat.plugin
+    
+    @property
+    def agent(self) -> Agent | None:
+        """Get access to the agent being executed. Can be None outside agent execution."""
+        return self.agent

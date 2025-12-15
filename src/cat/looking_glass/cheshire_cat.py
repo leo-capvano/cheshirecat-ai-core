@@ -127,6 +127,7 @@ class CheshireCat:
         # reset openapi schema
         self.fastapi_app.openapi_schema = None
 
+
     @property
     def plugin(self):
         """Access plugin object (used from within a plugin)."""

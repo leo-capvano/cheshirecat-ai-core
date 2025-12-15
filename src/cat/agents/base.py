@@ -1,21 +1,23 @@
-from typing import List, Any
+from typing import List, Any, TYPE_CHECKING
 
-from cat.auth.user import User
-from cat.looking_glass.cheshire_cat import CheshireCat
-from cat.types import Message, ChatRequest, ChatResponse
 from cat.mixin.llm import LLMMixin
 from cat.mixin.stream import EventStreamMixin
-from cat.mad_hatter.decorators import Tool, Service
-#from cat.looking_glass.stray_cat import StrayCat
+from cat.mad_hatter.decorators import Service
+from cat.types import Message, ChatRequest, ChatResponse
+
+if TYPE_CHECKING:
+    from cat.auth.user import User
+    from cat.looking_glass.cheshire_cat import CheshireCat
+    from cat.mad_hatter.decorators import Tool
+    from cat.looking_glass.execution_context import ExecutionContext
+
 
 class Agent(Service, LLMMixin, EventStreamMixin):
 
     service_type = "agent"
 
-    def __init__(self, ccat: CheshireCat, user: User, stream_callback):
-        self.ccat = ccat
-        self.user = user
-        self.stream_callback = stream_callback
+    def __init__(self, ctx: "ExecutionContext"):
+        self.ctx: "ExecutionContext" = ctx
 
     async def __call__(self, request: ChatRequest) -> ChatResponse:
         """
@@ -36,6 +38,8 @@ class Agent(Service, LLMMixin, EventStreamMixin):
 
         self.request = request
         self.response = ChatResponse()
+
+        # TODOV2: add agent_fast_reply hook
         
         async with self.ccat.mcp_clients.get_user_client(self) as mcp_client:
             self.mcp = mcp_client
@@ -127,7 +131,7 @@ class Agent(Service, LLMMixin, EventStreamMixin):
 
         return prompt_prefix + prompt_suffix
 
-    async def list_tools(self) -> List[Tool]:
+    async def list_tools(self) -> List["Tool"]:
         """Get both plugins' tools and MCP tools in Tool format."""
 
         mcp_tools = await self.mcp.list_tools()
@@ -155,10 +159,10 @@ class Agent(Service, LLMMixin, EventStreamMixin):
     
     async def execute_hook(self, hook_name, default_value):
         """Execute a plugin hook."""
-        return await self.mad_hatter.execute_hook(
+        return await self.ctx.execute_hook(
             hook_name,
             default_value,
-            self
+            self.ctx
         )
 
     def get_agent(self, slug):
@@ -171,11 +175,7 @@ class Agent(Service, LLMMixin, EventStreamMixin):
         if not AgentClass:
             raise Exception(f'Agent "{slug}" not found')
         
-        return AgentClass(
-            ccat=self.ccat,
-            user=self.user,
-            stream_callback=self.stream_callback
-        )
+        return AgentClass(self.ctx)
     
     async def call_agent(self, slug, request: ChatRequest) -> ChatResponse:
         """
@@ -188,6 +188,16 @@ class Agent(Service, LLMMixin, EventStreamMixin):
         
         agent = self.get_agent(slug)
         return await agent(request)
+
+    @property
+    def ccat(self) -> "CheshireCat":
+        """Gives access to the CheshireCat instance."""
+        return self.ctx.ccat
+    
+    @property
+    def user(self) -> "User":
+        """Gives access to the User instance."""
+        return self.ctx.user   
 
     @property
     def plugin(self):

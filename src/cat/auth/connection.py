@@ -20,7 +20,7 @@ from cat.auth import (
     AuthResource,
     User,
 )
-from cat.looking_glass.stray_cat import StrayCat
+from cat.looking_glass.execution_context import ExecutionContext
 
 
 class Connection(ABC):
@@ -35,7 +35,7 @@ class Connection(ABC):
         self.permission = permission
 
     @abstractmethod
-    async def __call__(self, *args, **kwargs) -> AsyncGenerator[StrayCat, None]:
+    async def __call__(self, *args, **kwargs) -> AsyncGenerator[ExecutionContext, None]:
         pass
 
     @abstractmethod
@@ -46,7 +46,7 @@ class Connection(ABC):
         self,
         connection: Request | WebSocket,
         credential: str | None
-    ) -> AsyncGenerator[StrayCat | None, None]:
+    ) -> AsyncGenerator[ExecutionContext | None, None]:
         
         ccat = connection.app.state.ccat
         
@@ -55,15 +55,15 @@ class Connection(ABC):
                 credential, self.resource, self.permission
             )
             if user and isinstance(user, User):
-                # create new StrayCat
-                cat = StrayCat(ccat=ccat, user=user)
+                # create new ExecutionContext
+                cat = ExecutionContext(ccat=ccat, user=user)
                 
-                # StrayCat is passed to the endpoint
+                # ExecutionContext is passed to the endpoint
                 yield cat
 
                 return
 
-        # if no StrayCat was obtained, raise exception
+        # if no user was obtained, raise exception
         self.not_allowed()
 
 
@@ -77,7 +77,7 @@ class HTTPConnection(Connection):
             description="Insert here your CCAT_API_KEY, or Bearer JWT token.",
             auto_error=False
         )), # this mess for the damn swagger
-    ) -> AsyncGenerator[StrayCat | None, None]:
+    ) -> AsyncGenerator[ExecutionContext | None, None]:
 
         # check Authorization header
         if credential is not None:
@@ -100,7 +100,7 @@ class WebsocketConnection(Connection):
     async def __call__(
         self,
         connection: WebSocket,
-    ) -> AsyncGenerator[StrayCat | None, None]:
+    ) -> AsyncGenerator[ExecutionContext | None, None]:
         
         async for stray in self.authorize(
             connection,
