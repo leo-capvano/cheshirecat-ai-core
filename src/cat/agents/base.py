@@ -255,17 +255,25 @@ class Agent(Service, LLMMixin, EventStreamMixin):
 
         for name, func in self.get_agent_tools().items():
             # Create a bound method wrapper that includes self
-            def create_bound_wrapper(bound_func):
+            sig = inspect.signature(func)
+            valid_params = set(sig.parameters.keys()) - {'self'}
+
+            def create_bound_wrapper(bound_func, valid_params):
+
                 async def wrapper(**kwargs):
+                    filtered_kwargs = {
+                        k: v for k, v in kwargs.items()
+                        if k in valid_params
+                    }
                     # Call the bound method (already has self)
-                    return await bound_func(**kwargs) if inspect.iscoroutinefunction(bound_func) else bound_func(
-                        **kwargs)
+                    return await bound_func(**filtered_kwargs) if inspect.iscoroutinefunction(bound_func) else bound_func(
+                        **filtered_kwargs)
 
                 return wrapper
 
             # Bind the function to this instance
             bound_method = func.__get__(self, self.__class__)
-            wrapped_func = create_bound_wrapper(bound_method)
+            wrapped_func = create_bound_wrapper(bound_method, valid_params)
 
             # Create a Tool instance from the decorated function
             tool = Tool.from_decorated_function(
