@@ -1,3 +1,4 @@
+import inspect
 import time
 from uuid import uuid4
 from dataclasses import asdict
@@ -49,7 +50,7 @@ class Tool:
         
         parsed_function = ParsedFunction.from_function(
             func,
-            exclude_args=["cat"], # awesome, will only be used at execution
+            exclude_args=["cat", "self"], # awesome, will only be used at execution
             validate=False
         )
 
@@ -193,6 +194,39 @@ class Tool:
                 content=tool_output.content.text,
                 raw_event=tool_output.model_dump()
             )
+        )
+
+    def bind_to(self, instance) -> 'Tool':
+        """Bind this tool's function to an instance (for class-based tools)."""
+
+        original_func = self.func
+        sig = inspect.signature(original_func)
+        valid_params = set(sig.parameters.keys()) - {'self'}
+
+        # Bind the method
+        bound_method = original_func.__get__(instance, instance.__class__)
+
+        # Create wrapper
+        def create_bound_wrapper(bound_func, params):
+            async def wrapper(**kwargs):
+                filtered_kwargs = {k: v for k, v in kwargs.items() if k in params}
+                if inspect.iscoroutinefunction(bound_func):
+                    return await bound_func(**filtered_kwargs)
+                else:
+                    return bound_func(**filtered_kwargs)
+
+            return wrapper
+
+        # Return a NEW Tool with the bound function
+        return Tool(
+            func=create_bound_wrapper(bound_method, valid_params),
+            name=self.name,
+            description=self.description,
+            input_schema=self.input_schema,
+            output_schema=self.output_schema,
+            return_direct=self.return_direct,
+            examples=self.examples,
+            is_internal=self.is_internal
         )
 
 

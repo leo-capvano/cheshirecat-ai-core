@@ -1,6 +1,4 @@
-import inspect
-from functools import wraps
-from typing import List, Any
+from typing import List
 
 from cat.auth.user import User
 from cat.looking_glass.cheshire_cat import CheshireCat
@@ -9,24 +7,6 @@ from cat.mixin.llm import LLMMixin
 from cat.mixin.stream import EventStreamMixin
 from cat.mad_hatter.decorators import Tool, Service
 #from cat.looking_glass.stray_cat import StrayCat
-
-
-def agent_tool(func=None, *, return_direct=False, examples=None):
-
-    if examples is None:
-        examples = []
-
-    if func is None:
-        return lambda f: agent_tool(f, return_direct=return_direct, examples=examples)
-
-    @wraps(func)
-    def wrapper(self, *args, **kwargs):
-        return func(self, *args, **kwargs)
-
-    wrapper._is_agent_tool = True
-    wrapper._return_direct = return_direct
-    wrapper._examples = examples
-    return wrapper
 
 
 class Agent(Service, LLMMixin, EventStreamMixin):
@@ -215,6 +195,14 @@ class Agent(Service, LLMMixin, EventStreamMixin):
         agent = self.get_agent(slug)
         return await agent(request)
 
+    def instantiate_agent_tools(self) -> List[Tool]:
+        """Find Tool instances on class and bind them to the agent instance."""
+        return [
+            attr.bind_to(self)
+            for name in dir(self.__class__)
+            if isinstance(attr := getattr(self.__class__, name, None), Tool)
+        ]
+
     @property
     def plugin(self):
         """Access plugin object (used from within a plugin)."""
@@ -234,60 +222,6 @@ class Agent(Service, LLMMixin, EventStreamMixin):
     def user_id(self) -> str:
         """Get the user ID."""
         return self.user.id
-
-    @classmethod
-    def get_agent_tools(cls):
-        """
-        Get all methods of the class that are decorated with @agent_tool.
-        """
-        agent_tools = {}
-        for name, func in inspect.getmembers(cls):
-            if inspect.isfunction(func) or inspect.ismethod(func):
-                if getattr(func, '_is_agent_tool', False):
-                    agent_tools[name] = func
-        return agent_tools
-
-    def instantiate_agent_tools(self) -> List[Tool]:
-        """
-        Instantiate agent tools as Tool instances.
-        """
-        agent_tools = []
-
-        for name, func in self.get_agent_tools().items():
-            # Create a bound method wrapper that includes self
-            sig = inspect.signature(func)
-            valid_params = set(sig.parameters.keys()) - {'self'}
-
-            def create_bound_wrapper(bound_func, valid_params):
-
-                async def wrapper(**kwargs):
-                    filtered_kwargs = {
-                        k: v for k, v in kwargs.items()
-                        if k in valid_params
-                    }
-                    # Call the bound method (already has self)
-                    return await bound_func(**filtered_kwargs) if inspect.iscoroutinefunction(bound_func) else bound_func(
-                        **filtered_kwargs)
-
-                return wrapper
-
-            # Bind the function to this instance
-            bound_method = func.__get__(self, self.__class__)
-            wrapped_func = create_bound_wrapper(bound_method, valid_params)
-
-            # Create a Tool instance from the decorated function
-            tool = Tool.from_decorated_function(
-                func,
-                return_direct=getattr(func, '_return_direct', False),
-                examples=getattr(func, '_examples', [])
-            )
-
-            # Replace the func with our bound wrapper so it can be executed properly
-            tool.func = wrapped_func
-
-            agent_tools.append(tool)
-
-        return agent_tools
 
 
     # @property
