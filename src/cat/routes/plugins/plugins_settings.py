@@ -15,16 +15,21 @@ class PluginSettings(BaseModel):
 @router.get("/{id}/settings")
 async def get_plugin_settings(
     id: str,
-    cat=check_permissions(AuthResource.PLUGIN, AuthPermission.READ),
+    ctx=check_permissions(AuthResource.PLUGIN, AuthPermission.READ),
 ) -> PluginSettings:
     """Returns the settings of a specific plugin."""
 
-    if not cat.mad_hatter.plugin_exists(id):
+    ccat = ctx.ccat
+
+    if not ccat.mad_hatter.plugin_exists(id):
         raise HTTPException(status_code=404, detail="Plugin not found")
 
     try:
-        settings = await cat.mad_hatter.plugins[id].load_settings()
-        schema = cat.mad_hatter.plugins[id].settings_schema()
+        plugin = ccat.mad_hatter.plugins[id]
+        settings = await plugin.load_settings()
+        # settings_model can be sync or async
+        model = plugin.settings_model()
+        schema = model.model_json_schema()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -39,22 +44,29 @@ async def get_plugin_settings(
 async def upsert_plugin_settings(
     id: str,
     payload: Dict = Body({"setting_a": "some value", "setting_b": "another value"}),
-    cat=check_permissions(AuthResource.PLUGIN, AuthPermission.EDIT),
+    ctx=check_permissions(AuthResource.PLUGIN, AuthPermission.EDIT),
 ) -> PluginSettings:
-    """Updates the settings of a specific plugin"""
+    """Updates the settings of a specific plugin (full replacement, not partial)"""
 
-    if not cat.mad_hatter.plugin_exists(id):
+    ccat = ctx.ccat
+
+    if not ccat.mad_hatter.plugin_exists(id):
         raise HTTPException(status_code=404, detail="Plugin not found")
 
     # Get the plugin object
-    plugin = cat.mad_hatter.plugins[id]
+    plugin = ccat.mad_hatter.plugins[id]
 
     try:
-        # Load the plugin settings Pydantic model
+        from cat import utils
+
+        # Load the plugin settings Pydantic model (sync or async)
         PluginSettingsModel = plugin.settings_model()
+
         # Validate the settings
-        PluginSettingsModel.model_validate(payload)
-        final_settings = await plugin.save_settings(payload)
+        validated_settings = PluginSettingsModel.model_validate(payload)
+
+        # Save settings (full replacement) - save_settings handles BaseModel conversion
+        final_settings = await plugin.save_settings(validated_settings)
     except ValidationError as e:
         raise HTTPException(
             status_code=400,
@@ -62,11 +74,11 @@ async def upsert_plugin_settings(
         )
     except Exception as e:
         raise HTTPException(
-            status_code=400,
+            status_code=500,
             detail=str(e)
         )
-    
-    await cat.mad_hatter.refresh_caches()
+
+    await ccat.mad_hatter.refresh_caches()
 
     return PluginSettings(
         id=id,

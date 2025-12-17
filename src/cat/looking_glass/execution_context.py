@@ -204,12 +204,7 @@ class ExecutionContext:
         service : Service | None
             The service instance if found, else None.
         """
-        S: Service = self.ccat.services.get(type, {}).get(slug, None)
-        if S is None and raise_error:
-            raise Exception(f'Service "{type}" with slug "{slug}" not found')
-        
-        if S is not None:
-            return await S.get_instance(self)
+        return await self.ccat.factory.get_service(type, slug, self, raise_error)
     
     async def get_agent(self, slug: str) -> Agent:
         """

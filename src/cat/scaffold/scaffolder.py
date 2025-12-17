@@ -3,7 +3,7 @@ import shutil
 import datetime
 from uuid import uuid4
 
-from cat.db.models import KeyValueDB
+from cat.db import DB
 from cat import paths
 
 
@@ -39,6 +39,11 @@ def populate_db():
             "alive_since": datetime.datetime.now(datetime.timezone.utc),
         },
     }
+
+    # Note: scaffolder runs sync, but DB methods are async
+    # This code runs during initial setup before async context is available
+    # Keeping as-is for now, or convert to async if scaffolder supports it
+    from cat.db.models import KeyValueDB
 
     for key, value in initial_settings.items():
         setting = KeyValueDB.objects().where(KeyValueDB.key == key).first().run_sync()

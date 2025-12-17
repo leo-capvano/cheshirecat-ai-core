@@ -6,6 +6,7 @@ from rich import inspect
 from cat import log
 from cat.protocols.model_context.client import MCPClients
 from cat.mad_hatter.mad_hatter import MadHatter
+from cat.services.factory import ServiceFactory
 from .execution_context import ExecutionContext
 
 if TYPE_CHECKING:
@@ -33,6 +34,9 @@ class CheshireCat:
 
         # execution context for global services, not user/request bound
         self.gctx = ExecutionContext(self)
+
+        # service factory for managing service lifecycle
+        self.factory = ServiceFactory()
 
         try:
             # reference to the FastAPI object
@@ -70,7 +74,11 @@ class CheshireCat:
 
     async def on_mad_hatter_refresh(self):
         """Refresh CheshireCat components when MadHatter is refreshed."""
+
+        # Reset factory (shutdown existing services and clear registry)
+        await self.factory.reset()
         
+        # reindex and warmup services
         await self.warmup_services()
 
         # update endpoints
@@ -92,29 +100,23 @@ class CheshireCat:
         from cat.services.auth.default import DefaultAuth
         from cat.services.agents.default import DefaultAgent
         from cat.services.model_provider.default import DefaultModelProvider
-        from cat.services.service import SingletonService
 
-        self.services = self.mad_hatter.service_classes
-
-        # always have a default agent
-        if not "agent" in self.services:
-            self.services["agent"] = {}
-        self.services["agent"]["default"] = DefaultAgent
-
-        # if no auth or models provided by plugins, add defaults
-        if "auth" not in self.services:
-            self.services["auth"] = { "default": DefaultAuth }
-        if "model_provider" not in self.services:
-            self.services["model_provider"] = { "default": DefaultModelProvider }
-
-        # actual warmup - instantiate SingletonService singletons
-        self.service_instances = {}
-        for type, services in self.services.items():
-            self.service_instances[type] = {}
+        # Register all services from plugins
+        for service_type, services in self.mad_hatter.service_classes.items():
             for slug, ServiceClass in services.items():
-                if issubclass(ServiceClass, SingletonService):
-                    self.service_instances[type][slug] = \
-                        await ServiceClass.get_instance(self.gctx)        
+                self.factory.registry.register(ServiceClass)
+
+        # Register default agent
+        self.factory.registry.register(DefaultAgent)
+
+        # If no auth or model_provider from plugins, use defaults
+        if not self.factory.registry.list_by_type("auth"):
+            self.factory.registry.register(DefaultAuth)
+        if not self.factory.registry.list_by_type("model_provider"):
+            self.factory.registry.register(DefaultModelProvider)
+
+        # Warmup all singleton services
+        await self.factory.warmup_singletons(self.gctx)        
 
     def refresh_endpoints(self):
         """Sync plugin endpoints in the fastapi app."""
@@ -137,8 +139,8 @@ class CheshireCat:
     @property
     def auth_handlers(self) -> dict[str, "Auth"]:
         """Get all auth handlers instances as a dictionary slug -> instance."""
-        
-        return self.service_instances.get("auth", {})
+
+        return self.factory.container._instances.get("auth", {})
 
 
 

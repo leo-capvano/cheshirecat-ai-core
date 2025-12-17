@@ -135,7 +135,7 @@
 - A specialized factory is responsible to collect objects (auth handlers, LLMs, Agents) from plugins. The factory uses hooks to make this collection.
 - `CatForm` used via the `@form` decorator is not included in core and have been moved to a plugin `form`. It was interesting to do research on this, but we ended up overengineering them: LLMs are way more powerful now and MCP has `elicitation` directly baked into tools. Furthermore, most of function calling fine tuning nowadays make the LLM itself ask for more info by inspecting the tool signature.
 - Core DB is a simple SQL (supports both sqlite and postgres) and it is used to store settings, chats, contexts and plugin settings. No more `metadata.json`, no `qdrant` in core, no memory/file caches.
-- Internal SQL is managed via Piccolo ORM (more about it later) and contains just two tables, `KeyValueDB` and `UserKeyValueDB`, acting as key/value stores respectively for global data and user specific data. It's very easy to leverage core DB and Piccolo to add tables from plugins.
+- Internal SQL is managed via Piccolo ORM (more about it later) and contains just two tables, `KeyValueDB` and `UserKeyValueDB`, acting as key/value stores respectively for global data and user specific data. There is also a couple of helpers to just call `.load` and `.save` XXXXXX examples. It's very easy to leverage core DB and Piccolo to add tables from plugins.
 - Core defines also an abstract table called `UserScopedDB` that can be subclassed by plugins and used for custom CRUDs (chats, contexts, products, whatever).
 - We've got a stabler and easier typing for Cat internals. Import the classes like this:
   ```python

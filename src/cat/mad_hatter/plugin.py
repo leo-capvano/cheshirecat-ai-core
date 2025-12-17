@@ -7,16 +7,16 @@ import importlib
 import subprocess
 from typing import Dict, List, Callable, Type, TYPE_CHECKING
 from inspect import getmembers, isclass
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from packaging.requirements import Requirement
 
+from cat.db import DB
 from cat.mad_hatter.decorators import (
     Tool, Hook, PluginDecorator,
     Endpoint
 )
 from cat.mad_hatter.plugin_manifest import PluginManifest
 from cat.services.service import Service, SingletonService, RequestService
-from cat.db.models import KeyValueDB
 from cat import log, paths
 
 
@@ -108,10 +108,6 @@ class Plugin:
 
         # TODOV2: remove settings from DB?
 
-    def settings_schema(self):
-        """Get plugin settings JSON schema."""
-        return self.settings_model().model_json_schema()
-
     def settings_model(self):
         """Get plugin settings Pydantic model"""
         # is "settings_model" hook defined in the plugin?
@@ -122,49 +118,66 @@ class Plugin:
         return PluginEmptySettingsModel
 
     async def load_settings(self) -> Dict:
-        """Load plugin settings."""
-
-        # TODOV2:
-        # - return as instance of settings_model()
-        # - validate loaded settings against model
-        # - throw away settings in DB if the model changed
+        """
+        Load plugin settings.
+        If settings exist but can't be validated against current model,
+        returns empty dict (prevents blocking on schema changes).
+        """
 
         db_key = f"{self.id}_plugin_settings"
 
         try:
-            # load settings from DB
-            settings = await KeyValueDB.objects().where(
-                KeyValueDB.key == db_key
-            ).first().output(load_json=True)
+            # Load settings from DB
+            loaded_settings = await DB.load(db_key)
 
-            # if it does not exist in DB, create it with defaults
-            if settings is None:
+            # If not found, create with defaults
+            if loaded_settings is None:
                 defaults = self._create_settings_from_model()
-                defaults = KeyValueDB(key=db_key, value=defaults)
-                await defaults.save()
-                return defaults.value
+                await DB.save(db_key, defaults)
+                return defaults
 
-            return settings.value
+            # Validate against current model (sync or async)
+            model = self.settings_model()
+            try:
+                model.model_validate(loaded_settings)
+            except ValidationError as e:
+                log.warning(
+                    f"Settings for plugin {self.id} are invalid "
+                    f"(schema changed?). Resetting to defaults. Error: {e}"
+                )
+                return {}
+
+            return loaded_settings
 
         except Exception:
             log.error(f"Unable to load plugin {self._id} settings.")
             log.warning(self.plugin_specific_error_message())
             raise
 
-    async def save_settings(self, settings: Dict) -> Dict:
-        """Save plugin settings."""
+    async def save_settings(self, settings: BaseModel | Dict) -> Dict:
+        """
+        Save plugin settings (full replacement, not partial merge).
 
-        # load already saved settings
-        old_settings = await self.load_settings()
+        Parameters
+        ----------
+        settings : BaseModel | dict
+            The complete settings to save (replaces existing).
 
-        # save settings
+        Returns
+        -------
+        dict
+            The saved settings.
+        """
+        from cat.db import DB
+
+        # Convert BaseModel to dict if needed
+        if isinstance(settings, BaseModel):
+            settings = settings.model_dump()
+
+        db_key = f"{self.id}_plugin_settings"
+
         try:
-            db_settings = await KeyValueDB.objects().where(
-                KeyValueDB.key == f"{self.id}_plugin_settings"
-            ).first().output(load_json=True)
-            db_settings.value = {**old_settings, **settings} # TODOV2: why not full replace?
-            await db_settings.save()
-            return db_settings.value
+            return await DB.save(db_key, settings)
         except Exception:
             log.error(f"Unable to save plugin {self._id} settings.")
             log.warning(self.plugin_specific_error_message())

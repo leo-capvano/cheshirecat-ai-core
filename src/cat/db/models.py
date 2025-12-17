@@ -37,6 +37,10 @@ class UserKeyValueDB(KeyValueDB, db=DB):
     class Meta:
         tablename = "ccat_user_key_value"
 
+################################################
+### utility user scoped table to be extended ###
+################################################
+
 class UserScopedDB(Table, db=DB):
     """Abstract user scoped table to be subclassed by plugins."""
     

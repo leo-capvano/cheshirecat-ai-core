@@ -7,7 +7,7 @@ from typing import List, Dict, Any, Callable, Type, TYPE_CHECKING
 
 from cat import log, paths, utils
 from cat.env import get_env
-from cat.db.models import KeyValueDB
+from cat.db import DB
 from cat.mad_hatter.plugin_extractor import PluginExtractor
 from cat.mad_hatter.registry import registry_download_plugin
 from cat.mad_hatter.plugin import Plugin
@@ -210,18 +210,11 @@ class MadHatter:
 
     async def get_active_plugins(self):
         """Get list of active plugins from DB."""
-        active_plugins = await KeyValueDB.objects().where(
-            KeyValueDB.key == "active_plugins"
-        ).first().output(load_json=True)
-        return active_plugins.value
-    
+        return await DB.load("active_plugins", default=[])
+
     async def set_active_plugins(self, active_plugins):
         """Set DB list of active plugins."""
-        ap = await KeyValueDB.objects().where(
-            KeyValueDB.key == "active_plugins"
-        ).first()
-        ap.value = list(set(active_plugins))
-        await ap.save()
+        await DB.save("active_plugins", list(set(active_plugins)))
 
     async def toggle_plugin(self, plugin_id):
         """Activate / deactivate a plugin."""

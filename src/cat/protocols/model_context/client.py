@@ -41,11 +41,11 @@ class MCPClients():
             "mcpServers": {}
         }
 
-        for slug, server_config in ctx.mcps:
+        for slug, server_config in {}: # TODOV2 RECOVER
             config["mcpServers"][slug] = {
                 "url": str(server_config.url)
             }
-        for server_config in ctx.request.mcps:
+        for server_config in []: # TODOV2 RECOVER
             config["mcpServers"][server_config.name] = {
                 "url": str(server_config.url)
             }
