@@ -5,22 +5,14 @@ from pydantic import BaseModel
 from fastapi import APIRouter, Request
 
 from cat.auth import AuthPermission, AuthResource, check_permissions
-from cat.mad_hatter.decorators import ServiceMetadata
+from cat.services.service import ServiceMetadata
 
 router = APIRouter(prefix="/status", tags=["Status"])
-
 
 class StatusResponse(BaseModel):
     status: str
     version: str
     auth_handlers: Dict[str, ServiceMetadata]
-
-class FactoryStatusResponse(BaseModel):
-    agents: Dict[str, ServiceMetadata]
-    models: Dict[str, ServiceMetadata]
-    #llms: List[str]
-    #embedders: List[str]
-    mcps: List[str]
 
 
 @router.get("")
@@ -33,7 +25,7 @@ async def status(
 
     auth_handlers = {}
     for slug, ah in ccat.auth_handlers.items():
-        auth_handlers[slug] = ah.get_service_metadata()
+        auth_handlers[slug] = await ah.get_meta()
         
     return StatusResponse(
         status = "We're all mad here, dear!",
@@ -45,26 +37,18 @@ async def status(
 @router.get("/factory")
 async def factory_status(
     r: Request,
-    cat=check_permissions(AuthResource.CHAT, AuthPermission.READ),
-) -> FactoryStatusResponse:
+    ctx=check_permissions(AuthResource.CHAT, AuthPermission.READ),
+) -> Dict[str, Dict[str, ServiceMetadata]]:
     """Available factory objects (llms, agents, auth handlers etc)."""
 
-    ccat = r.app.state.ccat
+    services = r.app.state.ccat.services
+    service_instances = {}
+    for type, service_dict in services.items():
+        service_instances[type] = {}
+        for slug, ServiceClass in service_dict.items():
+            instance = await ServiceClass.get_instance(ctx)
+            service_instances[type][slug] = await instance.get_meta()
 
-    agents = {}
-    for slug, A in ccat.agents.items():
-        agents[slug] = A.get_service_metadata()
-
-    models = {}
-    for slug, vendor in ccat.models.items():
-        models[slug] = vendor.get_service_metadata()
-        models[slug].llms = list(vendor.llms.keys())
-        models[slug].embedders = list(vendor.embedders.keys())
-
-    return FactoryStatusResponse(
-        agents=agents,
-        models=models,
-        mcps=ccat.mcps.keys()
-    )
+    return service_instances
 
 

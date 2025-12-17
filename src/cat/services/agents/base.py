@@ -2,7 +2,6 @@ from typing import List, Any, TYPE_CHECKING
 
 from cat.mixin.llm import LLMMixin
 from cat.mixin.stream import EventStreamMixin
-from cat.mad_hatter.decorators import Service
 from cat.types import Message, ChatRequest, ChatResponse
 
 if TYPE_CHECKING:
@@ -11,13 +10,11 @@ if TYPE_CHECKING:
     from cat.mad_hatter.decorators import Tool
     from cat.looking_glass.execution_context import ExecutionContext
 
+from ..service import RequestService
 
-class Agent(Service, LLMMixin, EventStreamMixin):
+class Agent(RequestService, LLMMixin, EventStreamMixin):
 
     service_type = "agent"
-
-    def __init__(self, ctx: "ExecutionContext"):
-        self.ctx: "ExecutionContext" = ctx
 
     async def __call__(self, request: ChatRequest) -> ChatResponse:
         """
@@ -41,7 +38,7 @@ class Agent(Service, LLMMixin, EventStreamMixin):
 
         # TODOV2: add agent_fast_reply hook
         
-        async with self.ccat.mcp_clients.get_user_client(self) as mcp_client:
+        async with self.ccat.mcp_clients.get_user_client(self.ctx) as mcp_client:
             self.mcp = mcp_client
             
             self.request = await self.execute_hook(
@@ -161,8 +158,7 @@ class Agent(Service, LLMMixin, EventStreamMixin):
         """Execute a plugin hook."""
         return await self.ctx.execute_hook(
             hook_name,
-            default_value,
-            self.ctx
+            default_value
         )
 
     def get_agent(self, slug):

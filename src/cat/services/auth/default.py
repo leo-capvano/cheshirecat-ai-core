@@ -5,11 +5,7 @@ from typing import Dict
 from cat import urls
 from cat.env import get_env
 
-from .base import Auth
-from ..permissions import (
-    AuthPermission, AuthResource
-)
-from ..user import User
+from .base import Auth, AuthPermission, AuthResource, User
 
 class DefaultAuth(Auth):
     """Defaul auth handler, only admin user, based on environment variables."""

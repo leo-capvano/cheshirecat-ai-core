@@ -3,7 +3,7 @@ import inspect
 import glob
 import shutil
 from copy import deepcopy
-from typing import List, Dict, Any, Callable
+from typing import List, Dict, Any, Callable, Type, TYPE_CHECKING
 
 from cat import log, paths, utils
 from cat.env import get_env
@@ -11,12 +11,16 @@ from cat.db.models import KeyValueDB
 from cat.mad_hatter.plugin_extractor import PluginExtractor
 from cat.mad_hatter.registry import registry_download_plugin
 from cat.mad_hatter.plugin import Plugin
-from cat.mad_hatter.decorators import (
-    Hook,
-    Tool,
-    Endpoint,
-    Service
-)
+
+if TYPE_CHECKING:
+    from cat.looking_glass.execution_context import ExecutionContext
+    from cat.services.service import Service
+    from cat.mad_hatter.decorators import (
+        Hook,
+        Tool,
+        Endpoint
+    )
+
 
 class MadHatter:
     """Plugin manager."""
@@ -32,7 +36,7 @@ class MadHatter:
         self.hooks: Dict[str, List[Hook]] = {}
         self.tools: List[Tool] = []
         self.endpoints: List[Endpoint] = []
-        self.services: Dict[str, Service] = {}
+        self.service_classes: Dict[str, Dict[str, Type[Service]]] = {}
 
         # callback out of the hook system to notify other components about a refresh
         self.on_refresh_callbacks: List[Callable] = []
@@ -173,19 +177,19 @@ class MadHatter:
         self.hooks = {}
         self.tools = []
         self.endpoints = []
-        self.services = {}
+        self.service_classes = {}
 
         for _, plugin in self.plugins.items():
             # load decorated funcs from plugins (only active ones have them populated)
             self.tools += plugin.tools
             self.endpoints += plugin.endpoints
-            
-            # index factory objects by type and slug
-            for s in plugin.services:
-                if not s.service_type in self.services:
-                    self.services[s.service_type] = {}
-                self.services[s.service_type][s.slug] = s
 
+            # index service classes by type and slug
+            for S in plugin.services:
+                if S.service_type not in self.service_classes.keys():
+                    self.service_classes[S.service_type] = {}
+                self.service_classes[S.service_type][S.slug] = S
+            
             # index hooks by name
             for h in plugin.hooks:
                 if h.name not in self.hooks.keys():
@@ -254,7 +258,9 @@ class MadHatter:
         await self.refresh_caches()
 
 
-    async def execute_hook(self, hook_name, default_value, ctx) -> Any:
+    async def execute_hook(
+        self, hook_name: str, default_value: Any, ctx: "ExecutionContext"
+    ) -> Any:
         """Execute a hook."""
 
         # check if hook is supported

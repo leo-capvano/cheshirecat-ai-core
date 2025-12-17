@@ -1,14 +1,14 @@
 
-from typing import List, Dict
+from typing import List
 from abc import ABC, abstractmethod
 
 from cat.types import Resource
 from cat.looking_glass.execution_context import ExecutionContext
-from cat.mad_hatter.decorators import Service
+from ..service import SingletonService
 
-class Memory(ABC, Service):
+class Memory(ABC, SingletonService):
     """Base class for Memory."""
-    
+
     service_type = "memory"
 
     @abstractmethod

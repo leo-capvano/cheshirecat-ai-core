@@ -5,18 +5,20 @@ import glob
 import tempfile
 import importlib
 import subprocess
-from typing import Dict, List, Callable
+from typing import Dict, List, Callable, Type, TYPE_CHECKING
 from inspect import getmembers, isclass
 from pydantic import BaseModel
 from packaging.requirements import Requirement
 
 from cat.mad_hatter.decorators import (
     Tool, Hook, PluginDecorator,
-    Endpoint, Service
+    Endpoint
 )
 from cat.mad_hatter.plugin_manifest import PluginManifest
+from cat.services.service import Service, SingletonService, RequestService
 from cat.db.models import KeyValueDB
 from cat import log, paths
+
 
 
 # Empty class to represent basic plugin Settings model
@@ -60,7 +62,7 @@ class Plugin:
         self._hooks: List[Hook] = []  # list of plugin hooks
         self._tools: List[Tool] = []  # list of plugin tools
         self._endpoints: List[Endpoint] = [] # list of plugin endpoints
-        self._services: List[Service] = [] # list of plugin factory objects
+        self._services: List[Type[Service]] = [] # list of service classes
 
         # list of @plugin decorated functions overriding default plugin behaviour
         self._plugin_overrides = {}
@@ -121,6 +123,11 @@ class Plugin:
 
     async def load_settings(self) -> Dict:
         """Load plugin settings."""
+
+        # TODOV2:
+        # - return as instance of settings_model()
+        # - validate loaded settings against model
+        # - throw away settings in DB if the model changed
 
         db_key = f"{self.id}_plugin_settings"
 
@@ -326,7 +333,7 @@ class Plugin:
             route.endpoint.plugin_id = self._id # this works
         return e
     
-    def _clean_service(self, service: Service):
+    def _clean_service(self, service: Type[Service]):
         s = service[1]
         s.service_type = s.service_type
         s.slug = s.slug or s.__name__.lower()
@@ -350,13 +357,14 @@ class Plugin:
     def _is_cat_tool(obj):
         return isinstance(obj, Tool)
     
-    # a plugin factory object is any class found in a plugin descending from Service
+    # a plugin service is a subclass of SingletonService or RequestService, but not a direct one
     @staticmethod
-    def _is_cat_service(obj):
-        return isclass(obj) \
-            and issubclass(obj, Service) \
-            and not obj is Service \
-            and not Service in obj.__bases__
+    def _is_cat_service(S):
+        return isclass(S) \
+            and issubclass(S, (SingletonService, RequestService)) \
+            and S not in (Service, SingletonService, RequestService) \
+            and not any(base in S.__bases__ for base in (Service, SingletonService, RequestService))
+            
 
     # a plugin override function has to be decorated with @plugin
     # (which returns an instance of PluginDecorator)

@@ -1,7 +1,7 @@
 from .log import log
 from .mad_hatter.decorators import hook, tool, plugin, endpoint
 from .looking_glass.execution_context import ExecutionContext
-from .agents.base import Agent
+from .services.agents.base import Agent
 
 __all__ = [
     "log",

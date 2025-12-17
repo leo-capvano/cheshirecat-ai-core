@@ -1,19 +1,22 @@
 
 import asyncio
 import time
+import inspect
 from uuid import uuid4
 from collections.abc import AsyncGenerator
-from typing import Any, Callable
+from typing import Any, Callable, TYPE_CHECKING
 
 from cat.auth.user import User
-from cat.looking_glass.cheshire_cat import CheshireCat
 from cat.protocols.agui import events
 from cat.types import ChatRequest, ChatResponse
 from cat.mad_hatter.plugin import Plugin
-from cat.mad_hatter.decorators import Service
-from cat.agents.base import Agent
+from cat.services.service import Service
+from cat.services.agents.base import Agent
 from cat import log
 
+if TYPE_CHECKING:
+    from cat.looking_glass.cheshire_cat import CheshireCat
+    from cat.base import Auth, ModelProvider, Service, Agent, Memory
 
 class ExecutionContext:
     """
@@ -32,7 +35,7 @@ class ExecutionContext:
 
     def __init__(
         self,
-        ccat: CheshireCat,
+        ccat: "CheshireCat",
         user: User | None = None
     ):
         """
@@ -51,27 +54,9 @@ class ExecutionContext:
         self.user = user
         self.stream_callback = lambda x: None
 
-    def get_service(self, type: str, slug: str) -> Service | None:
-        """Get a service instance by type and slug.
-
-        Parameters
-        ----------
-        type : str
-            The type of the service (e.g. "llm", "memory", "agent", etc.)
-        slug : str
-            The slug of the service.
-
-        Returns
-        -------
-        service : Service | None
-            The service instance if found, else None.
-        """
-        return self.ccat.get_service(type, slug)
-
     async def __call__(
         self,
-        request: ChatRequest,
-        stream_callback: Callable = lambda x: None
+        request: ChatRequest
     ) -> ChatResponse:
         """Run the conversation turn.
 
@@ -93,9 +78,6 @@ class ExecutionContext:
             If stream_callback is passed, this method will return None and emit the final response via the stream_callback
         """
 
-        # used to stream messages back to the client via queue
-        self.stream_callback = stream_callback
-
         # TODOV2: fast_reply hook has no access to messages
         # Run a totally custom reply (skips all the side effects of the framework)
         fast_reply = await self.mad_hatter.execute_hook(
@@ -109,12 +91,8 @@ class ExecutionContext:
             "before_cat_reads_message", request, ctx=self
         )
 
-        # run agent(s). They will populate the ChatResponse
-        slug = request.agent
-        AgentClass = self.ccat.agents.get(slug)
-        if not AgentClass:
-            raise Exception(f'Agent "{slug}" not found')
-        agent = AgentClass(self)
+        # run agent(s). They will populate the ChatResponse       
+        agent = await self.get_agent(request.agent)
         response: ChatResponse = await agent(request)
 
         # run final response through plugins
@@ -148,13 +126,11 @@ class ExecutionContext:
         queue: asyncio.Queue = asyncio.Queue()
         async def callback(msg) -> None:
             await queue.put(msg) # TODO have a timeout
+        self.stream_callback = callback
         async def runner() -> None:
             try:
                 # Main entry point to StrayCat.__call__, contains the main AI flow
-                final_reply = await self(
-                    request,
-                    stream_callback=callback
-                )
+                final_reply = await self(request)
 
                 # AGUI event for agent run finish
                 await callback(
@@ -206,7 +182,52 @@ class ExecutionContext:
             default_value,
             ctx=self
         )
-            
+
+    async def get_service(
+        self,
+        type: str,
+        slug: None | str = None,
+        raise_error: bool = False
+    ) -> Service | None:
+        """Get a service instance by type and slug.
+
+        Parameters
+        ----------
+        type : str
+            Type of the service (e.g. "llm", "memory", "agent", etc.)
+        slug : str | None
+            Slug of the service (e.g. "openai:gpt-5", "graph_memory").
+            If not passed, returns all the services of the given type.
+
+        Returns
+        -------
+        service : Service | None
+            The service instance if found, else None.
+        """
+        S: Service = self.ccat.services.get(type, {}).get(slug, None)
+        if S is None and raise_error:
+            raise Exception(f'Service "{type}" with slug "{slug}" not found')
+        
+        if S is not None:
+            return await S.get_instance(self)
+    
+    async def get_agent(self, slug: str) -> Agent:
+        """
+        Get an agent by its slug.
+        Every call to this method returns a new instance.
+        """
+        return await self.get_service("agent", slug, raise_error=True)
+
+    def get_plugin(self) -> Plugin:
+
+        log.deprecation_warning("`get_plugin` is deprecated, use the `.plugin` instead.")
+        return self.plugin
+
+    @property
+    def plugin(self) -> Plugin:
+        """Get the current plugin. Can be None if called outside plugin scope."""
+        return self.ccat.mad_hatter.get_plugin()
+
     @property
     def user_id(self) -> str:
         """Get the user ID."""
@@ -218,11 +239,14 @@ class ExecutionContext:
         return self.ccat.mad_hatter
     
     @property
-    def plugin(self) -> Plugin:
-        """Get the current plugin. Can be None if called outside plugin scope."""
-        return self.ccat.plugin
+    def mcps(self):
+        """Gives access to the MCP servers."""
+        return self.ccat.mcp_clients
     
-    @property
-    def agent(self) -> Agent | None:
-        """Get access to the agent being executed. Can be None outside agent execution."""
-        return self.agent
+    
+
+    
+    #@property
+    #def agent(self) -> "Agent":
+    #    """Get access to the agent being executed. Can be None outside agent execution."""
+    #    return self.agent
