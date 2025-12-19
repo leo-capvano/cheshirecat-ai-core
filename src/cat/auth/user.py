@@ -1,9 +1,12 @@
-from typing import Dict, List, Any
+from typing import Dict, List, Any, TYPE_CHECKING
 from uuid import UUID
 from pydantic import BaseModel, field_validator
 
-from .permissions import AuthResource, AuthPermission
 from cat.db import UserDB
+
+if TYPE_CHECKING:
+    from .permissions import AuthResource, AuthPermission
+
 
 class User(BaseModel):
     """
@@ -17,7 +20,7 @@ class User(BaseModel):
     name: str
 
     # permissions
-    permissions: Dict[AuthResource, List[AuthPermission]] | Dict[str, List[str]]
+    permissions: Dict[str, List[str]]
 
     # only put in here what you are comfortable to pass plugins:
     # - profile data
@@ -39,8 +42,8 @@ class User(BaseModel):
 
     def can(
             self,
-            resource: AuthResource | str,
-            permission: AuthPermission | str
+            resource: str,
+            permission: str
         ) -> bool:
         """
         Check user permissions.
@@ -61,90 +64,42 @@ class User(BaseModel):
         return (resource in self.permissions) and \
             permission in self.permissions[resource]
 
-    async def save(self, key: str, value: Any) -> Any:
+    async def save_settings(self, settings: Dict) -> Dict:
         """
-        Save user-specific key-value pair.
+        Save user-specific settings.
+        Will overwrite existing settings, so load existing settings first, update the dictionary, and then save.
 
         Parameters
         ----------
-        key : str
-            The key to store the value under.
-        value : Any
-            The value to store (will be JSON serialized).
+        settings : Dict
+            The settings to store (must be JSON serialized).
 
         Returns
         -------
-        Any
-            The saved value.
+        Dict
+            The saved settings.
 
         Examples
         --------
-        >>> await user.save("theme", "dark")
-        "dark"
+        >>> await user.save_settings({"theme": "dark"})
+        {"theme": "dark"}
         """
-        return await UserDB.save(self.id, key, value)
 
-    async def load(self, key: str, default: Any = None) -> Any:
+        await UserDB.save(self.id, "settings", settings)
+        return settings
+
+    async def load_settings(self) -> Dict:
         """
         Load user-specific value by key.
-
-        Parameters
-        ----------
-        key : str
-            The key to load.
-        default : Any, optional
-            Default value to return if key doesn't exist (default: None).
+        Returns an empty dict if no settings are found.
 
         Returns
         -------
-        Any
-            The stored value, or default if not found.
-
+        Dict
+            The stored settings, or an empty dict if not found.
         Examples
         --------
-        >>> await user.load("theme", "light")
-        "dark"
+        >>> await user.load_settings()
+        {"theme": "dark"}
         """
-        return await UserDB.load(self.id, key, default)
-
-    async def delete(self, key: str) -> bool:
-        """
-        Delete user-specific key-value pair.
-
-        Parameters
-        ----------
-        key : str
-            The key to delete.
-
-        Returns
-        -------
-        bool
-            True if the key was deleted, False if it didn't exist.
-
-        Examples
-        --------
-        >>> await user.delete("theme")
-        True
-        """
-        return await UserDB.delete(self.id, key)
-
-    async def exists(self, key: str) -> bool:
-        """
-        Check if user-specific key exists.
-
-        Parameters
-        ----------
-        key : str
-            The key to check.
-
-        Returns
-        -------
-        bool
-            True if the key exists, False otherwise.
-
-        Examples
-        --------
-        >>> await user.exists("theme")
-        True
-        """
-        return await UserDB.exists(self.id, key)
+        return await UserDB.load(self.id, "settings", {})

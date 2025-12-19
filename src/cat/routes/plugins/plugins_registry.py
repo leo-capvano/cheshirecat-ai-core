@@ -6,14 +6,15 @@ from fastapi import APIRouter, HTTPException
 from cat import log
 from cat.mad_hatter.registry import registry_search_plugins
 from cat.mad_hatter.plugin_manifest import PluginManifest
-from cat.auth import AuthPermission, AuthResource, check_permissions
+from cat.auth import AuthPermission, AuthResource, get_user, get_ccat
 
 router = APIRouter(prefix="/registry")
 
 @router.get("")
 async def registry_get_plugins(
     search: str = None,
-    cat=check_permissions(AuthResource.PLUGIN, AuthPermission.LIST),
+    _ = get_user(AuthResource.PLUGIN, AuthPermission.LIST),
+    ccat = get_ccat(),
     # author: str = None, to be activated in case of more granular search
     # tag: str = None, to be activated in case of more granular search
 ) -> List[PluginManifest]:
@@ -27,11 +28,11 @@ async def registry_get_plugins(
         registry_plugins_index[p.id] = p
 
     # get active plugins
-    active_plugins = await cat.mad_hatter.get_active_plugins()
+    active_plugins = await ccat.mad_hatter.get_active_plugins()
 
     # list installed plugins' manifest
     installed_plugins = []
-    for p in cat.mad_hatter.plugins.values():
+    for p in ccat.mad_hatter.plugins.values():
         # get manifest
         manifest: PluginManifest = deepcopy(
             p.manifest
@@ -58,12 +59,13 @@ class PluginRegistryUpload(BaseModel):
 @router.post("/install")
 async def registry_install_plugin(
     payload: PluginRegistryUpload,
-    cat=check_permissions(AuthResource.PLUGIN, AuthPermission.WRITE),
+    _ = get_user(AuthResource.PLUGIN, AuthPermission.WRITE),
+    ccat = get_ccat(),
 ) -> PluginManifest:
     """Install a new plugin from registry"""
 
     try:
-        plugin = await cat.mad_hatter.install_plugin(payload.url)
+        plugin = await ccat.mad_hatter.install_plugin(payload.url)
     except Exception:
         log.error("Could not install plugin from registry")
         raise HTTPException(status_code=500, detail="Could not install plugin from registry")

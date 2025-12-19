@@ -1,11 +1,10 @@
 from typing import List, Optional
 import json
-from fastapi import APIRouter, HTTPException, Body, Query
+from fastapi import APIRouter, HTTPException, Body, Query, Depends
 from pydantic import BaseModel
 from piccolo.table import Table
 
-from cat.looking_glass.stray_cat import StrayCat
-from cat.auth import AuthPermission, AuthResource, check_permissions
+from cat.auth import AuthPermission, AuthResource, User, get_user
 from .schemas import Page
 
 
@@ -29,11 +28,11 @@ def create_crud(
     @router.get("", description=f"List and search {tag}")
     async def get_list(
         search: Optional[str] = Query(None, description="Search query"),
-        cat: StrayCat = check_permissions(auth_resource, AuthPermission.LIST),
+        user: User = get_user(auth_resource, AuthPermission.LIST),
     ) -> Page[SelectSchema]:
         
         if restrict_by_user_id:
-            q = DBModel.objects().where(DBModel.user_id == cat.user_id)
+            q = DBModel.objects().where(DBModel.user_id == user.id)
         else:
             q = DBModel.objects()
 
@@ -58,12 +57,12 @@ def create_crud(
     @router.get("/{id}", description=f"Get a {tag}")
     async def get_one(
         id: str,
-        cat: StrayCat = check_permissions(auth_resource, AuthPermission.READ),
+        user: User = get_user(auth_resource, AuthPermission.READ),
     ) -> SelectSchema:
         
         q = DBModel.objects().where(DBModel.id == id)
         if restrict_by_user_id:
-            q = q.where(DBModel.user_id == cat.user_id)
+            q = q.where(DBModel.user_id == user.id)
 
         obj = await q.first().output(load_json=True)
         if obj is None:
@@ -73,12 +72,12 @@ def create_crud(
     @router.post("", description=f"Create new {tag}")
     async def create(
         data: CreateSchema = Body(...),
-        cat: StrayCat = check_permissions(auth_resource, AuthPermission.WRITE),
+        user: User = get_user(auth_resource, AuthPermission.WRITE),
     ) -> SelectSchema:
         
         payload = data.model_dump()
         if restrict_by_user_id:
-            payload["user_id"] = cat.user_id
+            payload["user_id"] = user.id
         obj = DBModel(**payload)
         await obj.save()
 
@@ -88,12 +87,12 @@ def create_crud(
     async def edit(
         id: str,
         data: UpdateSchema = Body(...),
-        cat: StrayCat = check_permissions(auth_resource, AuthPermission.EDIT),
+        user: User = get_user(auth_resource, AuthPermission.EDIT),
     ) -> SelectSchema:
         
         q = DBModel.objects().where(DBModel.id == id)
         if restrict_by_user_id:
-            q = q.where(DBModel.user_id == cat.user_id)
+            q = q.where(DBModel.user_id == user.id)
 
         obj = await q.first().output(load_json=True)
 
@@ -109,12 +108,12 @@ def create_crud(
     @router.delete("/{id}")
     async def delete(
         id: str,
-        cat: StrayCat = check_permissions(auth_resource, AuthPermission.DELETE),
+        user: User = get_user(auth_resource, AuthPermission.DELETE),
     ):
         
         q = DBModel.objects().where(DBModel.id == id)
         if restrict_by_user_id:
-            q = q.where(DBModel.user_id == cat.user_id)
+            q = q.where(DBModel.user_id == user.id)
         
         obj = await q.first()
 

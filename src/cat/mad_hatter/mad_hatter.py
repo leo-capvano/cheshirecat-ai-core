@@ -3,7 +3,7 @@ import inspect
 import glob
 import shutil
 from copy import deepcopy
-from typing import List, Dict, Any, Callable, Type, TYPE_CHECKING
+from typing import List, Dict, Any, Callable, Type, Union, TYPE_CHECKING
 
 from cat import log, paths, utils
 from cat.env import get_env
@@ -13,6 +13,7 @@ from cat.mad_hatter.registry import registry_download_plugin
 from cat.mad_hatter.plugin import Plugin
 
 if TYPE_CHECKING:
+    from cat.looking_glass.cheshire_cat import CheshireCat
     from cat.looking_glass.hook_context import HookContext
     from cat.services.service import Service
     from cat.mad_hatter.decorators import (
@@ -252,10 +253,10 @@ class MadHatter:
 
 
     async def execute_hook(
-        self, hook_name: str, default_value: Any, ctx: "HookContext"
+        self, hook_name: str, default_value: Any, caller: Union["CheshireCat", "Service", Callable]
     ) -> Any:
         """
-        Execute a hook with the given context.
+        Execute a hook with the given caller context.
 
         Parameters
         ----------
@@ -263,8 +264,9 @@ class MadHatter:
             Name of the hook to execute.
         default_value : Any
             Default value passed through hooks.
-        ctx : HookContext
-            Hook context providing access to ccat and optional user.
+        caller : Union[CheshireCat, Service, Callable]
+            The caller (CheshireCat, SingletonService, RequestService) that invoked the hook.
+            Used to build HookContext internally.
 
         Returns
         -------
@@ -276,6 +278,10 @@ class MadHatter:
         if hook_name not in self.hooks.keys():
             log.debug(f"Hook {hook_name} not present in any plugin")
             return default_value
+
+        # Build HookContext from caller
+        from cat.looking_glass.hook_context import HookContext
+        ctx = HookContext(caller)
 
         # Hook with arguments.
         #  First argument is passed to `execute_hook` is the pipeable one.
@@ -308,7 +314,7 @@ class MadHatter:
 
 
     def get_plugin(self) -> Plugin:
-        """Internal use only. Plugins should use `ctx.plugin`."""
+        """Internal use only. Services should use `self.plugin`."""
 
         stack = inspect.stack()
         norm_plugins_path = os.path.normpath(paths.PLUGINS_PATH)

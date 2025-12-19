@@ -3,11 +3,10 @@ from urllib.parse import urljoin
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import RedirectResponse
 
-from cat.looking_glass.stray_cat import StrayCat
 from cat.auth import (
     User,
     AuthPermission, AuthResource,
-    check_permissions
+    get_user
 )
 from cat import urls
 from cat.env import get_env
@@ -108,7 +107,7 @@ async def oauth_callback(r: Request, name: str):
 
 @router.get("/me")
 async def get_user_info(
-    cat: StrayCat = check_permissions(AuthResource.CHAT, AuthPermission.READ),
+    user: User = get_user(AuthResource.CHAT, AuthPermission.READ),
 ) -> User:
     """Returns user information."""
-    return cat.user.model_dump()
+    return user

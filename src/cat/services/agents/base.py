@@ -37,7 +37,10 @@ class Agent(RequestService, LLMMixin, EventStreamMixin):
 
         # TODOV2: add agent_fast_reply hook
         
-        async with self.ccat.mcp_clients.get_user_client(self.ctx) as mcp_client:
+        # Build HookContext for MCP client (if needed)
+        from cat.looking_glass.hook_context import HookContext
+        ctx = HookContext(self)
+        async with self.ccat.mcp_clients.get_user_client(ctx) as mcp_client:
             self.mcp = mcp_client
             
             self.request = await self.execute_hook(
@@ -158,12 +161,13 @@ class Agent(RequestService, LLMMixin, EventStreamMixin):
         Get an agent by its slug.
         Every call to this method returns a new instance.
         """
-        
+
         AgentClass = self.ccat.agents.get(slug)
         if not AgentClass:
             raise Exception(f'Agent "{slug}" not found')
-        
-        return AgentClass(self.ctx)
+
+        # Agent is a RequestService, pass ccat and request
+        return AgentClass(self.ccat, self.request)
     
     async def call_agent(self, slug, request: AgentMessage) -> AgentMessage:
         """
@@ -177,38 +181,3 @@ class Agent(RequestService, LLMMixin, EventStreamMixin):
         agent = self.get_agent(slug)
         return await agent(request)
 
-    @property
-    def ccat(self) -> "CheshireCat":
-        """Gives access to the CheshireCat instance."""
-        return self.ctx.ccat
-    
-    @property
-    def user(self) -> "User":
-        """Gives access to the User instance."""
-        return self.ctx.user   
-
-    @property
-    def plugin(self):
-        """Access plugin object (used from within a plugin)."""
-        return self.ccat.plugin
-    
-    @property
-    def mcpqqqqq(self):
-        """Gives access to the MCP client."""
-        return self._mcp
-
-    @property
-    def mad_hatter(self):
-        """Gives access to the `MadHatter` plugin manager."""
-        return self.ccat.mad_hatter
-    
-    @property
-    def user_id(self) -> str:
-        """Get the user ID."""
-        return self.user.id
-    
-    
-    # @property
-    # def stream_callback(self):
-    #     """Gives access to the stream callback function."""
-    #     return self.ctx.stream_callback

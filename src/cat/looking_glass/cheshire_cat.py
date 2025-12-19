@@ -1,5 +1,5 @@
 import sys
-from typing import TYPE_CHECKING
+from typing import Union, TYPE_CHECKING
 
 from rich import inspect
 
@@ -10,7 +10,8 @@ from cat.services.factory import ServiceFactory
 from .hook_context import HookContext
 
 if TYPE_CHECKING:
-    from cat.base import Auth, Agent, ModelProvider, Memory, Service
+    from cat.base import Auth
+    from cat.mad_hatter.plugin import Plugin
 
 
 class CheshireCat:
@@ -51,7 +52,7 @@ class CheshireCat:
             # allows plugins to do something before cat components are loaded
             await self.mad_hatter.execute_hook(
                 # TODOV2: cover legacy hooks
-                "before_bootstrap", None, HookContext(self)
+                "before_cat_bootstrap", None, caller=self
             )
 
             # init MCP clients cache
@@ -59,7 +60,7 @@ class CheshireCat:
 
             # allows plugins to do something after the cat bootstrap is complete
             await self.mad_hatter.execute_hook(
-                "after_bootstrap", None, HookContext(self)
+                "after_cat_bootstrap", None, caller=self
             )
 
         except Exception:
@@ -82,7 +83,7 @@ class CheshireCat:
 
         # allow plugins to hook the refresh (e.g. to embed tools)
         await self.mad_hatter.execute_hook(
-            "after_mad_hatter_refresh", None, HookContext(self)
+            "after_mad_hatter_refresh", None, caller=self
         )
 
         log.welcome()
@@ -135,6 +136,9 @@ class CheshireCat:
         """Get all auth handlers instances as a dictionary slug -> instance."""
 
         return self.factory.container._instances.get("auth", {})
-
-
+    
+    @property
+    def plugin(self) -> "Plugin":
+        """Access to the Plugin that provided this service, if any."""
+        return self.mad_hatter.get_plugin()
 

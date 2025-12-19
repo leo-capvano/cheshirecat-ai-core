@@ -1,6 +1,7 @@
 from enum import Enum
-
-from fastapi import Depends
+from typing import Annotated
+from fastapi import Depends, Request
+from cat.auth.user import User
 
 
 # TODOV2: these Enums should be easily extensible (so maybe not even enums)
@@ -27,15 +28,29 @@ def check_permissions(
         permission: AuthPermission | str
     ) -> Depends:
     """
-    DEPRECATED: Use get_user() for new code.
+    DEPRECATED - DO NOT USE.
 
-    Helper function to inject authenticated Request into endpoints after
-    checking permissions. Kept for backwards compatibility.
+    This function is broken after v2 refactoring and will be removed.
+    Use get_user() and get_ccat() instead.
 
-    For new endpoints, prefer:
-    - user = get_user(resource, permission) to get authenticated user
-    - ccat = get_ccat() to get CheshireCat instance
-    - Or access directly via request.state.user and request.app.state.ccat
+    OLD PATTERN (broken):
+    =====================
+    @router.post("/message")
+    async def message(cat=check_permissions(AuthResource.CHAT, AuthPermission.EDIT)):
+        ...
+
+    NEW PATTERN (use this):
+    =======================
+    @router.post("/message")
+    async def message(
+        request: Request,
+        user: User = get_user(AuthResource.CHAT, AuthPermission.EDIT),
+        ccat = get_ccat(),
+    ):
+        # Access user, ccat directly
+        # For agent operations, use factory:
+        # agent = await ccat.factory.get_service("agent", "default", request=request)
+        ...
 
     Parameters
     ----------
@@ -44,28 +59,21 @@ def check_permissions(
     permission: AuthPermission | str
         The permission that the user must have for the resource.
 
-    Returns
-    -------
-    Depends
-        Dependency that resolves to authenticated Request.
-        User available at request.state.user.
-        Raises HTTPException(403) if auth fails.
+    Raises
+    ------
+    NotImplementedError
+        Always raises - this function is deprecated and non-functional.
     """
-
-    # import here to avoid circular imports
-    from cat.auth.connection import HTTPConnection
-
-    return Depends(HTTPConnection(
-        # in case strings are passed, we do not force to the enum, to allow custom permissions
-        # (which in any case are to be matched in the endpoint)
-        resource = resource,
-        permission = permission,
-    ))
+    raise NotImplementedError(
+        "check_permissions is deprecated and broken after v2 refactoring. "
+        "Use get_user(resource, permission) and get_ccat() instead. "
+        "See docstring for migration examples."
+    )
 
 
 def get_user(
-        resource: AuthResource | str,
-        permission: AuthPermission | str
+        resource: str,
+        permission: str
     ) -> Depends:
     """
     Dependency that extracts authenticated user from request.state.
@@ -96,9 +104,10 @@ def get_user(
         pass
     """
     from cat.auth.connection import HTTPConnection
-    from fastapi import Request
 
-    async def extract_user(request: Request = Depends(HTTPConnection(resource, permission))):
+    async def extract_user(
+        request = Depends(HTTPConnection(resource, permission))
+    ) -> User:
         # HTTPConnection already validated and set request.state.user
         return request.state.user
 
@@ -121,9 +130,4 @@ def get_ccat() -> Depends:
         # ccat is the CheshireCat instance
         pass
     """
-    from fastapi import Request
-
     return Depends(lambda request: request.app.state.ccat)
-
-
-

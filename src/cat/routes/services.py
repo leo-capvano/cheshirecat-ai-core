@@ -2,7 +2,7 @@ from typing import Dict
 from pydantic import BaseModel, Field, ValidationError
 from fastapi import APIRouter, Request, HTTPException, Body
 
-from cat.auth import AuthPermission, AuthResource, check_permissions
+from cat.auth import AuthPermission, AuthResource, get_user
 from cat.services.service import ServiceMetadata
 
 router = APIRouter(prefix="/services", tags=["Services"])
@@ -25,7 +25,7 @@ class ServiceSettings(BaseModel):
 @router.get("")
 async def list_services(
     r: Request,
-    ctx=check_permissions(AuthResource.CHAT, AuthPermission.READ),
+    user = get_user(AuthResource.CHAT, AuthPermission.READ),
 ) -> Dict[str, Dict[str, ServiceMetadata]]:
     """
     List all available services with their metadata and capabilities.
@@ -53,7 +53,7 @@ async def get_service(
     service_type: str,
     slug: str,
     r: Request,
-    ctx=check_permissions(AuthResource.CHAT, AuthPermission.READ),
+    user = get_user(AuthResource.CHAT, AuthPermission.READ),
 ) -> ServiceDetails:
     """
     Get details for a specific service including metadata and current settings.
@@ -92,7 +92,7 @@ async def get_service_settings(
     service_type: str,
     slug: str,
     r: Request,
-    ctx=check_permissions(AuthResource.CHAT, AuthPermission.READ),
+    user = get_user(AuthResource.CHAT, AuthPermission.READ),
 ) -> ServiceSettings:
     """
     Get current settings for a specific service.
@@ -136,7 +136,7 @@ async def update_service_settings(
     slug: str,
     r: Request,
     payload: Dict = Body(...),
-    ctx=check_permissions(AuthResource.CHAT, AuthPermission.WRITE),
+    user = get_user(AuthResource.CHAT, AuthPermission.WRITE),
 ) -> ServiceSettings:
     """
     Update settings for a specific service (full replacement, not partial).

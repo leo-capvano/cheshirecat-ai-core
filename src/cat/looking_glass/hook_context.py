@@ -1,10 +1,11 @@
-from typing import Union, TYPE_CHECKING
+from typing import Callable, Union, TYPE_CHECKING
+from fastapi import Request
 
 if TYPE_CHECKING:
-    from cat.looking_glass.cheshire_cat import CheshireCat
     from cat.auth.user import User
-    from cat.mad_hatter.mad_hatter import MadHatter
+    from cat.looking_glass.cheshire_cat import CheshireCat
     from cat.services.service import SingletonService, RequestService, Service
+    from cat.mad_hatter.mad_hatter import MadHatter
     from cat.services.factory import ServiceFactory
     from cat.protocols.model_context.client import MCPClients
 
@@ -15,7 +16,11 @@ class HookContext:
     Provides access to services and optional user context.
     """
 
-    def __init__(self, caller: Union["Service", "CheshireCat"]) -> None:
+    def __init__(
+            self,
+            caller: Union["CheshireCat", "SingletonService", "RequestService", Callable],
+            request: Union["Request", None] = None,
+        ) -> None:
         """
         Initialize hook context.
 
@@ -26,6 +31,9 @@ class HookContext:
         user : User, optional
             The current user (for request-scoped hooks).
         """
+
+        from cat.looking_glass.cheshire_cat import CheshireCat
+        from cat.services.service import SingletonService, RequestService
 
         if isinstance(caller, CheshireCat):
             ccat = caller

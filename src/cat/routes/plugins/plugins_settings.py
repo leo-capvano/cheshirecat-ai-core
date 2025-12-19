@@ -3,7 +3,7 @@
 from typing import Dict
 from pydantic import BaseModel, Field, ValidationError
 from fastapi import Body, APIRouter, HTTPException
-from cat.auth import AuthPermission, AuthResource, check_permissions
+from cat.auth import AuthPermission, AuthResource, get_user, get_ccat
 
 router = APIRouter(prefix="/plugins")
 
@@ -15,11 +15,10 @@ class PluginSettings(BaseModel):
 @router.get("/{id}/settings")
 async def get_plugin_settings(
     id: str,
-    ctx=check_permissions(AuthResource.PLUGIN, AuthPermission.READ),
+    _ = get_user(AuthResource.PLUGIN, AuthPermission.READ),
+    ccat = get_ccat(),
 ) -> PluginSettings:
     """Returns the settings of a specific plugin."""
-
-    ccat = ctx.ccat
 
     if not ccat.mad_hatter.plugin_exists(id):
         raise HTTPException(status_code=404, detail="Plugin not found")
@@ -44,11 +43,10 @@ async def get_plugin_settings(
 async def upsert_plugin_settings(
     id: str,
     payload: Dict = Body({"setting_a": "some value", "setting_b": "another value"}),
-    ctx=check_permissions(AuthResource.PLUGIN, AuthPermission.EDIT),
+    _ = get_user(AuthResource.PLUGIN, AuthPermission.EDIT),
+    ccat = get_ccat(),
 ) -> PluginSettings:
     """Updates the settings of a specific plugin (full replacement, not partial)"""
-
-    ccat = ctx.ccat
 
     if not ccat.mad_hatter.plugin_exists(id):
         raise HTTPException(status_code=404, detail="Plugin not found")

@@ -4,7 +4,7 @@ import httpx
 
 from fastapi import APIRouter, Query
 
-from cat.auth import AuthPermission, AuthResource, check_permissions
+from cat.auth import AuthPermission, AuthResource, get_user
 from cat.routes.common.crud import Page
 
 
@@ -37,7 +37,7 @@ class RegistryConnector(BaseModel):
 @router.get("")
 async def public_registry(
     search: Optional[str] = Query(None),
-    cat=check_permissions(AuthResource.CONNECTOR, AuthPermission.LIST),
+    _ = get_user(AuthResource.CONNECTOR, AuthPermission.LIST),
 ) -> Page[RegistryConnector]:
     """MCP servers available in registry. Only remote ones with http stream transport."""
 

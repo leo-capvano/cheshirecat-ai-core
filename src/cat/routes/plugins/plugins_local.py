@@ -4,7 +4,7 @@ from typing import List
 from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException, UploadFile
 from cat import log
-from cat.auth import AuthPermission, AuthResource, check_permissions
+from cat.auth import AuthPermission, AuthResource, get_user, get_ccat
 from cat.mad_hatter.plugin_manifest import PluginManifest
 
 router = APIRouter(prefix="/plugins")
@@ -19,16 +19,17 @@ class InstalledPlugin(BaseModel):
 @router.get("")
 async def get_plugins(
     search: str = None,
-    cat=check_permissions(AuthResource.PLUGIN, AuthPermission.LIST)
+    _ = get_user(AuthResource.PLUGIN, AuthPermission.LIST),
+    ccat = get_ccat()
 ) -> List[InstalledPlugin]:
     """List installed plugins"""
 
     # get active plugins
-    active_plugins = await cat.mad_hatter.get_active_plugins()
+    active_plugins = await ccat.mad_hatter.get_active_plugins()
 
     # list installed plugins' manifest
     installed_plugins = []
-    for p in cat.mad_hatter.plugins.values():
+    for p in ccat.mad_hatter.plugins.values():
         # filter by query
         plugin_text = p.manifest.model_dump_json()
         if (search is None) or (search.lower() in plugin_text):
@@ -46,15 +47,16 @@ async def get_plugins(
 @router.get("/{id}")
 async def get_plugin(
     id: str,
-    cat=check_permissions(AuthResource.PLUGIN, AuthPermission.READ),
+    _ = get_user(AuthResource.PLUGIN, AuthPermission.READ),
+    ccat = get_ccat(),
 ) -> InstalledPlugin:
     """Returns information on a single plugin"""
 
-    if not cat.mad_hatter.plugin_exists(id):
+    if not ccat.mad_hatter.plugin_exists(id):
         raise HTTPException(status_code=404, detail="Plugin not found")
 
-    active_plugins = await cat.mad_hatter.get_active_plugins()
-    plugin = cat.mad_hatter.plugins[id]
+    active_plugins = await ccat.mad_hatter.get_active_plugins()
+    plugin = ccat.mad_hatter.plugins[id]
 
     return InstalledPlugin(
         id=plugin.id,
@@ -66,7 +68,8 @@ async def get_plugin(
 @router.post("")
 async def install_plugin(
     file: UploadFile,
-    cat=check_permissions(AuthResource.PLUGIN, AuthPermission.WRITE),
+    _ = get_user(AuthResource.PLUGIN, AuthPermission.WRITE),
+    ccat = get_ccat(),
 ) -> InstalledPlugin:
     """Install a new plugin from a zip file"""
 
@@ -89,8 +92,8 @@ async def install_plugin(
         content = await file.read()
         await f.write(content)
 
-    plugin = await cat.mad_hatter.install_plugin(plugin_archive_path)
-    active_plugins = await cat.mad_hatter.get_active_plugins()
+    plugin = await ccat.mad_hatter.install_plugin(plugin_archive_path)
+    active_plugins = await ccat.mad_hatter.get_active_plugins()
 
     return InstalledPlugin(
         id=plugin.id,
@@ -102,17 +105,18 @@ async def install_plugin(
 @router.put("/{id}/toggle", status_code=200)
 async def toggle_plugin(
     id: str,
-    cat=check_permissions(AuthResource.PLUGIN, AuthPermission.WRITE),
+    _ = get_user(AuthResource.PLUGIN, AuthPermission.WRITE),
+    ccat = get_ccat(),
 ):
     """Enable or disable a single plugin"""
 
     # check if plugin exists
-    if not cat.mad_hatter.plugin_exists(id):
+    if not ccat.mad_hatter.plugin_exists(id):
         raise HTTPException(status_code=404, detail="Plugin not found")
 
     try:
         # toggle plugin
-        await cat.mad_hatter.toggle_plugin(id)
+        await ccat.mad_hatter.toggle_plugin(id)
     except Exception as e:
         log.error(f"Could not toggle plugin {id}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -121,16 +125,17 @@ async def toggle_plugin(
 @router.delete("/{id}")
 async def remove_plugin(
     id: str,
-    cat=check_permissions(AuthResource.PLUGIN, AuthPermission.DELETE),
+    _ = get_user(AuthResource.PLUGIN, AuthPermission.DELETE),
+    ccat = get_ccat(),
 ):
     """Physically remove plugin."""
 
     # check if plugin exists
-    if not cat.mad_hatter.plugin_exists(id):
+    if not ccat.mad_hatter.plugin_exists(id):
         raise HTTPException(status_code=404, detail="Plugin not found")
 
     try:
         # remove folder, hooks and tools
-        await cat.mad_hatter.uninstall_plugin(id)
+        await ccat.mad_hatter.uninstall_plugin(id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

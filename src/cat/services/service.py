@@ -1,4 +1,4 @@
-from typing import Literal, Type, Dict, Any, TYPE_CHECKING
+from typing import Union, Literal, Type, Dict, Any, TYPE_CHECKING
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from cat.db import DB
@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from cat.looking_glass.hook_context import HookContext
     from cat.auth.user import User
     from cat.mad_hatter.mad_hatter import MadHatter
+    from cat.mad_hatter.plugin import Plugin
     from cat.services.factory import ServiceFactory
     from cat.protocols.model_context.client import MCPClients
 
@@ -68,6 +69,13 @@ class Service:
     def mad_hatter(self) -> "MadHatter":
         """Access to the MadHatter plugin manager."""
         return self._ccat.mad_hatter
+    
+    @property
+    def plugin(self) -> Union["Plugin", None]:
+        """Access to the Plugin that provided this service, if any."""
+        if self.plugin_id is None:
+            return None
+        return self.mad_hatter.plugins[self.plugin_id]
 
     @property
     def mcp_clients(self) -> "MCPClients":
@@ -92,6 +100,7 @@ class Service:
     async def execute_hook(self, hook_name: str, default_value: Any) -> Any:
         """
         Execute a hook for plugins to be intercepted.
+        MadHatter will build HookContext internally from this service.
 
         Parameters
         ----------
@@ -105,11 +114,10 @@ class Service:
         Any
             The value after hook execution.
         """
-        # TODO: HookContext will be passed here instead of self
         return await self.mad_hatter.execute_hook(
             hook_name,
             default_value,
-            HookContext(self)
+            caller=self
         )
 
     async def settings_model(self) -> Type[BaseModel] | None:
