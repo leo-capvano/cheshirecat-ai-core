@@ -5,6 +5,8 @@ from .permissions import (
     AuthPermission,
     AuthResource,
     check_permissions,
+    get_user,
+    get_ccat,
 )
 
 __all__ = [
@@ -12,5 +14,7 @@ __all__ = [
     "AuthPermission",
     "AuthResource",
     "check_permissions",
+    "get_user",
+    "get_ccat",
     "User",
 ]

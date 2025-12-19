@@ -38,7 +38,11 @@ async def list_services(
     for service_type, service_dict in factory.registry.list_all().items():
         service_metadata[service_type] = {}
         for slug, ServiceClass in service_dict.items():
-            instance = await factory.get_service(service_type, slug, ctx)
+            # Pass request only for request-scoped services
+            if ServiceClass.lifecycle == "request":
+                instance = await factory.get_service(service_type, slug, request=r)
+            else:
+                instance = await factory.get_service(service_type, slug)
             service_metadata[service_type][slug] = await instance.get_meta()
 
     return service_metadata
@@ -57,13 +61,19 @@ async def get_service(
     ccat = r.app.state.ccat
     factory = ccat.factory
 
-    # Get service instance
-    instance = await factory.get_service(service_type, slug, ctx, raise_error=False)
-    if instance is None:
+    # Check service class lifecycle
+    ServiceClass = factory.registry.get(service_type, slug)
+    if ServiceClass is None:
         raise HTTPException(
             status_code=404,
             detail=f"Service {service_type}:{slug} not found"
         )
+
+    # Get service instance (pass request for request-scoped services)
+    if ServiceClass.lifecycle == "request":
+        instance = await factory.get_service(service_type, slug, request=r)
+    else:
+        instance = await factory.get_service(service_type, slug)
 
     # Get metadata
     metadata = await instance.get_meta()
@@ -91,13 +101,19 @@ async def get_service_settings(
     ccat = r.app.state.ccat
     factory = ccat.factory
 
-    # Get service instance
-    instance = await factory.get_service(service_type, slug, ctx, raise_error=False)
-    if instance is None:
+    # Check service class lifecycle
+    ServiceClass = factory.registry.get(service_type, slug)
+    if ServiceClass is None:
         raise HTTPException(
             status_code=404,
             detail=f"Service {service_type}:{slug} not found"
         )
+
+    # Get service instance (pass request for request-scoped services)
+    if ServiceClass.lifecycle == "request":
+        instance = await factory.get_service(service_type, slug, request=r)
+    else:
+        instance = await factory.get_service(service_type, slug)
 
     # Get settings schema
     settings_model = await instance.settings_model()
@@ -130,13 +146,19 @@ async def update_service_settings(
     ccat = r.app.state.ccat
     factory = ccat.factory
 
-    # Get service instance
-    instance = await factory.get_service(service_type, slug, ctx, raise_error=False)
-    if instance is None:
+    # Check service class lifecycle
+    ServiceClass = factory.registry.get(service_type, slug)
+    if ServiceClass is None:
         raise HTTPException(
             status_code=404,
             detail=f"Service {service_type}:{slug} not found"
         )
+
+    # Get service instance (pass request for request-scoped services)
+    if ServiceClass.lifecycle == "request":
+        instance = await factory.get_service(service_type, slug, request=r)
+    else:
+        instance = await factory.get_service(service_type, slug)
 
     # Check if service is request-scoped
     if instance.lifecycle == "request":

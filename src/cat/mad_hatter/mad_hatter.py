@@ -13,7 +13,7 @@ from cat.mad_hatter.registry import registry_download_plugin
 from cat.mad_hatter.plugin import Plugin
 
 if TYPE_CHECKING:
-    from cat.looking_glass.execution_context import ExecutionContext
+    from cat.looking_glass.hook_context import HookContext
     from cat.services.service import Service
     from cat.mad_hatter.decorators import (
         Hook,
@@ -252,9 +252,25 @@ class MadHatter:
 
 
     async def execute_hook(
-        self, hook_name: str, default_value: Any, ctx: "ExecutionContext"
+        self, hook_name: str, default_value: Any, ctx: "HookContext"
     ) -> Any:
-        """Execute a hook."""
+        """
+        Execute a hook with the given context.
+
+        Parameters
+        ----------
+        hook_name : str
+            Name of the hook to execute.
+        default_value : Any
+            Default value passed through hooks.
+        ctx : HookContext
+            Hook context providing access to ccat and optional user.
+
+        Returns
+        -------
+        Any
+            The value after all hooks have been executed.
+        """
 
         # check if hook is supported
         if hook_name not in self.hooks.keys():

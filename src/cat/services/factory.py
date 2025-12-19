@@ -5,7 +5,8 @@ from cat import log
 from cat.services.service import Service
 
 if TYPE_CHECKING:
-    from cat.looking_glass.execution_context import ExecutionContext
+    from cat.looking_glass.cheshire_cat import CheshireCat
+    from fastapi import Request
 
 
 class ServiceRegistry:
@@ -169,7 +170,16 @@ class ServiceFactory:
     Handles both singleton and request-scoped lifecycles.
     """
 
-    def __init__(self):
+    def __init__(self, ccat: "CheshireCat"):
+        """
+        Initialize the service factory.
+
+        Parameters
+        ----------
+        ccat : CheshireCat
+            The CheshireCat instance that owns this factory.
+        """
+        self.ccat = ccat
         self.registry = ServiceRegistry()
         self.container = ServiceContainer()
 
@@ -177,7 +187,7 @@ class ServiceFactory:
         self,
         service_type: str,
         slug: str,
-        ctx: "ExecutionContext",
+        request: "Request" = None,
         raise_error: bool = False
     ) -> Service | None:
         """
@@ -191,8 +201,8 @@ class ServiceFactory:
             The type of service (e.g., "agent", "memory").
         slug : str
             The slug identifier for the service.
-        ctx : ExecutionContext
-            The execution context (for singletons, should be gctx).
+        request : Request, optional
+            The FastAPI Request object (required for request-scoped services).
         raise_error : bool
             If True, raises exception when service not found.
 
@@ -222,16 +232,19 @@ class ServiceFactory:
         lifecycle = ServiceClass.lifecycle
 
         if lifecycle == "singleton":
-            return await self._get_or_create_singleton(ServiceClass, ctx)
+            return await self._get_or_create_singleton(ServiceClass)
         elif lifecycle == "request":
-            return await self._create_request_service(ServiceClass, ctx)
+            if request is None:
+                raise Exception(
+                    f"Request-scoped service {service_type}:{slug} requires a request parameter"
+                )
+            return await self._create_request_service(ServiceClass, request)
         else:
             raise Exception(f"Unknown lifecycle: {lifecycle}")
 
     async def _get_or_create_singleton(
         self,
-        ServiceClass: Type[Service],
-        ctx: "ExecutionContext"
+        ServiceClass: Type[Service]
     ) -> Service:
         """
         Get or create a singleton service instance.
@@ -240,8 +253,6 @@ class ServiceFactory:
         ----------
         ServiceClass : Type[Service]
             The service class to instantiate.
-        ctx : ExecutionContext
-            The execution context (must be gctx, no user).
 
         Returns
         -------
@@ -255,17 +266,9 @@ class ServiceFactory:
         if await self.container.has(service_type, slug):
             return await self.container.get(service_type, slug)
 
-        # Ensure we're using global context for singletons
-        gctx = ctx if ctx.user is None else ctx.ccat.gctx
-        if gctx.user is not None:
-            raise Exception(
-                f"SingletonService {service_type}:{slug} must be instantiated "
-                "with global context (gctx), no user."
-            )
-
         # Create new instance
         log.debug(f"Creating singleton: {service_type}:{slug}")
-        instance = ServiceClass(gctx)
+        instance = ServiceClass(self.ccat)
 
         try:
             await instance.setup()
@@ -282,7 +285,7 @@ class ServiceFactory:
     async def _create_request_service(
         self,
         ServiceClass: Type["Service"],
-        ctx: "ExecutionContext"
+        request: "Request"
     ) -> "Service":
         """
         Create a new request-scoped service instance.
@@ -291,8 +294,8 @@ class ServiceFactory:
         ----------
         ServiceClass : Type[Service]
             The service class to instantiate.
-        ctx : ExecutionContext
-            The execution context (with user).
+        request : Request
+            The FastAPI Request object.
 
         Returns
         -------
@@ -303,7 +306,7 @@ class ServiceFactory:
         slug = ServiceClass.slug
 
         log.debug(f"Creating request service: {service_type}:{slug}")
-        instance = ServiceClass(ctx)
+        instance = ServiceClass(self.ccat, request)
 
         try:
             await instance.setup()
@@ -314,15 +317,10 @@ class ServiceFactory:
 
         return instance
 
-    async def warmup_singletons(self, gctx: "ExecutionContext") -> None:
+    async def warmup_singletons(self) -> None:
         """
         Pre-instantiate all singleton services at bootstrap.
         Fails fast if any singleton setup fails.
-
-        Parameters
-        ----------
-        gctx : ExecutionContext
-            The global execution context (no user).
         """
         log.info("Warming up singleton services...")
 
@@ -330,7 +328,7 @@ class ServiceFactory:
             for slug, ServiceClass in services.items():
                 if ServiceClass.lifecycle == "singleton":
                     try:
-                        await self._get_or_create_singleton(ServiceClass, gctx)
+                        await self._get_or_create_singleton(ServiceClass)
                         log.info(f"\t{service_type}:{slug}")
                     except Exception as e:
                         log.error(f"\t{service_type}:{slug} - {e}")

@@ -7,7 +7,7 @@ from cat import log
 from cat.protocols.model_context.client import MCPClients
 from cat.mad_hatter.mad_hatter import MadHatter
 from cat.services.factory import ServiceFactory
-from .execution_context import ExecutionContext
+from .hook_context import HookContext
 
 if TYPE_CHECKING:
     from cat.base import Auth, Agent, ModelProvider, Memory, Service
@@ -19,9 +19,6 @@ class CheshireCat:
 
     Main class that manages the whole AI application.
     It contains references to all the main modules and is responsible for application bootstrapping.
-
-    In most cases you will not need to interact with this class directly, but rather
-    with `ctx` (`ExecutionContext`) which will be available in your plugin's agents, hooks, tools and endpoints.
     """
 
     async def bootstrap(self, fastapi_app):
@@ -32,11 +29,8 @@ class CheshireCat:
 
         # ^._.^
 
-        # execution context for global services, not user/request bound
-        self.gctx = ExecutionContext(self)
-
         # service factory for managing service lifecycle
-        self.factory = ServiceFactory()
+        self.factory = ServiceFactory(self)
 
         try:
             # reference to the FastAPI object
@@ -57,15 +51,15 @@ class CheshireCat:
             # allows plugins to do something before cat components are loaded
             await self.mad_hatter.execute_hook(
                 # TODOV2: cover legacy hooks
-                "before_bootstrap", None, self.gctx
+                "before_bootstrap", None, HookContext(self)
             )
-            
+
             # init MCP clients cache
             self.mcp_clients = MCPClients()
 
             # allows plugins to do something after the cat bootstrap is complete
             await self.mad_hatter.execute_hook(
-                "after_bootstrap", None, self.gctx
+                "after_bootstrap", None, HookContext(self)
             )
 
         except Exception:
@@ -88,7 +82,7 @@ class CheshireCat:
 
         # allow plugins to hook the refresh (e.g. to embed tools)
         await self.mad_hatter.execute_hook(
-            "after_mad_hatter_refresh", None, self.gctx
+            "after_mad_hatter_refresh", None, HookContext(self)
         )
 
         log.welcome()
@@ -116,7 +110,7 @@ class CheshireCat:
             self.factory.registry.register(DefaultModelProvider)
 
         # Warmup all singleton services
-        await self.factory.warmup_singletons(self.gctx)        
+        await self.factory.warmup_singletons()        
 
     def refresh_endpoints(self):
         """Sync plugin endpoints in the fastapi app."""

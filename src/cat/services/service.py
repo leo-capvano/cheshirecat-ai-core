@@ -1,11 +1,17 @@
-from typing import Literal, Type, Dict, TYPE_CHECKING
+from typing import Literal, Type, Dict, Any, TYPE_CHECKING
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from cat.db import DB
 from cat import log
 
 if TYPE_CHECKING:
-    from cat.looking_glass.execution_context import ExecutionContext
+    from fastapi import Request
+    from cat.looking_glass.cheshire_cat import CheshireCat
+    from cat.looking_glass.hook_context import HookContext
+    from cat.auth.user import User
+    from cat.mad_hatter.mad_hatter import MadHatter
+    from cat.services.factory import ServiceFactory
+    from cat.protocols.model_context.client import MCPClients
 
 LifeCycle = Literal["singleton", "request"]
 
@@ -36,24 +42,75 @@ class Service:
     description: str | None = None
     plugin_id: str | None = None
 
-    def __init__(self, ctx: "ExecutionContext", *args, **kwargs):
-        self.ctx = ctx
+    def __init__(self, ccat: "CheshireCat") -> None:
+        """
+        Initialize service with infrastructure.
 
-    async def setup(self):
+        Parameters
+        ----------
+        ccat : CheshireCat
+            The main Cat application instance providing access to
+            factory, mad_hatter, mcp_clients, etc.
+        """
+        self._ccat = ccat
+
+    @property
+    def ccat(self) -> "CheshireCat":
+        """Access to the CheshireCat instance."""
+        return self._ccat
+
+    @property
+    def factory(self) -> "ServiceFactory":
+        """Access to the ServiceFactory."""
+        return self._ccat.factory
+
+    @property
+    def mad_hatter(self) -> "MadHatter":
+        """Access to the MadHatter plugin manager."""
+        return self._ccat.mad_hatter
+
+    @property
+    def mcp_clients(self) -> "MCPClients":
+        """Access to MCP clients."""
+        return self._ccat.mcp_clients
+
+    async def setup(self) -> None:
         """
         Async setup for the service (e.g. load API keys from settings).
-        Instance has already at disposal the ExecutionContext as `self.ctx`.
         Override in subclasses.
         """
         pass
 
-    async def teardown(self):
+    async def teardown(self) -> None:
         """
         Async cleanup for the service (e.g. close connections, cleanup resources).
         Called during shutdown for singleton services.
         Override in subclasses if cleanup is needed.
         """
         pass
+
+    async def execute_hook(self, hook_name: str, default_value: Any) -> Any:
+        """
+        Execute a hook for plugins to be intercepted.
+
+        Parameters
+        ----------
+        hook_name : str
+            Name of the hook to execute.
+        default_value : Any
+            Default value if hook doesn't modify it.
+
+        Returns
+        -------
+        Any
+            The value after hook execution.
+        """
+        # TODO: HookContext will be passed here instead of self
+        return await self.mad_hatter.execute_hook(
+            hook_name,
+            default_value,
+            HookContext(self)
+        )
 
     async def settings_model(self) -> Type[BaseModel] | None:
         """
@@ -80,7 +137,7 @@ class Service:
         """
         return None
 
-    async def load_settings(self) -> Dict:
+    async def load_settings(self) -> Dict[str, Any]:
         """
         Load service settings.
         Override in subclasses to implement settings storage.
@@ -92,7 +149,7 @@ class Service:
         """
         return {}
 
-    async def save_settings(self, settings: BaseModel | Dict) -> Dict:
+    async def save_settings(self, settings: BaseModel | Dict[str, Any]) -> Dict[str, Any]:
         """
         Save service settings.
         Override in subclasses to implement settings storage.
@@ -113,7 +170,14 @@ class Service:
         return settings
 
     async def get_meta(self) -> ServiceMetadata:
-        """Get service metadata."""
+        """
+        Get service metadata.
+
+        Returns
+        -------
+        ServiceMetadata
+            Service metadata including settings schema.
+        """
         model = await self.settings_model()
         settings_schema = model.model_json_schema() if model else None
 
@@ -140,7 +204,7 @@ class SingletonService(Service):
 
     lifecycle = "singleton"
 
-    async def load_settings(self) -> Dict:
+    async def load_settings(self) -> Dict[str, Any]:
         """
         Load service settings from database.
         If settings exist but can't be validated against current model,
@@ -171,7 +235,7 @@ class SingletonService(Service):
 
         return loaded_settings
 
-    async def save_settings(self, settings: BaseModel | Dict) -> Dict:
+    async def save_settings(self, settings: BaseModel | Dict[str, Any]) -> Dict[str, Any]:
         """
         Save service settings to database.
         Full replacement, not partial merge.
@@ -205,10 +269,44 @@ class RequestService(Service):
 
     lifecycle = "request"
 
-    async def save_settings(self, settings: Dict) -> Dict:
+    def __init__(self, ccat: "CheshireCat", request: "Request") -> None:
+        """
+        Initialize request-scoped service.
+
+        Parameters
+        ----------
+        ccat : CheshireCat
+            The main Cat application instance.
+        request : Request
+            The FastAPI Request object containing user and request context.
+        """
+        super().__init__(ccat)
+        self.request = request
+
+    @property
+    def user(self) -> "User":
+        """Access the current user from request state."""
+        return self.request.state.user
+
+    @property
+    def user_id(self) -> str:
+        """Get the current user ID."""
+        return self.user.id
+
+    async def save_settings(self, settings: Dict[str, Any]) -> Dict[str, Any]:
         """
         Request-scoped services do not support persistent settings.
         Settings should be provided per-request in the execution context.
+
+        Parameters
+        ----------
+        settings : dict
+            Settings dict (not used).
+
+        Returns
+        -------
+        dict
+            Never returns.
 
         Raises
         ------

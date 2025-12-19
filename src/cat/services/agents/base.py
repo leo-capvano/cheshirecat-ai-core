@@ -2,13 +2,12 @@ from typing import List, Any, TYPE_CHECKING
 
 from cat.mixin.llm import LLMMixin
 from cat.mixin.stream import EventStreamMixin
-from cat.types import Message, ChatRequest, ChatResponse
+from cat.types import Message, AgentMessage
 
 if TYPE_CHECKING:
     from cat.auth.user import User
     from cat.looking_glass.cheshire_cat import CheshireCat
     from cat.mad_hatter.decorators import Tool
-    from cat.looking_glass.execution_context import ExecutionContext
 
 from ..service import RequestService
 
@@ -16,7 +15,7 @@ class Agent(RequestService, LLMMixin, EventStreamMixin):
 
     service_type = "agent"
 
-    async def __call__(self, request: ChatRequest) -> ChatResponse:
+    async def __call__(self, request: AgentMessage) -> AgentMessage:
         """
         Main entry point for the agent, to run an agent like a function.
         Calls main lifecycle hooks and delegates actual agent logic to `execute()`.
@@ -34,7 +33,7 @@ class Agent(RequestService, LLMMixin, EventStreamMixin):
         """
 
         self.request = request
-        self.response = ChatResponse()
+        self.response = AgentMessage()
 
         # TODOV2: add agent_fast_reply hook
         
@@ -153,13 +152,6 @@ class Agent(RequestService, LLMMixin, EventStreamMixin):
                 return await t.execute(self, tool_call)
             
         raise Exception(f"Tool {name} not found")
-    
-    async def execute_hook(self, hook_name, default_value):
-        """Execute a plugin hook."""
-        return await self.ctx.execute_hook(
-            hook_name,
-            default_value
-        )
 
     def get_agent(self, slug):
         """
@@ -173,7 +165,7 @@ class Agent(RequestService, LLMMixin, EventStreamMixin):
         
         return AgentClass(self.ctx)
     
-    async def call_agent(self, slug, request: ChatRequest) -> ChatResponse:
+    async def call_agent(self, slug, request: AgentMessage) -> AgentMessage:
         """
         Call an agent by its slug. Shortcut for:
         ```python

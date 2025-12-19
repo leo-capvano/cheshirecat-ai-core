@@ -9,7 +9,7 @@ from cat.protocols.model_context.type_wrappers import (
 )
 
 from .messages import Message
-from .chats import ChatRequest, ChatResponse
+from .agent_message import AgentMessage
 
 __all__ = [
     "Resource",
@@ -20,6 +20,5 @@ __all__ = [
     "ResourceLink",
     "EmbeddedResource",
     "Message",
-    "ChatRequest",
-    "ChatResponse"
+    "AgentMessage"
 ]
