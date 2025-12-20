@@ -1,7 +1,11 @@
 from enum import Enum
-from typing import Annotated
+from typing import Annotated, TYPE_CHECKING
 from fastapi import Depends, Request
+from httpx import request
 from cat.auth.user import User
+
+if TYPE_CHECKING:
+    from cat.looking_glass.cheshire_cat import CheshireCat
 
 
 # TODOV2: these Enums should be easily extensible (so maybe not even enums)
@@ -114,7 +118,9 @@ def get_user(
     return Depends(extract_user)
 
 
-def get_ccat() -> Depends:
+def get_ccat(
+    
+) -> Depends:
     """
     Dependency helper to get CheshireCat instance from request.
 
@@ -130,4 +136,6 @@ def get_ccat() -> Depends:
         # ccat is the CheshireCat instance
         pass
     """
-    return Depends(lambda request: request.app.state.ccat)
+    def extract_ccat(request: Request) -> "CheshireCat":
+        return request.app.state.ccat
+    return Depends(extract_ccat)

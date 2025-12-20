@@ -2,7 +2,7 @@ from typing import List, Dict
 from cat.types import Message
 from cat.protocols.future.llm_wrapper import LLMWrapper
 from cat.mad_hatter.decorators import Tool
-from cat import utils
+from cat import utils, log
 
 
 class LLMMixin:
@@ -17,20 +17,27 @@ class LLMMixin:
         stream: bool = True,
     ) -> Message:
         """Generate a response using the Large Language Model."""
-        
+
+        # Get model slug from chat_request in request.state
+        chat_request = getattr(self.request.state, "chat_request", None)
+        slug_from_request = chat_request.model if chat_request else None
+
         if model:
             slug = model
-        elif hasattr(self, "request"):
-            slug = self.request.model
+        elif slug_from_request:
+            slug = slug_from_request
+        elif self.model:
+            slug = self.model
+        # TODOV2 search also in settings? global or user?
         else:
             raise Exception("No LLM specified for generation.")
 
-        if slug not in self.ccat.llms:
-            raise Exception(f'LLM "{slug}" not found')
+        # Get LLM instance from CheshireCat
+        model = await self.ccat.get_llm(slug, self.request)
 
         new_mex: Message = await LLMWrapper.invoke(
             self,
-            model=self.ccat.llms[slug],
+            model=model,
             system_prompt=system_prompt,
             messages=messages,
             tools=tools,

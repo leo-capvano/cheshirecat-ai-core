@@ -131,11 +131,72 @@ class CheshireCat:
         # reset openapi schema
         self.fastapi_app.openapi_schema = None
 
+    async def get_llm(self, slug: str, request=None):
+        """
+        Get an LLM instance by its slug.
+
+        Parameters
+        ----------
+        slug : str
+            The LLM slug in format "provider:model" (e.g., "openai:gpt-4").
+        request : Request, optional
+            The FastAPI request (for future extensibility).
+
+        Returns
+        -------
+        BaseChatModel
+            The LLM instance.
+        """
+
+        if ":" in slug:
+            provider_slug, model_slug = slug.split(":", 1)
+        else:
+            provider_slug, model_slug = "default", slug
+
+        provider = await self.factory.get_service(
+            service_type="model_provider",
+            slug=provider_slug,
+            raise_error=True
+        )
+
+        return await provider.get_llm(model_slug)
+
+    async def get_embedder(self, slug: str, request=None):
+        """
+        Get an Embedder instance by its slug.
+
+        Parameters
+        ----------
+        slug : str
+            The embedder slug in format "provider:model" (e.g., "openai:text-embedding-3-small").
+        request : Request, optional
+            The FastAPI request (for future extensibility).
+
+        Returns
+        -------
+        Embeddings
+            The embedder instance.
+        """
+        if ":" in slug:
+            provider_slug, model_slug = slug.split(":", 1)
+        else:
+            provider_slug, model_slug = "default", slug
+
+        provider = await self.factory.get_service(
+            service_type="model_provider",
+            slug=provider_slug,
+            raise_error=True
+        )
+
+        return await provider.get_embedder(model_slug)
+
+
     @property
     def auth_handlers(self) -> dict[str, "Auth"]:
         """Get all auth handlers instances as a dictionary slug -> instance."""
 
         return self.factory.container._instances.get("auth", {})
+    
     
     @property
     def plugin(self) -> "Plugin":

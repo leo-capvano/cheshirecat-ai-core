@@ -27,15 +27,15 @@ class MCPClients():
     def __init__(self):
         self.clients = TTLCache(maxsize=1000, ttl=60*10)
     
-    def get_user_client(self, ctx):
+    def get_user_client(self, agent) -> MCPClient:
         
-        need_new, config = self.need_new_client(ctx)
+        need_new, config = self.need_new_client(agent)
         if need_new:
-            self.clients[ctx.user.id] = MCPClient(config)
+            self.clients[agent.user.id] = MCPClient(config)
 
-        return self.clients[ctx.user.id]
+        return self.clients[agent.user.id]
     
-    def need_new_client(self, ctx) -> tuple[bool, dict]:
+    def need_new_client(self, agent) -> tuple[bool, dict]:
         
         config = {
             "mcpServers": {}
@@ -50,8 +50,8 @@ class MCPClients():
                 "url": str(server_config.url)
             }
         
-        need_new = (ctx.user.id not in self.clients) \
-            or self.clients[ctx.user.id].config != config
+        need_new = (agent.user.id not in self.clients) \
+            or self.clients[agent.user.id].config != config
 
         return (
             need_new,

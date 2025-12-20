@@ -1,18 +1,18 @@
-import json
 from fastapi import APIRouter, Body, Request
-from fastapi.responses import StreamingResponse
 
 from typing import List, Dict
 from pydantic import BaseModel, Field
 
+from cat.types import Task
 from cat.auth import AuthResource, AuthPermission, get_user, get_ccat
 from cat.looking_glass import prompts
 from cat.protocols.model_context.server import MCPServer
+from cat.protocols.agui.streaming import AGUIStream
 from cat.types import Message, TextContent, Resource
 
 router = APIRouter(prefix="", tags=["Home"])
 
-class ChatRequest(BaseModel):
+class ChatRequest(Task):
 
     agent: str = Field(
         "default",
@@ -29,27 +29,9 @@ class ChatRequest(BaseModel):
         description="System prompt (agent prompt prefix) to set the conversation context."
     )
 
-    resources: List[Resource] = Field(
-        default_factory=list,
-        description="List of user defined resources (usually uploaded files) available to the agent."
-    )
-
     mcps: List[MCPServer] = Field(
         default_factory=list,
         description="List of MCP servers the agent will interact with."
-    )
-
-    messages: List[Message] = Field(
-        default_factory=lambda: [
-            Message(
-                role="user",
-                content=TextContent(
-                    type="text",
-                    text="Meow"
-                )
-            )
-        ],
-        description="List of chat messages in the conversation."
     )
 
     stream: bool = Field(
@@ -93,9 +75,15 @@ async def message(
             "stream": False,
         }
     ),
-    user = get_user(AuthResource.CHAT, AuthPermission.EDIT),
+    _ = get_user(AuthResource.CHAT, AuthPermission.EDIT),
     ccat = get_ccat(),
 ) -> ChatResponse:
+    """
+    Send a message to the Cat. Allows choosing agent, model, system prompt and MCPs.
+    """
+
+    # Store chat_request in request.state for access in downstream services
+    http_request.state.chat_request = chat_request
 
     # Get agent from factory
     agent = await ccat.factory.get_service(
@@ -105,14 +93,12 @@ async def message(
         raise_error=True
     )
 
-    # TODOV2: The queue/stream pattern will be implemented separately
-    # For now, use the agent directly
-    if chat_request.stream:
-        async def event_stream():
-            # TODOV2: Replace with queue pattern when implemented
-            async for msg in agent.stream(chat_request):
-                yield f"data: {json.dumps(dict(msg))}\n\n"
+    task = Task(
+        messages=chat_request.messages,
+        resources=chat_request.resources
+    )
 
-        return StreamingResponse(event_stream(), media_type="text/event-stream")
+    if chat_request.stream:
+        return AGUIStream(agent, task).stream()
     else:
-        return await agent(chat_request)
+        return await agent(task)

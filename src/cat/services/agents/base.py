@@ -1,12 +1,10 @@
-from typing import List, Any, TYPE_CHECKING
+from typing import List, TYPE_CHECKING
 
 from cat.mixin.llm import LLMMixin
 from cat.mixin.stream import EventStreamMixin
-from cat.types import Message, AgentMessage
+from cat.types import Message, Task, TaskResult
 
 if TYPE_CHECKING:
-    from cat.auth.user import User
-    from cat.looking_glass.cheshire_cat import CheshireCat
     from cat.mad_hatter.decorators import Tool
 
 from ..service import RequestService
@@ -14,8 +12,10 @@ from ..service import RequestService
 class Agent(RequestService, LLMMixin, EventStreamMixin):
 
     service_type = "agent"
+    system_prompt = "You are an Agent in the Cheshire Cat AI fleet. Help the user and other agents with their requests."
+    model = None # can be a slug like "openai:gpt-4o", if None will be taken from request or settings
 
-    async def __call__(self, request: AgentMessage) -> AgentMessage:
+    async def __call__(self, task: Task) -> TaskResult:
         """
         Main entry point for the agent, to run an agent like a function.
         Calls main lifecycle hooks and delegates actual agent logic to `execute()`.
@@ -32,34 +32,30 @@ class Agent(RequestService, LLMMixin, EventStreamMixin):
             ChatResponse object, the agent's answer.
         """
 
-        self.request = request
-        self.response = AgentMessage()
+        self.task = task
+        self.result = TaskResult()
 
         # TODOV2: add agent_fast_reply hook
-        
-        # Build HookContext for MCP client (if needed)
-        from cat.looking_glass.hook_context import HookContext
-        ctx = HookContext(self)
-        async with self.ccat.mcp_clients.get_user_client(ctx) as mcp_client:
+        async with self.ccat.mcp_clients.get_user_client(self) as mcp_client:
             self.mcp = mcp_client
             
-            self.request = await self.execute_hook(
-                "before_agent_execution", self.request
+            self.task = await self.execute_hook(
+                "before_agent_execution", self.task
             )
-            self.request = await self.execute_hook(
-                f"before_{self.slug}_agent_execution", self.request
+            self.task = await self.execute_hook(
+                f"before_{self.slug}_agent_execution", self.task
             )
             
             await self.execute()
             
-            self.response = await self.execute_hook(
-                f"after_{self.slug}_agent_execution", self.response
+            self.result = await self.execute_hook(
+                f"after_{self.slug}_agent_execution", self.result
             )
-            self.response = await self.execute_hook(
-                "after_agent_execution", self.response
+            self.result = await self.execute_hook(
+                "after_agent_execution", self.result
             )
 
-        return self.response
+        return self.result
         
     async def execute(self):
         """
@@ -80,14 +76,14 @@ class Agent(RequestService, LLMMixin, EventStreamMixin):
                 # prompt construction
                 await self.get_system_prompt(),
                 # pass conversation messages
-                messages=self.request.messages + self.response.messages,
+                messages=self.task.messages + self.result.messages,
                 # pass tools (global, internal and MCP)
                 tools=await self.list_tools(),
                 # whether to stream or not
-                stream=self.request.stream,
+                stream=self.request.stream
             )
 
-            self.response.messages.append(llm_mex)
+            self.result.messages.append(llm_mex)
             
             if len(llm_mex.tool_calls) == 0:
                 # No tool calls, exit
@@ -100,7 +96,7 @@ class Agent(RequestService, LLMMixin, EventStreamMixin):
                     # actually executing the tool
                     tool_message = await self.call_tool(tool_call)
                     # append tool message
-                    self.response.messages.append(tool_message)
+                    self.result.messages.append(tool_message)
                     # if t.return_direct: TODOV2 recover return_direct
 
     async def get_system_prompt(self) -> str:
@@ -112,13 +108,16 @@ class Agent(RequestService, LLMMixin, EventStreamMixin):
         Override for custom behavior.
         """
 
-        prompt_prefix = await self.execute_hook(
+        # Get base prompt from self.system_prompt or http request override
+        prompt = getattr(self.request, "system_prompt", self.system_prompt)
+
+        prompt = await self.execute_hook(
             "agent_prompt_prefix",
-            self.request.system_prompt
+            prompt
         )
-        prompt_prefix = await self.execute_hook(
+        prompt = await self.execute_hook(
             f"agent_{self.slug}_prompt_prefix",
-            prompt_prefix
+            prompt
         )
         prompt_suffix = await self.execute_hook(
             "agent_prompt_suffix", ""
@@ -128,7 +127,7 @@ class Agent(RequestService, LLMMixin, EventStreamMixin):
             prompt_suffix
         )
 
-        return prompt_prefix + prompt_suffix
+        return prompt + prompt_suffix
 
     async def list_tools(self) -> List["Tool"]:
         """Get both plugins' tools and MCP tools in Tool format."""
@@ -156,28 +155,23 @@ class Agent(RequestService, LLMMixin, EventStreamMixin):
             
         raise Exception(f"Tool {name} not found")
 
-    def get_agent(self, slug):
+    def get_agent(self, slug) -> "Agent":
         """
         Get an agent by its slug.
         Every call to this method returns a new instance.
         """
 
-        AgentClass = self.ccat.agents.get(slug)
-        if not AgentClass:
-            raise Exception(f'Agent "{slug}" not found')
-
-        # Agent is a RequestService, pass ccat and request
-        return AgentClass(self.ccat, self.request)
+        return self.factory.get_service("agent", slug, request=self.request, raise_error=True)
     
-    async def call_agent(self, slug, request: AgentMessage) -> AgentMessage:
+    async def call_agent(self, slug, task: Task) -> TaskResult:
         """
         Call an agent by its slug. Shortcut for:
         ```python
         a = self.get_agent("my_agent")
-        response = await a(request)
+        result = await a(task)
         ```
         """
         
         agent = self.get_agent(slug)
-        return await agent(request)
+        return await agent(task)
 
