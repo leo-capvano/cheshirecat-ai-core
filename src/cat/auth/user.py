@@ -11,9 +11,9 @@ if TYPE_CHECKING:
 class User(BaseModel):
     """
     Class to represent a User.
-    Will be creted by Auth handler(s) starting from a JWT.
-    Core will use this object to build a StrayCat (session).
-    User will be accessible via `StrayCat.user`
+    Will be creted by Auth handler(s) starting from a credential (jwt or key).
+    Instance of the authenticated user is stored under request.state.user and is available in request services.
+    Will be accessible in services via `Service.user`
     """
 
     id: UUID

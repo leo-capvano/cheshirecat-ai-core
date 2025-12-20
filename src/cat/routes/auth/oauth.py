@@ -1,12 +1,15 @@
 from urllib.parse import urljoin
+from typing import Dict
 
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Body
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel, Field, ValidationError
 
 from cat.auth import (
     User,
     AuthPermission, AuthResource,
-    get_user
+    get_user,
+    get_ccat
 )
 from cat import urls
 from cat.env import get_env
@@ -105,9 +108,3 @@ async def oauth_callback(r: Request, name: str):
     return response
 
 
-@router.get("/me")
-async def get_user_info(
-    user: User = get_user(AuthResource.CHAT, AuthPermission.READ),
-) -> User:
-    """Returns user information."""
-    return user

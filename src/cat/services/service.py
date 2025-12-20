@@ -143,6 +143,7 @@ class Service:
             return MyServiceSettings
         ```
         """
+        
         return None
 
     async def load_settings(self) -> Dict[str, Any]:
@@ -214,57 +215,54 @@ class SingletonService(Service):
 
     async def load_settings(self) -> Dict[str, Any]:
         """
-        Load service settings from database.
-        If settings exist but can't be validated against current model,
-        returns empty dict (prevents blocking on schema changes).
+        Load service settings from plugin namespace.
+        Settings are stored under {service_type}_{slug} key in plugin settings.
 
         Returns
         -------
         dict
-            The service settings, or empty dict if none saved or invalid.
+            The service settings, or empty dict if none saved.
         """
-        db_key = f"service_{self.service_type}_{self.slug}_settings"
-
-        loaded_settings = await DB.load(db_key)
-        if loaded_settings is None:
+        if not self.plugin:
             return {}
 
-        # Validate against current model
-        model = await self.settings_model()
-        if model is not None:
-            try:
-                model.model_validate(loaded_settings)
-            except ValidationError as e:
-                log.warning(
-                    f"Settings for {self.service_type}:{self.slug} are invalid "
-                    f"(schema changed?). Resetting to defaults. Error: {e}"
-                )
-                return {}
-
-        return loaded_settings
+        plugin_dict = await self.plugin.load_settings()
+        namespace = f"{self.service_type}_{self.slug}"
+        return plugin_dict.get(namespace, {})
 
     async def save_settings(self, settings: BaseModel | Dict[str, Any]) -> Dict[str, Any]:
         """
-        Save service settings to database.
-        Full replacement, not partial merge.
+        Save service settings to plugin namespace.
+        Updates only this service's namespace within the plugin settings.
 
         Parameters
         ----------
         settings : BaseModel | dict
-            The complete settings to save (replaces existing).
+            The complete settings to save for this service.
 
         Returns
         -------
         dict
             The saved settings.
         """
+        if not self.plugin:
+            raise Exception("Cannot save settings for service without plugin")
+
         # Convert BaseModel to dict if needed
         if isinstance(settings, BaseModel):
             settings = settings.model_dump()
 
-        db_key = f"service_{self.service_type}_{self.slug}_settings"
+        # Load full plugin settings
+        plugin_dict = await self.plugin.load_settings()
 
-        return await DB.save(db_key, settings)
+        # Update this service's namespace
+        namespace = f"{self.service_type}_{self.slug}"
+        plugin_dict[namespace] = settings
+
+        # Save back to plugin
+        await self.plugin.save_settings(plugin_dict)
+
+        return settings
 
 
 class RequestService(Service):
@@ -272,7 +270,7 @@ class RequestService(Service):
     Base class for request-scoped services (e.g. Agent).
     Request services are instantiated fresh for each request and related to a specific user.
 
-    Settings are transient and passed per-request, not persisted.
+    Settings are persisted per-user in user settings.
     """
 
     lifecycle = "request"
@@ -301,27 +299,47 @@ class RequestService(Service):
         """Get the current user ID."""
         return self.user.id
 
-    async def save_settings(self, settings: Dict[str, Any]) -> Dict[str, Any]:
+    async def load_settings(self) -> Dict[str, Any]:
         """
-        Request-scoped services do not support persistent settings.
-        Settings should be provided per-request in the execution context.
-
-        Parameters
-        ----------
-        settings : dict
-            Settings dict (not used).
+        Load service settings from user namespace.
+        Settings are stored under {service_type}_{slug} key in user settings.
 
         Returns
         -------
         dict
-            Never returns.
-
-        Raises
-        ------
-        Exception
-            Always raises since request services cannot have persistent settings.
+            The service settings for this user, or empty dict if none saved.
         """
-        raise Exception(
-            f"Request-scoped service {self.service_type}:{self.slug} "
-            "does not support persistent settings. Settings are provided per-request."
-        )
+        user_dict = await self.user.load_settings()
+        namespace = f"{self.service_type}_{self.slug}"
+        return user_dict.get(namespace, {})
+
+    async def save_settings(self, settings: BaseModel | Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Save service settings to user namespace.
+        Updates only this service's namespace within the user settings.
+
+        Parameters
+        ----------
+        settings : BaseModel | dict
+            The complete settings to save for this service.
+
+        Returns
+        -------
+        dict
+            The saved settings.
+        """
+        # Convert BaseModel to dict if needed
+        if isinstance(settings, BaseModel):
+            settings = settings.model_dump()
+
+        # Load full user settings
+        user_dict = await self.user.load_settings()
+
+        # Update this service's namespace
+        namespace = f"{self.service_type}_{self.slug}"
+        user_dict[namespace] = settings
+
+        # Save back to user
+        await self.user.save_settings(user_dict)
+
+        return settings
