@@ -115,8 +115,7 @@ class ServiceContainer:
         Service | None
             The service instance if found, None otherwise.
         """
-        async with self._lock:
-            return self._instances.get(service_type, {}).get(slug)
+        return self._instances.get(service_type, {}).get(slug)
 
     async def set(self, service_type: str, slug: str, instance: "Service") -> None:
         """
@@ -152,8 +151,7 @@ class ServiceContainer:
         bool
             True if the instance exists, False otherwise.
         """
-        async with self._lock:
-            return slug in self._instances.get(service_type, {})
+        return slug in self._instances.get(service_type, {})
 
     async def clear(self) -> None:
         """
@@ -273,9 +271,8 @@ class ServiceFactory:
         try:
             await instance.setup()
         except Exception as e:
-            raise Exception(
-                f"Failed to setup singleton {service_type}:{slug}: {e}"
-            ) from e
+            log.error(f"Failed to setup singleton {service_type}_{slug}: {e}")
+            return None
 
         # Store in container
         await self.container.set(service_type, slug, instance)
@@ -311,9 +308,8 @@ class ServiceFactory:
         try:
             await instance.setup()
         except Exception as e:
-            raise Exception(
-                f"Failed to setup request service {service_type}:{slug}: {e}"
-            ) from e
+            log.error(f"Failed to setup request service {service_type}_{slug}: {e}")
+            return None
 
         return instance
 
@@ -343,12 +339,11 @@ class ServiceFactory:
 
         for service_type, services in self.container._instances.items():
             for slug, instance in services.items():
-                if hasattr(instance, "teardown"):
-                    try:
-                        await instance.teardown()
-                        log.info(f"{service_type}:{slug} teardown")
-                    except Exception as e:
-                        log.error(f"{service_type}:{slug} teardown failed: {e}")
+                try:
+                    await instance.teardown()
+                    log.info(f"{service_type}:{slug} teardown")
+                except Exception as e:
+                    log.error(f"{service_type}:{slug} teardown failed: {e}")
 
         await self.container.clear()
         log.info("Shutdown complete.")

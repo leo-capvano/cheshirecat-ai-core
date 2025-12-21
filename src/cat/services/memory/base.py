@@ -1,21 +1,19 @@
 
 from typing import List, TYPE_CHECKING
-from abc import ABC, abstractmethod
 
 from cat.types import Resource
-from ..service import SingletonService
+from ..service import RequestService
 
 if TYPE_CHECKING:
     from cat.auth.user import User
 
 
-class Memory(ABC, SingletonService):
+class Memory(RequestService):
     """Base class for Memory."""
 
     service_type = "memory"
 
-    @abstractmethod
-    async def store(self, resources: List[Resource], user: "User") -> None:
+    async def store(self, resources: List[Resource]) -> None:
         """
         Store resources into memory. Override in subclasses.
 
@@ -28,10 +26,7 @@ class Memory(ABC, SingletonService):
         """
         pass
 
-    @abstractmethod
-    async def recall(
-        self, query: List[Resource], user: "User"
-    ) -> List[Resource]:
+    async def recall(self, query: List[Resource]) -> List[Resource]:
         """
         Recall relevant information from memory. Override in subclasses.
 
@@ -46,5 +41,11 @@ class Memory(ABC, SingletonService):
         -------
         List[Resource]
             Retrieved resources.
+        """
+        return []
+    
+    async def clear(self) -> None:
+        """
+        Clear all memory. Override in subclasses.
         """
         pass
