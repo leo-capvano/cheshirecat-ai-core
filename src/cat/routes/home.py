@@ -3,7 +3,7 @@ from fastapi import APIRouter, Body, Request, HTTPException
 from typing import List, Dict
 from pydantic import BaseModel, Field
 
-from cat.types import Task
+from cat.types import Task, TaskResult
 from cat.auth import AuthResource, AuthPermission, get_user, get_ccat
 from cat.looking_glass import prompts
 from cat.protocols.model_context.server import MCPServer
@@ -44,18 +44,6 @@ class ChatRequest(Task):
         description="Dictionary to hold extra custom data."
     )
 
-
-class ChatResponse(BaseModel):
-    messages: List[Message] = Field(
-        default_factory=list,
-        description="List of chat messages returned in the response."
-    )
-    
-    custom: Dict = Field(
-        default_factory=dict,
-        description="Dictionary to hold extra custom data."
-    )
-
       
 @router.post("/message")
 async def message(
@@ -77,7 +65,7 @@ async def message(
     ),
     _ = get_user(AuthResource.CHAT, AuthPermission.EDIT),
     ccat = get_ccat(),
-) -> ChatResponse:
+) -> TaskResult:
     """
     Send a message to the Cat. Allows choosing agent, model, system prompt and MCPs.
     """
@@ -97,7 +85,6 @@ async def message(
             status_code=404,
             detail=f"Agent '{chat_request.agent}' not found."
         )
-
 
     task = Task(
         messages=chat_request.messages,
