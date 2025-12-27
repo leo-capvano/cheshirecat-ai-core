@@ -48,8 +48,8 @@ class Connection(ABC):
     ) -> AsyncGenerator[Request | WebSocket, None]:
 
         ccat = connection.app.state.ccat
-
-        for ah in ccat.auth_handlers.values():
+        auth_handlers = await ccat.get_auth_handlers()
+        for ah in auth_handlers.values():
             user: User = await ah.authorize_user_from_credential(
                 credential, self.resource, self.permission
             )

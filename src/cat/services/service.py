@@ -1,5 +1,5 @@
 from typing import Union, Literal, Type, Dict, Any, TYPE_CHECKING
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict
 
 from cat.db import DB
 from cat import log
@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from cat.auth.user import User
     from cat.mad_hatter.mad_hatter import MadHatter
     from cat.mad_hatter.plugin import Plugin
-    from cat.services.factory import ServiceFactory
+    from cat.services.__factory import ServiceFactory
     from cat.protocols.model_context.client import MCPClients
 
 LifeCycle = Literal["singleton", "request"]
@@ -43,32 +43,17 @@ class Service:
     description: str | None = None
     plugin_id: str | None = None
 
-    def __init__(self, ccat: "CheshireCat") -> None:
-        """
-        Initialize service with infrastructure.
-
-        Parameters
-        ----------
-        ccat : CheshireCat
-            The main Cat application instance providing access to
-            factory, mad_hatter, mcp_clients, etc.
-        """
-        self._ccat = ccat
-
-    @property
-    def ccat(self) -> "CheshireCat":
-        """Access to the CheshireCat instance."""
-        return self._ccat
+    ccat: "CheshireCat"
 
     @property
     def factory(self) -> "ServiceFactory":
         """Access to the ServiceFactory."""
-        return self._ccat.factory
+        return self.ccat.factory
 
     @property
     def mad_hatter(self) -> "MadHatter":
         """Access to the MadHatter plugin manager."""
-        return self._ccat.mad_hatter
+        return self.ccat.mad_hatter
     
     @property
     def plugin(self) -> Union["Plugin", None]:
@@ -80,7 +65,7 @@ class Service:
     @property
     def mcp_clients(self) -> "MCPClients":
         """Access to MCP clients."""
-        return self._ccat.mcp_clients
+        return self.ccat.mcp_clients
 
     async def setup(self) -> None:
         """
@@ -274,20 +259,7 @@ class RequestService(Service):
     """
 
     lifecycle = "request"
-
-    def __init__(self, ccat: "CheshireCat", request: "Request") -> None:
-        """
-        Initialize request-scoped service.
-
-        Parameters
-        ----------
-        ccat : CheshireCat
-            The main Cat application instance.
-        request : Request
-            The FastAPI Request object containing user and request context.
-        """
-        super().__init__(ccat)
-        self.request = request
+    request: "Request"
 
     @property
     def user(self) -> "User":

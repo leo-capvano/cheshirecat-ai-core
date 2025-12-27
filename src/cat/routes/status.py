@@ -21,9 +21,10 @@ async def status(
     """Server status"""
 
     ccat = r.app.state.ccat
+    ahs = await ccat.get_auth_handlers()
 
     auth_handlers = {}
-    for slug, ah in ccat.auth_handlers.items():
+    for slug, ah in ahs.items():
         auth_handlers[slug] = await ah.get_meta()
         
     return StatusResponse(

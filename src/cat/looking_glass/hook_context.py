@@ -6,7 +6,7 @@ if TYPE_CHECKING:
     from cat.looking_glass.cheshire_cat import CheshireCat
     from cat.services.service import SingletonService, RequestService, Service
     from cat.mad_hatter.mad_hatter import MadHatter
-    from cat.services.factory import ServiceFactory
+    from cat.services.__factory import ServiceFactory
     from cat.protocols.model_context.client import MCPClients
 
 

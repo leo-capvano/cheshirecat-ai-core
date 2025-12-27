@@ -4,6 +4,7 @@ from fastapi import APIRouter, Request, HTTPException, Body
 
 from cat.auth import AuthPermission, AuthResource, get_user
 from cat.services.service import ServiceMetadata
+from cat import log
 
 router = APIRouter(prefix="/services", tags=["Services"])
 
@@ -35,15 +36,18 @@ async def list_services(
     factory = ccat.factory
 
     service_metadata = {}
-    for service_type, service_dict in factory.registry.list_all().items():
+    for service_type, service_dict in factory.class_index.items():
         service_metadata[service_type] = {}
         for slug, ServiceClass in service_dict.items():
-            # Pass request only for request-scoped services
-            if ServiceClass.lifecycle == "request":
-                instance = await factory.get_service(service_type, slug, request=r)
-            else:
-                instance = await factory.get_service(service_type, slug)
-            service_metadata[service_type][slug] = await instance.get_meta()
+            try:
+                # Pass request only for request-scoped services
+                if ServiceClass.lifecycle == "request":
+                    instance = await factory.get(service_type, slug, request=r)
+                else:
+                    instance = await factory.get(service_type, slug)
+                service_metadata[service_type][slug] = await instance.get_meta()
+            except Exception as e:
+                log.error(f"Error loading service {service_type}:{slug} - {e}")
 
     return service_metadata
 
@@ -71,9 +75,9 @@ async def get_service(
 
     # Get service instance (pass request for request-scoped services)
     if ServiceClass.lifecycle == "request":
-        instance = await factory.get_service(service_type, slug, request=r)
+        instance = await factory.get(service_type, slug, request=r)
     else:
-        instance = await factory.get_service(service_type, slug)
+        instance = await factory.get(service_type, slug)
 
     # Get metadata
     metadata = await instance.get_meta()
@@ -111,9 +115,9 @@ async def get_service_settings(
 
     # Get service instance (pass request for request-scoped services)
     if ServiceClass.lifecycle == "request":
-        instance = await factory.get_service(service_type, slug, request=r)
+        instance = await factory.get(service_type, slug, request=r)
     else:
-        instance = await factory.get_service(service_type, slug)
+        instance = await factory.get(service_type, slug)
 
     # Get settings schema
     settings_model = await instance.settings_model()
@@ -156,9 +160,9 @@ async def update_service_settings(
 
     # Get service instance (pass request for request-scoped services)
     if ServiceClass.lifecycle == "request":
-        instance = await factory.get_service(service_type, slug, request=r)
+        instance = await factory.get(service_type, slug, request=r)
     else:
-        instance = await factory.get_service(service_type, slug)
+        instance = await factory.get(service_type, slug)
 
     # Check if service is request-scoped
     if instance.lifecycle == "request":

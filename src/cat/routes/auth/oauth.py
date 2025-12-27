@@ -40,7 +40,9 @@ async def oauth_login(
 ) -> RedirectResponse:
     """Starts the OAuth flow."""
     
-    auth = r.app.state.ccat.auth_handlers.get(name, None)
+    ccat = r.app.state.ccat
+    ahs = await ccat.get_auth_handlers()
+    auth = ahs.get(name, None)
     
     if auth is None:
         raise HTTPException(status_code=404, detail=f"Auth Handler {name} not found.")
@@ -67,7 +69,9 @@ async def oauth_login(
 async def oauth_callback(r: Request, name: str):
     """OAuth callback."""
 
-    auth = r.app.state.ccat.auth_handlers.get(name, None)
+    ccat = r.app.state.ccat
+    ahs = await ccat.get_auth_handlers()
+    auth = ahs.get(name, None)
 
     if auth is None:
         raise HTTPException(

@@ -161,7 +161,7 @@ class Agent(RequestService, LLMMixin, EventStreamMixin):
         Every call to this method returns a new instance.
         """
 
-        return self.factory.get_service("agent", slug, request=self.request, raise_error=True)
+        return self.factory.get("agent", slug, request=self.request, raise_error=True)
     
     async def call_agent(self, slug, task: Task) -> TaskResult:
         """

@@ -39,7 +39,7 @@ async def get_plugin_settings(
                 namespace = f"{service_class.service_type}_{service_class.slug}"
 
                 # Get instance
-                instance = await ccat.factory.get_service(
+                instance = await ccat.factory.get(
                     service_class.service_type,
                     service_class.slug
                 )
@@ -114,7 +114,7 @@ async def patch_plugin_settings(
                 )
 
             # Validate against schema
-            instance = await ccat.factory.get_service(service_type, slug)
+            instance = await ccat.factory.get(service_type, slug)
             model = await instance.settings_model()
             if model:
                 try:
@@ -143,7 +143,7 @@ async def patch_plugin_settings(
         for service_class in plugin.services:
             if service_class.lifecycle == "singleton":
                 namespace = f"{service_class.service_type}_{service_class.slug}"
-                instance = await ccat.factory.get_service(
+                instance = await ccat.factory.get(
                     service_class.service_type,
                     service_class.slug
                 )

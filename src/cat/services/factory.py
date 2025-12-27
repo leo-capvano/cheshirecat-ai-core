@@ -1,364 +1,108 @@
-import asyncio
-from typing import Type, TYPE_CHECKING
+from typing import List, Dict, Type, Union, TYPE_CHECKING
+from fastapi import Request
+from punq import Container, Scope
 
 from cat import log
-from cat.services.service import Service
 
 if TYPE_CHECKING:
     from cat.looking_glass.cheshire_cat import CheshireCat
-    from fastapi import Request
+    from cat.services.service import Service
 
 
-class ServiceRegistry:
-    """
-    Registry for service classes discovered from plugins.
-    Stores service class definitions organized by type and slug.
-    """
+class ServiceFactory:
 
-    def __init__(self):
-        # { "service_type": { "slug": ServiceClass } }
-        self._services: dict[str, dict[str, Type["Service"]]] = {}
+    def __init__(self, ccat: "CheshireCat"):
+        self.ccat = ccat
+        self.container = Container()
+        self.class_index: Dict[str, Dict[str, Type["Service"]]] = {}
 
-    def register(self, service_class: Type["Service"]) -> None:
+    def register(self, ServiceClass: Type["Service"]):
+        if ServiceClass.lifecycle == "singleton":
+            self.container.register(
+                ServiceClass,
+                scope=Scope.singleton,
+            )
+        else:
+            self.container.register(ServiceClass)
+
+        type, slug = ServiceClass.service_type, ServiceClass.slug
+        if type not in self.class_index:
+            self.class_index[type] = {}
+        self.class_index[type][slug] = ServiceClass
+
+    async def teardown(self):
+        # stop singletons
+        for instance in self.container._singletons.values():
+            try:
+                await instance.teardown()
+            except Exception as e:
+                log.error(f"Error during teardown of {instance}: {e}")
+        # new container
+        self.container = Container()
+        self.class_index = {}
+        
+    async def get(
+        self,
+        type: str,
+        slug: str,
+        request: Request | None = None,
+        raise_error: bool = True
+    ) -> Union["Service", None]:
         """
-        Register a service class.
+        Get a service instance by type and slug.
 
         Parameters
         ----------
-        service_class : Type[Service]
-            The service class to register.
-        """
-        service_type = service_class.service_type
-        slug = service_class.slug
-
-        if not service_type:
-            raise ValueError(f"Service {service_class.__name__} has no service_type")
-        if not slug:
-            raise ValueError(f"Service {service_class.__name__} has no slug")
-
-        if service_type not in self._services:
-            self._services[service_type] = {}
-
-        self._services[service_type][slug] = service_class
-        log.debug(f"Registered service: {service_type}:{slug} ({service_class.__name__})")
-
-    def get(self, service_type: str, slug: str) -> Type["Service"] | None:
-        """
-        Get a service class by type and slug.
-
-        Parameters
-        ----------
-        service_type : str
-            The type of service (e.g., "agent", "memory").
+        type : str
+            The type of service (e.g. "agent", "auth").
         slug : str
-            The slug identifier for the service.
-
-        Returns
-        -------
-        Type[Service] | None
-            The service class if found, None otherwise.
-        """
-        return self._services.get(service_type, {}).get(slug)
-
-    def list_by_type(self, service_type: str) -> dict[str, Type["Service"]]:
-        """
-        List all services of a given type.
-
-        Parameters
-        ----------
-        service_type : str
-            The type of service to list.
-
-        Returns
-        -------
-        dict[str, Type[Service]]
-            Dictionary of slug -> ServiceClass for the given type.
-        """
-        return self._services.get(service_type, {})
-
-    def list_all(self) -> dict[str, dict[str, Type["Service"]]]:
-        """
-        Get all registered services.
-
-        Returns
-        -------
-        dict[str, dict[str, Type[Service]]]
-            All services organized by type and slug.
-        """
-        return self._services
-
-
-class ServiceContainer:
-    """
-    Container for singleton service instances.
-    Provides thread-safe storage with lifecycle management.
-    """
-
-    def __init__(self):
-        # {service_type: {slug: instance}}
-        self._instances: dict[str, dict[str, "Service"]] = {}
-        self._lock = asyncio.Lock()
-
-    async def get(self, service_type: str, slug: str) -> Service | None:
-        """
-        Get a singleton instance if it exists.
-
-        Parameters
-        ----------
-        service_type : str
-            The type of service.
-        slug : str
-            The slug identifier.
+            The slug identifier for the service (e.g. "my_agent", "graph_memory").
+        request : Request, optional
+            The FastAPI request object, required for request-scoped services.
+        raise_error : bool, optional
+            Whether to raise an error if the service is not found. Default is True.
 
         Returns
         -------
         Service | None
             The service instance if found, None otherwise.
         """
-        return self._instances.get(service_type, {}).get(slug)
-
-    async def set(self, service_type: str, slug: str, instance: "Service") -> None:
-        """
-        Store a singleton instance.
-
-        Parameters
-        ----------
-        service_type : str
-            The type of service.
-        slug : str
-            The slug identifier.
-        instance : Service
-            The service instance to store.
-        """
-        async with self._lock:
-            if service_type not in self._instances:
-                self._instances[service_type] = {}
-            self._instances[service_type][slug] = instance
-
-    async def has(self, service_type: str, slug: str) -> bool:
-        """
-        Check if a singleton instance exists.
-
-        Parameters
-        ----------
-        service_type : str
-            The type of service.
-        slug : str
-            The slug identifier.
-
-        Returns
-        -------
-        bool
-            True if the instance exists, False otherwise.
-        """
-        return slug in self._instances.get(service_type, {})
-
-    async def clear(self) -> None:
-        """
-        Clear all singleton instances.
-        Useful for testing or reset operations.
-        """
-        async with self._lock:
-            self._instances.clear()
-
-
-class ServiceFactory:
-    """
-    Factory for creating and managing service instances.
-    Handles both singleton and request-scoped lifecycles.
-    """
-
-    def __init__(self, ccat: "CheshireCat"):
-        """
-        Initialize the service factory.
-
-        Parameters
-        ----------
-        ccat : CheshireCat
-            The CheshireCat instance that owns this factory.
-        """
-        self.ccat = ccat
-        self.registry = ServiceRegistry()
-        self.container = ServiceContainer()
-
-    async def get_service(
-        self,
-        service_type: str,
-        slug: str,
-        request: "Request" = None,
-        raise_error: bool = False
-    ) -> Service | None:
-        """
-        Get a service instance based on its lifecycle.
-        - Singleton services: retrieved from container (or created if first access)
-        - Request services: new instance created each time
-
-        Parameters
-        ----------
-        service_type : str
-            The type of service (e.g., "agent", "memory").
-        slug : str
-            The slug identifier for the service.
-        request : Request, optional
-            The FastAPI Request object (required for request-scoped services).
-        raise_error : bool
-            If True, raises exception when service not found.
-
-        Returns
-        -------
-        Service | None
-            The service instance, or None if not found and raise_error=False.
-
-        Raises
-        ------
-        Exception
-            If service not found and raise_error=True.
-            If service setup fails.
-        """
-        # Get service class from registry
-        ServiceClass = self.registry.get(service_type, slug)
-
-        if ServiceClass is None:
+        
+        try:
+            ServiceClass = self.class_index[type][slug]
+        except Exception:
             if raise_error:
-                available = list(self.registry.list_by_type(service_type).keys())
-                raise Exception(
-                    f'Service "{service_type}" with slug "{slug}" not found. '
-                    f"Available: {available}"
-                )
+                mex = f"Service of type '{type}' and slug '{slug}' not found"
+                log.error(mex)
+                raise Exception(mex)
             return None
 
-        lifecycle = ServiceClass.lifecycle
+        # Punq resolves (eventual) constructor dependencies automatically, if they are registered
+        service = self.container.resolve(ServiceClass)
 
-        if lifecycle == "singleton":
-            return await self._get_or_create_singleton(ServiceClass)
-        elif lifecycle == "request":
+        # Inject CheshireCat ref and request ref for request-scoped services
+        service.ccat = self.ccat # nasty reference to the app. I don't care
+        if service.lifecycle == "request":
             if request is None:
                 raise Exception(
-                    f"Request-scoped service {service_type}:{slug} requires a request parameter"
-                )
-            return await self._create_request_service(ServiceClass, request)
-        else:
-            raise Exception(f"Unknown lifecycle: {lifecycle}")
+                    f"Request object must be provided for request-scoped service {ServiceClass.__name__}")
+            service.request = request
 
-    async def _get_or_create_singleton(
-        self,
-        ServiceClass: Type[Service]
-    ) -> Service:
-        """
-        Get or create a singleton service instance.
+        # Post-construction injection: resolve 'requires' dict
+        requires = getattr(ServiceClass, 'requires', {})
+        for service_type, slugs in requires.items():
+            print("\t", service_type, slugs)
+            if isinstance(slugs, str):
+                resolved = await self.get(service_type, slugs, request=request, raise_error=False)
+            else:
+                resolved = []
+                for s in slugs:
+                    instance = await self.get(service_type, s, request=request, raise_error=False)
+                    if instance:
+                        resolved.append(instance)
+            setattr(service, service_type, resolved)
 
-        Parameters
-        ----------
-        ServiceClass : Type[Service]
-            The service class to instantiate.
-
-        Returns
-        -------
-        Service
-            The singleton instance.
-        """
-        service_type = ServiceClass.service_type
-        slug = ServiceClass.slug
-
-        # Check if already in container
-        if await self.container.has(service_type, slug):
-            return await self.container.get(service_type, slug)
-
-        # Create new instance
-        log.debug(f"Creating singleton: {service_type}:{slug}")
-        instance = ServiceClass(self.ccat)
-
-        try:
-            await instance.setup()
-        except Exception as e:
-            log.error(f"Failed to setup singleton {service_type}_{slug}: {e}")
-            return None
-
-        # Store in container
-        await self.container.set(service_type, slug, instance)
-
-        return instance
-
-    async def _create_request_service(
-        self,
-        ServiceClass: Type["Service"],
-        request: "Request"
-    ) -> "Service":
-        """
-        Create a new request-scoped service instance.
-
-        Parameters
-        ----------
-        ServiceClass : Type[Service]
-            The service class to instantiate.
-        request : Request
-            The FastAPI Request object.
-
-        Returns
-        -------
-        Service
-            A fresh service instance.
-        """
-        service_type = ServiceClass.service_type
-        slug = ServiceClass.slug
-
-        log.debug(f"Creating request service: {service_type}:{slug}")
-        instance = ServiceClass(self.ccat, request)
-
-        try:
-            await instance.setup()
-        except Exception as e:
-            log.error(f"Failed to setup request service {service_type}_{slug}: {e}")
-            return None
-
-        return instance
-
-    async def warmup_singletons(self) -> None:
-        """
-        Pre-instantiate all singleton services at bootstrap.
-        Fails fast if any singleton setup fails.
-        """
-        log.info("Warming up singleton services...")
-
-        for service_type, services in self.registry.list_all().items():
-            for slug, ServiceClass in services.items():
-                if ServiceClass.lifecycle == "singleton":
-                    try:
-                        await self._get_or_create_singleton(ServiceClass)
-                        log.info(f"\t{service_type}:{slug}")
-                    except Exception as e:
-                        log.error(f"\t{service_type}:{slug} - {e}")
-                        raise
-
-    async def shutdown(self) -> None:
-        """
-        Shutdown all singleton services.
-        Calls teardown() on each service if available.
-        """
-        log.info("Shutting down singleton services...")
-
-        for service_type, services in self.container._instances.items():
-            for slug, instance in services.items():
-                try:
-                    await instance.teardown()
-                    log.info(f"{service_type}:{slug} teardown")
-                except Exception as e:
-                    log.error(f"{service_type}:{slug} teardown failed: {e}")
-
-        await self.container.clear()
-        log.info("Shutdown complete.")
-
-    async def reset(self) -> None:
-        """
-        Reset the factory by shutting down all services and clearing registries.
-        Used when plugins are toggled or settings change.
-        """
-        log.info("Resetting factory...")
-
-        # Shutdown existing singletons
-        await self.shutdown()
-
-        # Clear registry
-        self.registry._services.clear()
-
-        log.info("Factory reset complete.")
+        if not hasattr(service, '_setup_done'):
+            await service.setup()
+            service._setup_done = True
+        return service

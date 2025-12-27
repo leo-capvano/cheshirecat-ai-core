@@ -35,7 +35,7 @@ async def get_user_settings(
 
     # Collect schemas from ALL request services (across all plugins)
     schemas = {}
-    for service_type, service_dict in ccat.factory.registry.list_all().items():
+    for service_type, service_dict in ccat.factory.class_index.items():
         for slug, ServiceClass in service_dict.items():
             if ServiceClass.lifecycle == "request":
                 log.error(ServiceClass)
@@ -43,7 +43,7 @@ async def get_user_settings(
                 log.error(namespace)
 
                 # Get instance (pass request for request-scoped services)
-                instance = await ccat.factory.get_service(
+                instance = await ccat.factory.get(
                     service_type,
                     slug,
                     request=r
@@ -109,7 +109,7 @@ async def patch_user_settings(
             )
 
         # Validate against schema
-        instance = await ccat.factory.get_service(service_type, slug, request=r)
+        instance = await ccat.factory.get(service_type, slug, request=r)
         model = await instance.settings_model()
         if model:
             try:
@@ -132,11 +132,11 @@ async def patch_user_settings(
 
     # Get schemas for response
     schemas = {}
-    for service_type, service_dict in ccat.factory.registry.list_all().items():
+    for service_type, service_dict in ccat.factory.class_index.items():
         for slug, service_class in service_dict.items():
             if service_class.lifecycle == "request":
                 namespace = f"{service_type}_{slug}"
-                instance = await ccat.factory.get_service(
+                instance = await ccat.factory.get(
                     service_type,
                     slug,
                     request=r

@@ -259,7 +259,7 @@ wheels = [
 
 [[package]]
 name = "cheshire-cat-ai"
-version = "2.0.9"
+version = "2.0.10"
 source = { editable = "." }
 dependencies = [
     { name = "ag-ui-protocol" },
@@ -275,6 +275,7 @@ dependencies = [
     { name = "loguru" },
     { name = "piccolo", extra = ["all"] },
     { name = "pillow" },
+    { name = "punq" },
     { name = "pydantic" },
     { name = "pyjwt" },
     { name = "pytest" },
@@ -303,6 +304,7 @@ requires-dist = [
     { name = "loguru", specifier = ">=0.7.2" },
     { name = "piccolo", extras = ["all"], specifier = ">=1.30.0" },
     { name = "pillow", specifier = ">=11.3.0" },
+    { name = "punq", specifier = ">=0.7.0" },
     { name = "pydantic", specifier = ">=2.12.4" },
     { name = "pyjwt", specifier = ">=2.8.0" },
     { name = "pytest" },
@@ -1192,6 +1194,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/20/e5/16ff212c1e452235a90aeb09066144d0c5a6a8c0834397e03f5224495c4e/ptyprocess-0.7.0.tar.gz", hash = "sha256:5c5d0a3b48ceee0b48485e0c26037c0acd7d29765ca3fbb5cb3831d347423220", size = 70762, upload-time = "2020-12-28T15:15:30.155Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/22/a6/858897256d0deac81a172289110f31629fc4cee19b6f01283303e18c8db3/ptyprocess-0.7.0-py2.py3-none-any.whl", hash = "sha256:4b41f3967fce3af57cc7e94b888626c18bf37a083e3651ca8feeb66d492fef35", size = 13993, upload-time = "2020-12-28T15:15:28.35Z" },
+]
+
+[[package]]
+name = "punq"
+version = "0.7.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e6/f1/c31e86ce1ab85837d8e6a6868163bae3afaef01c49d45f1bfa479c1a5b90/punq-0.7.0.tar.gz", hash = "sha256:bb7a6cc75a2e7d51b861b0e11f4830a12617b3ee33dbced9ce2be6a98ba39d63", size = 7254, upload-time = "2023-11-06T10:45:19.945Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/92/6a/c89602766d4416371eb801c3de89eda45fcea4435836ba7c01d1da88d47a/punq-0.7.0-py3-none-any.whl", hash = "sha256:7e0aca446c36a73674ec3fc078ec5e90e7a172ee349537d075ff20d73c3b1810", size = 7719, upload-time = "2023-11-06T10:45:18.118Z" },
 ]
 
 [[package]]

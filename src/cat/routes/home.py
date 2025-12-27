@@ -86,9 +86,9 @@ async def message(
     http_request.state.chat_request = chat_request
 
     # Get agent from factory
-    agent = await ccat.factory.get_service(
-        service_type="agent",
-        slug=chat_request.agent,
+    agent = await ccat.factory.get(
+        "agent",
+        chat_request.agent,
         request=http_request,
         raise_error=True
     )

@@ -70,48 +70,46 @@ class CheshireCat:
     async def on_mad_hatter_refresh(self):
         """Refresh CheshireCat components when MadHatter is refreshed."""
 
-        # Reset factory (shutdown existing services and clear registry)
-        await self.factory.reset()
         
         # reindex and warmup services
-        await self.warmup_services()
+        await self.refresh_factory()
 
         # update endpoints
         self.refresh_endpoints()
 
         # TODOV2: cache plugin settings (maybe not here, in the plugin obj)
 
-        # allow plugins to hook the refresh (e.g. to embed tools)
+        # allow plugins to hook the refresh
         await self.mad_hatter.execute_hook(
             "after_mad_hatter_refresh", None, caller=self
         )
 
         log.welcome()
 
-    async def warmup_services(self):
+    async def refresh_factory(self):
         """Warmup long lived services."""
 
         # avoid circular imports
         from cat.services.auth.default import DefaultAuth
         from cat.services.agents.default import DefaultAgent
         from cat.services.model_provider.default import DefaultModelProvider
+        
+        # Reset factory (shutdown existing services and clear registry)
+        await self.factory.teardown()
 
         # Register all services from plugins
         for service_type, services in self.mad_hatter.service_classes.items():
             for slug, ServiceClass in services.items():
-                self.factory.registry.register(ServiceClass)
+                self.factory.register(ServiceClass)
 
         # Register default agent
-        self.factory.registry.register(DefaultAgent)
+        self.factory.register(DefaultAgent)
 
         # If no auth or model_provider from plugins, use defaults
-        if not self.factory.registry.list_by_type("auth"):
-            self.factory.registry.register(DefaultAuth)
-        if not self.factory.registry.list_by_type("model_provider"):
-            self.factory.registry.register(DefaultModelProvider)
-
-        # Warmup all singleton services
-        await self.factory.warmup_singletons()        
+        if not "auth" in self.factory.class_index:
+            self.factory.register(DefaultAuth)
+        if not "model_provider" in self.factory.class_index:
+            self.factory.register(DefaultModelProvider)       
 
     def refresh_endpoints(self):
         """Sync plugin endpoints in the fastapi app."""
@@ -153,9 +151,9 @@ class CheshireCat:
         else:
             provider_slug, model_slug = "default", slug
 
-        provider = await self.factory.get_service(
-            service_type="model_provider",
-            slug=provider_slug,
+        provider = await self.factory.get(
+            "model_provider",
+            provider_slug,
             raise_error=True
         )
 
@@ -182,21 +180,27 @@ class CheshireCat:
         else:
             provider_slug, model_slug = "default", slug
 
-        provider = await self.factory.get_service(
-            service_type="model_provider",
-            slug=provider_slug,
+        provider = await self.factory.get(
+            "model_provider",
+            provider_slug,
             raise_error=True
         )
 
         return await provider.get_embedder(model_slug)
 
+    async def get_auth_handlers(self) -> dict[str, "Auth"]:
+        """
+        Get all auth handlers instances as a dictionary slug -> instance.
 
-    @property
-    def auth_handlers(self) -> dict[str, "Auth"]:
-        """Get all auth handlers instances as a dictionary slug -> instance."""
-
-        return self.factory.container._instances.get("auth", {})
-    
+        Returns
+        -------
+        dict[str, Auth]
+            Dictionary of auth handler instances.
+        """
+        ahs = {}
+        for slug in self.factory.class_index.get("auth", {}):
+            ahs[slug] = await self.factory.get("auth", slug)
+        return ahs
     
     @property
     def plugin(self) -> "Plugin":
