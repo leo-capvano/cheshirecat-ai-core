@@ -90,9 +90,9 @@ class CheshireCat:
         """Warmup long lived services."""
 
         # avoid circular imports
-        from cat.services.auth.default import DefaultAuth
+        from cat.services.auths.default import DefaultAuth
         from cat.services.agents.default import DefaultAgent
-        from cat.services.model_provider.default import DefaultModelProvider
+        from cat.services.model_providers.default import DefaultModelProvider
         
         # Reset factory (shutdown existing services and clear registry)
         await self.factory.teardown()
@@ -106,9 +106,9 @@ class CheshireCat:
         self.factory.register(DefaultAgent)
 
         # If no auth or model_provider from plugins, use defaults
-        if not "auth" in self.factory.class_index:
+        if not "auths" in self.factory.class_index:
             self.factory.register(DefaultAuth)
-        if not "model_provider" in self.factory.class_index:
+        if not "model_providers" in self.factory.class_index:
             self.factory.register(DefaultModelProvider)       
 
     def refresh_endpoints(self):
@@ -152,7 +152,7 @@ class CheshireCat:
             provider_slug, model_slug = "default", slug
 
         provider = await self.factory.get(
-            "model_provider",
+            "model_providers",
             provider_slug,
             raise_error=True
         )
@@ -181,7 +181,7 @@ class CheshireCat:
             provider_slug, model_slug = "default", slug
 
         provider = await self.factory.get(
-            "model_provider",
+            "model_providers",
             provider_slug,
             raise_error=True
         )
@@ -198,8 +198,8 @@ class CheshireCat:
             Dictionary of auth handler instances.
         """
         ahs = {}
-        for slug in self.factory.class_index.get("auth", {}):
-            ahs[slug] = await self.factory.get("auth", slug)
+        for slug in self.factory.class_index.get("auths", {}):
+            ahs[slug] = await self.factory.get("auths", slug)
         return ahs
     
     @property

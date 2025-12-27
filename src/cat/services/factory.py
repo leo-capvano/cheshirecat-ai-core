@@ -54,7 +54,7 @@ class ServiceFactory:
         Parameters
         ----------
         type : str
-            The type of service (e.g. "agent", "auth").
+            The type of service (e.g. "agents", "auths", "directives").
         slug : str
             The slug identifier for the service (e.g. "my_agent", "graph_memory").
         request : Request, optional
@@ -103,6 +103,9 @@ class ServiceFactory:
             setattr(service, service_type, resolved)
 
         if not hasattr(service, '_setup_done'):
-            await service.setup()
-            service._setup_done = True
-        return service
+            try:
+                await service.setup()
+                service._setup_done = True
+            except Exception as e:
+                log.error(f"Error during setup of {service}: {e}")
+        return service  

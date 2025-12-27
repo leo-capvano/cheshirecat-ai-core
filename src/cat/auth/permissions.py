@@ -53,7 +53,7 @@ def check_permissions(
     ):
         # Access user, ccat directly
         # For agent operations, use factory:
-        # agent = await ccat.factory.get("agent", "default", request=request)
+        # agent = await ccat.factory.get("agents", "default", request=request)
         ...
 
     Parameters

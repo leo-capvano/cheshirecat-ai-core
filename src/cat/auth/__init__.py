@@ -1,4 +1,4 @@
-from cat.services.auth.base import Auth
+from cat.services.auths.base import Auth
 
 from .user import User
 from .permissions import (

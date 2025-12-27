@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Body, Request
+from fastapi import APIRouter, Body, Request, HTTPException
 
 from typing import List, Dict
 from pydantic import BaseModel, Field
@@ -87,11 +87,17 @@ async def message(
 
     # Get agent from factory
     agent = await ccat.factory.get(
-        "agent",
+        "agents",
         chat_request.agent,
         request=http_request,
-        raise_error=True
+        raise_error=False
     )
+    if agent is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Agent '{chat_request.agent}' not found."
+        )
+
 
     task = Task(
         messages=chat_request.messages,

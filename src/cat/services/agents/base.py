@@ -2,18 +2,21 @@ from typing import List, TYPE_CHECKING
 
 from cat.mixin.llm import LLMMixin
 from cat.mixin.stream import EventStreamMixin
-from cat.types import Message, Task, TaskResult
+from cat.types import Message, Context, Task, TaskResult
 
 if TYPE_CHECKING:
     from cat.mad_hatter.decorators import Tool
+    from cat.base import Directive
 
 from ..service import RequestService
 
 class Agent(RequestService, LLMMixin, EventStreamMixin):
 
-    service_type = "agent"
+    service_type = "agents"
     system_prompt = "You are an Agent in the Cheshire Cat AI fleet. Help the user and other agents with their requests."
     model = None # can be a slug like "openai:gpt-4o", if None will be taken from request or settings
+
+    directives: List["Directive"] = []
 
     async def __call__(self, task: Task) -> TaskResult:
         """
@@ -32,30 +35,33 @@ class Agent(RequestService, LLMMixin, EventStreamMixin):
             ChatResponse object, the agent's answer.
         """
 
-        self.task = task
-        self.result = TaskResult()
+        self.ctx = Context(
+            system_prompt = await self.get_system_prompt(),
+            task = task,
+            result = TaskResult(),
+            tools = await self.list_tools()
+        )
 
-        # TODOV2: add agent_fast_reply hook
         async with self.ccat.mcp_clients.get_user_client(self) as mcp_client:
             self.mcp = mcp_client
             
-            self.task = await self.execute_hook(
-                "before_agent_execution", self.task
+            self.ctx = await self.execute_hook(
+                "before_agent_execution", self.ctx
             )
-            self.task = await self.execute_hook(
-                f"before_{self.slug}_agent_execution", self.task
+            self.ctx = await self.execute_hook(
+                f"before_{self.slug}_agent_execution", self.ctx
             )
             
             await self.execute()
             
-            self.result = await self.execute_hook(
-                f"after_{self.slug}_agent_execution", self.result
+            self.ctx = await self.execute_hook(
+                f"after_{self.slug}_agent_execution", self.ctx
             )
-            self.result = await self.execute_hook(
-                "after_agent_execution", self.result
+            self.ctx = await self.execute_hook(
+                "after_agent_execution", self.ctx
             )
 
-        return self.result
+        return self.ctx.result
         
     async def execute(self):
         """
@@ -72,18 +78,25 @@ class Agent(RequestService, LLMMixin, EventStreamMixin):
         """
 
         while True:
+            
+            # let directives work on the context
+            for d in self.directives:
+                tmp_ctx = await d.step(self.ctx)
+                if tmp_ctx is not None and isinstance(tmp_ctx, Context):
+                    self.ctx = tmp_ctx
+
             llm_mex: Message = await self.llm(
                 # prompt construction
-                await self.get_system_prompt(),
+                self.ctx.system_prompt,
                 # pass conversation messages
-                messages=self.task.messages + self.result.messages,
-                # pass tools (global, internal and MCP)
-                tools=await self.list_tools(),
+                messages=self.ctx.task.messages + self.ctx.result.messages,
+                # pass tools
+                tools=self.ctx.tools,
                 # whether to stream or not
                 stream=self.request.stream
             )
 
-            self.result.messages.append(llm_mex)
+            self.ctx.result.messages.append(llm_mex)
             
             if len(llm_mex.tool_calls) == 0:
                 # No tool calls, exit
@@ -96,7 +109,7 @@ class Agent(RequestService, LLMMixin, EventStreamMixin):
                     # actually executing the tool
                     tool_message = await self.call_tool(tool_call)
                     # append tool message
-                    self.result.messages.append(tool_message)
+                    self.ctx.result.messages.append(tool_message)
                     # if t.return_direct: TODOV2 recover return_direct
 
     async def get_system_prompt(self) -> str:
@@ -155,14 +168,6 @@ class Agent(RequestService, LLMMixin, EventStreamMixin):
             
         raise Exception(f"Tool {name} not found")
 
-    def get_agent(self, slug) -> "Agent":
-        """
-        Get an agent by its slug.
-        Every call to this method returns a new instance.
-        """
-
-        return self.factory.get("agent", slug, request=self.request, raise_error=True)
-    
     async def call_agent(self, slug, task: Task) -> TaskResult:
         """
         Call an agent by its slug. Shortcut for:
@@ -172,6 +177,11 @@ class Agent(RequestService, LLMMixin, EventStreamMixin):
         ```
         """
         
-        agent = self.get_agent(slug)
+        agent = self.factory.get(
+            "agents",
+            slug,
+            request=self.request,
+            raise_error=True
+        )
         return await agent(task)
 

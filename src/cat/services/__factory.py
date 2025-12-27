@@ -49,7 +49,7 @@ class ServiceRegistry:
         Parameters
         ----------
         service_type : str
-            The type of service (e.g., "agent", "memory").
+            The type of service (e.g., , "memory").
         slug : str
             The slug identifier for the service.
 
@@ -196,7 +196,7 @@ class ServiceFactory:
         Parameters
         ----------
         service_type : str
-            The type of service (e.g., "agent", "memory").
+            The type of service (e.g., , "memory").
         slug : str
             The slug identifier for the service.
         request : Request, optional

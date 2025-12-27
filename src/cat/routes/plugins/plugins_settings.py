@@ -81,7 +81,7 @@ async def patch_plugin_settings(
     try:
         # Validate each namespace against its service schema
         for namespace, settings in payload.items():
-            # Parse namespace: "model_provider_openai" -> ("model_provider", "openai")
+            # Parse namespace: "model_provider_openai" -> ("model_providers", "openai")
             if "_" not in namespace:
                 raise HTTPException(
                     status_code=400,
