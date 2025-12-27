@@ -1,12 +1,13 @@
 from typing import List, TYPE_CHECKING
 
 from cat.types import Message, Context, Task, TaskResult
-
-if TYPE_CHECKING:
-    from cat.mad_hatter.decorators import Tool
-    from cat.base import Directive
+from cat.mad_hatter.decorators import Tool
 
 from ..service import RequestService
+
+if TYPE_CHECKING:
+    from cat.base import Directive
+
 
 class Agent(RequestService):
 
@@ -140,18 +141,23 @@ class Agent(RequestService):
 
         return prompt + prompt_suffix
 
-    async def list_tools(self) -> List["Tool"]:
-        """Get both plugins' tools and MCP tools in Tool format."""
+    async def list_tools(self) -> List[Tool]:
+        """Get plugins' tools, MCP tools, and agent's own tools in CatTool format."""
 
+        # Get MCP tools
         mcp_tools = await self.mcp.list_tools()
         mcp_tools = [
             Tool.from_fastmcp(t, self.mcp.call_tool)
             for t in mcp_tools
         ]
 
+        # Get agent's own tools decorated with @agent_tool
+        agent_tools = self.instantiate_agent_tools()
+
+        # Combine all tools
         tools = await self.execute_hook(
             "agent_allowed_tools",
-            mcp_tools + self.mad_hatter.tools
+            mcp_tools + self.mad_hatter.tools + agent_tools
         )
 
         return tools
@@ -183,3 +189,30 @@ class Agent(RequestService):
         )
         return await agent(task)
 
+    def instantiate_agent_tools(self) -> List[Tool]:
+        """Find Tool instances on class and bind them to the agent instance."""
+        return [
+            attr.bind_to(self)
+            for name in dir(self.__class__)
+            if isinstance(attr := getattr(self.__class__, name, None), Tool)
+        ]
+
+    @property
+    def plugin(self):
+        """Access plugin object (used from within a plugin)."""
+        return self.ccat.plugin
+    
+    @property
+    def mcpqqqqq(self):
+        """Gives access to the MCP client."""
+        return self._mcp
+
+    @property
+    def mad_hatter(self):
+        """Gives access to the `MadHatter` plugin manager."""
+        return self.ccat.mad_hatter
+    
+    @property
+    def user_id(self) -> str:
+        """Get the user ID."""
+        return self.user.id
