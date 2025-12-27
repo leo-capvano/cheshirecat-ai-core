@@ -21,4 +21,4 @@ class Directive(RequestService):
         user : User
             The user storing the resources.
         """
-        pass
+        return context

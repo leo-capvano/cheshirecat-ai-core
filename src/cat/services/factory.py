@@ -109,7 +109,6 @@ class ServiceFactory:
         """Resolve and inject service dependencies from 'requires' dict."""
         requires = getattr(service.__class__, 'requires', {})
         for service_type, slugs in requires.items():
-            print("\t", service_type, slugs)
             if isinstance(slugs, str):
                 resolved = await self.get(service_type, slugs, request=request, raise_error=False)
             else:

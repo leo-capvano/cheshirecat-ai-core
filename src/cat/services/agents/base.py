@@ -51,7 +51,8 @@ class Agent(RequestService):
                 f"before_{self.slug}_agent_execution", self.ctx
             )
             
-            await self.execute()
+            # agentic loop
+            await self.loop()
             
             self.ctx = await self.execute_hook(
                 f"after_{self.slug}_agent_execution", self.ctx
@@ -61,13 +62,6 @@ class Agent(RequestService):
             )
 
         return self.ctx.result
-        
-    async def execute(self):
-        """
-        Main agent logic, just runs `self.loop()`.
-        Override in subclasses for custom behavior.
-        """
-        await self.loop()
 
     async def loop(self):
         """
@@ -102,14 +96,13 @@ class Agent(RequestService):
                 return
             else:
                 # LLM has chosen to use tools, run them
-                # TODOV2: tools may require explicit user permission
-                # TODOV2: tools may return an artifact, resource or elicitation
                 for tool_call in llm_mex.tool_calls:
                     # actually executing the tool
                     tool_message = await self.call_tool(tool_call)
                     # append tool message
                     self.ctx.result.messages.append(tool_message)
-                    # if t.return_direct: TODOV2 recover return_direct
+
+            self.ctx.step_number += 1
 
     async def get_system_prompt(self) -> str:
         """

@@ -15,6 +15,12 @@ class Context(BaseModel):
         arbitrary_types_allowed=True,
     )
 
+    step_number: int = 0
+    """The current step number in the agentic loop."""
+
+    finished: bool = False
+    """Whether the task is finished."""
+
     system_prompt: str
     """The system prompt"""
 
