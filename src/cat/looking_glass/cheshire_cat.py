@@ -1,5 +1,5 @@
 import sys
-from typing import Union, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from rich import inspect
 
@@ -7,7 +7,6 @@ from cat import log
 from cat.protocols.model_context.client import MCPClients
 from cat.mad_hatter.mad_hatter import MadHatter
 from cat.services.factory import ServiceFactory
-from .hook_context import HookContext
 
 if TYPE_CHECKING:
     from cat.base import Auth
@@ -109,7 +108,7 @@ class CheshireCat:
         if not "auths" in self.factory.class_index:
             self.factory.register(DefaultAuth)
         if not "model_providers" in self.factory.class_index:
-            self.factory.register(DefaultModelProvider)       
+            self.factory.register(DefaultModelProvider)
 
     def refresh_endpoints(self):
         """Sync plugin endpoints in the fastapi app."""

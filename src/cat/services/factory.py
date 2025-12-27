@@ -1,3 +1,4 @@
+import asyncio
 from typing import List, Dict, Type, Union, TYPE_CHECKING
 from fastapi import Request
 from punq import Container, Scope
@@ -15,6 +16,7 @@ class ServiceFactory:
         self.ccat = ccat
         self.container = Container()
         self.class_index: Dict[str, Dict[str, Type["Service"]]] = {}
+        self._setup_locks: Dict[int, asyncio.Lock] = {}
 
     def register(self, ServiceClass: Type["Service"]):
         if ServiceClass.lifecycle == "singleton":
@@ -40,7 +42,8 @@ class ServiceFactory:
         # new container
         self.container = Container()
         self.class_index = {}
-        
+        self._setup_locks = {}
+
     async def get(
         self,
         type: str,
@@ -67,29 +70,44 @@ class ServiceFactory:
         Service | None
             The service instance if found, None otherwise.
         """
-        
-        try:
-            ServiceClass = self.class_index[type][slug]
-        except Exception:
-            if raise_error:
-                mex = f"Service of type '{type}' and slug '{slug}' not found"
-                log.error(mex)
-                raise Exception(mex)
+        ServiceClass = self._resolve_service_class(type, slug, raise_error)
+        if ServiceClass is None:
             return None
 
-        # Punq resolves (eventual) constructor dependencies automatically, if they are registered
         service = self.container.resolve(ServiceClass)
+        self._inject_context(service, request)
+        await self._resolve_dependencies(service, request)
+        await self._setup_service(service, type, slug)
 
-        # Inject CheshireCat ref and request ref for request-scoped services
-        service.ccat = self.ccat # nasty reference to the app. I don't care
+        return service
+
+    def _resolve_service_class(
+        self,
+        type: str,
+        slug: str,
+        raise_error: bool
+    ) -> Union[Type["Service"], None]:
+        """Lookup ServiceClass from class_index."""
+        try:
+            return self.class_index[type][slug]
+        except Exception:
+            if raise_error:
+                raise Exception(f"Service of type '{type}' and slug '{slug}' not found")
+            return None
+
+    def _inject_context(self, service: "Service", request: Request | None) -> None:
+        """Inject CheshireCat reference and request for request-scoped services."""
+        if not hasattr(service, 'ccat'):
+            service.ccat = self.ccat
         if service.lifecycle == "request":
             if request is None:
                 raise Exception(
-                    f"Request object must be provided for request-scoped service {ServiceClass.__name__}")
+                    f"Request object must be provided for request-scoped service {service.__class__.__name__}")
             service.request = request
 
-        # Post-construction injection: resolve 'requires' dict
-        requires = getattr(ServiceClass, 'requires', {})
+    async def _resolve_dependencies(self, service: "Service", request: Request | None) -> None:
+        """Resolve and inject service dependencies from 'requires' dict."""
+        requires = getattr(service.__class__, 'requires', {})
         for service_type, slugs in requires.items():
             print("\t", service_type, slugs)
             if isinstance(slugs, str):
@@ -102,10 +120,25 @@ class ServiceFactory:
                         resolved.append(instance)
             setattr(service, service_type, resolved)
 
-        if not hasattr(service, '_setup_done'):
-            try:
+    async def _setup_service(self, service: "Service", type: str, slug: str) -> None:
+        """Setup service with singleton locking or direct call for request-scoped."""
+
+        try:
+            if service.lifecycle == "singleton":
+                # Fast path: check without lock first (double-checked locking pattern)
+                if not hasattr(service, '_setup_done'):
+                    service_id = id(service)
+                    if service_id not in self._setup_locks:
+                        self._setup_locks[service_id] = asyncio.Lock()
+
+                    # Acquire lock only if setup not done
+                    async with self._setup_locks[service_id]:
+                        # Check again inside lock to handle race conditions
+                        if not hasattr(service, '_setup_done'):
+                            await service.setup()
+                            service._setup_done = True
+            else:
+                # Request-scoped services are fresh instances, always setup
                 await service.setup()
-                service._setup_done = True
-            except Exception as e:
-                log.error(f"Error during setup of {service}: {e}")
-        return service  
+        except Exception as e:
+            log.error(f"Error during setup of {service}: {e}")
