@@ -1,8 +1,10 @@
-from typing import List, Dict
-from cat.types import Message
+from typing import List, Dict, TYPE_CHECKING
 from cat.protocols.future.llm_wrapper import LLMWrapper
-from cat.mad_hatter.decorators import Tool
 from cat import utils, log
+
+if TYPE_CHECKING:
+    from cat.types import Message
+    from cat.mad_hatter.decorators import Tool
 
 
 class LLMMixin:
@@ -12,10 +14,10 @@ class LLMMixin:
         self,
         system_prompt: str,
         model: str | None = None,
-        messages: list[Message] = [],
-        tools: list[Tool] = [],
+        messages: list["Message"] = [],
+        tools: list["Tool"] = [],
         stream: bool = True,
-    ) -> Message:
+    ) -> "Message":
         """Generate a response using the Large Language Model."""
 
         # Get model slug from chat_request in request.state

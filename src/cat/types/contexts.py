@@ -1,9 +1,10 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING
+
 from pydantic import BaseModel, ConfigDict
 
-if TYPE_CHECKING:
-    from cat.mad_hatter.decorators import Tool
-    from .tasks import Task, TaskResult
+from cat.mad_hatter.decorators import Tool
+from .tasks import Task, TaskResult
 
 
 class Context(BaseModel):
@@ -17,12 +18,11 @@ class Context(BaseModel):
     system_prompt: str
     """The system prompt"""
 
-    task: "Task"
+    task: Task
     """The current task being processed."""
 
-    result: "TaskResult"
+    result: TaskResult
     """The result of the task so far."""
 
-    tools: list["Tool"]
+    tools: list[Tool]
     """Available tools for the model to use."""
-    

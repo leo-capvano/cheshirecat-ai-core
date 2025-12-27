@@ -8,7 +8,7 @@ from cat.auth import AuthResource, AuthPermission, get_user, get_ccat
 from cat.looking_glass import prompts
 from cat.protocols.model_context.server import MCPServer
 from cat.protocols.agui.streaming import AGUIStream
-from cat.types import Message, TextContent, Resource
+from cat.types import Message
 
 router = APIRouter(prefix="", tags=["Home"])
 

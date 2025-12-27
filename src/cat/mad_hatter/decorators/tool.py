@@ -1,16 +1,18 @@
 import time
 from uuid import uuid4
 from dataclasses import asdict
-from typing import Callable, List, Dict
+from typing import Callable, List, Dict, TYPE_CHECKING
 
 from fastmcp.tools.tool import FunctionTool, ParsedFunction
 from fastmcp.client.client import CallToolResult
 from ag_ui.core.events import EventType # take away after they fix the bug
 
 from cat.protocols.agui import events
-from cat.types import Message, TextContent
 from cat.utils import run_sync_or_async
 
+if TYPE_CHECKING:
+    from cat.types import Message
+    from cat.types.messages import TextContent
 
 class Tool:
     """Cat tool uniforming @tool decorated functions in plugins and MCP tools."""
@@ -82,7 +84,7 @@ class Tool:
     def __repr__(self) -> str:
         return f"Tool(name={self.name}, input_schema={self.input_schema}, internal={self.is_internal})"
 
-    async def execute(self, agent, tool_call) -> Message:
+    async def execute(self, agent, tool_call) -> "Message":
         """
         Execute a Tool with the provided tool_call data structure (which is returned by the LLM).
         Will emit AGUI events for tool execution and return a Message with role="tool".
@@ -126,6 +128,8 @@ class Tool:
         return tool_result
 
     def standardize_output(self, tool_call, tool_result):
+
+        from cat.types import Message, TextContent
 
         if isinstance(tool_result, str):
             # legacy tools

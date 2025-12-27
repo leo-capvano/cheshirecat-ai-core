@@ -1,8 +1,8 @@
 from typing import Union, Literal, Type, Dict, Any, TYPE_CHECKING
 from pydantic import BaseModel, ConfigDict
 
-from cat.db import DB
-from cat import log
+from cat.mixin.llm import LLMMixin
+from cat.mixin.stream import EventStreamMixin
 
 if TYPE_CHECKING:
     from fastapi import Request
@@ -250,7 +250,7 @@ class SingletonService(Service):
         return settings
 
 
-class RequestService(Service):
+class RequestService(Service, LLMMixin, EventStreamMixin):
     """
     Base class for request-scoped services (e.g. Agent).
     Request services are instantiated fresh for each request and related to a specific user.

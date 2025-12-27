@@ -71,7 +71,7 @@ class AgentStream:
             yield event
 
         # Setup callback to populate queue
-        self.agent.stream_callback = lambda event: asyncio.create_task(
+        self.agent.request.state.stream_callback = lambda event: asyncio.create_task(
             self.queue.put(event)
         )
 

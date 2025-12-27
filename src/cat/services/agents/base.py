@@ -1,7 +1,5 @@
 from typing import List, TYPE_CHECKING
 
-from cat.mixin.llm import LLMMixin
-from cat.mixin.stream import EventStreamMixin
 from cat.types import Message, Context, Task, TaskResult
 
 if TYPE_CHECKING:
@@ -10,7 +8,7 @@ if TYPE_CHECKING:
 
 from ..service import RequestService
 
-class Agent(RequestService, LLMMixin, EventStreamMixin):
+class Agent(RequestService):
 
     service_type = "agents"
     system_prompt = "You are an Agent in the Cheshire Cat AI fleet. Help the user and other agents with their requests."
@@ -35,15 +33,15 @@ class Agent(RequestService, LLMMixin, EventStreamMixin):
             ChatResponse object, the agent's answer.
         """
 
-        self.ctx = Context(
-            system_prompt = await self.get_system_prompt(),
-            task = task,
-            result = TaskResult(),
-            tools = await self.list_tools()
-        )
-
         async with self.ccat.mcp_clients.get_user_client(self) as mcp_client:
             self.mcp = mcp_client
+            
+            self.ctx = Context(
+                system_prompt = await self.get_system_prompt(),
+                task = task,
+                result = TaskResult(),
+                tools = await self.list_tools()
+            )
             
             self.ctx = await self.execute_hook(
                 "before_agent_execution", self.ctx

@@ -7,8 +7,8 @@ class EventStreamMixin:
 
     async def send_json(self, data: Dict):
         """Send JSON data to the client."""
-        if self.stream_callback:
-            await self.stream_callback(data)
+        if hasattr(self.request.state, "stream_callback"):
+            await self.request.state.stream_callback(data)
         
     async def agui_event(self, event: events.BaseEvent):
         """Send an AGUI event to the client."""
