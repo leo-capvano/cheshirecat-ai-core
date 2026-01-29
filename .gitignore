@@ -10,6 +10,12 @@ venv
 .idea
 /dist/
 
+# agents
+.claude/
+openspec
+AGENTS.md
+CLAUDE.md
+
 # installation folders
 /data/
 /plugins/
