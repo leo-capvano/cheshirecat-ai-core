@@ -72,7 +72,7 @@ Allowed classes are:
 
 "{sentence}" -> """
 
-        response = await self.llm(prompt).content.text
+        response = (await self.llm(prompt)).text
 
         best_label, score = min(
             ((label, utils.levenshtein_distance(response, label)) for label in labels_names),

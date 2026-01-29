@@ -50,17 +50,22 @@ async def message(
     http_request: Request,
     chat_request: ChatRequest = Body(
         ...,
-        example={
-            "agent": "default",
-            "model": "openai:gpt-4o",
-            "system_prompt": "You are the Cheshire Cat, and always talk in rhymes.",
-            "messages": [
-                {
-                    "role": "user",
-                    "content": {"type": "text", "text": "Meow!"}
+        openapi_examples={
+            "simple": {
+                "summary": "Simple text message",
+                "value": {
+                    "agent": "default",
+                    "model": "openai:gpt-4o",
+                    "system_prompt": "You are the Cheshire Cat, and always talk in rhymes.",
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": [{"type": "text", "text": "Meow!"}]
+                        }
+                    ],
+                    "stream": False,
                 }
-            ],
-            "stream": False,
+            }
         }
     ),
     _ = get_user(AuthResource.CHAT, AuthPermission.EDIT),

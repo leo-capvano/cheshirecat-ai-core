@@ -1,7 +1,6 @@
 import inspect
 import time
 from uuid import uuid4
-from dataclasses import asdict
 from typing import Callable, List, Dict, TYPE_CHECKING
 
 from fastmcp.tools.tool import FunctionTool, ParsedFunction
@@ -133,36 +132,23 @@ class Tool:
         from cat.types import Message, TextContent
 
         if isinstance(tool_result, str):
-            # legacy tools
-            tool_result = CallToolResult(
-                content = [
-                    TextContent(
-                        text=tool_result
-                    )
-                ],
-                structured_content=None
-            )
+            # legacy tools returning plain string
+            content_blocks = [TextContent(text=tool_result)]
         elif isinstance(tool_result, Message):
             # returning the output of .llm() directly
-            tool_result = CallToolResult(
-                content = [tool_result.content],
-                structured_content=None
-            )
+            content_blocks = tool_result.content
+        elif isinstance(tool_result, CallToolResult):
+            # MCP tool result - extract content blocks
+            content_blocks = list(tool_result.content)
+        else:
+            # fallback: convert to string
+            content_blocks = [TextContent(text=str(tool_result))]
 
-        text = ""
-        for c in tool_result.content:
-            if c.type == "text":
-                text += c.text # TODO: many content blocks here of different types, also embedded resources
-        
         return Message(
             role="tool",
-            content=TextContent(
-                text=text,
-                tool={
-                    "in": tool_call,
-                    "out": asdict(tool_result) # it's a dataclass
-                }
-            )
+            content=content_blocks,
+            tool_call_id=tool_call["id"],
+            tool_name=tool_call["name"]
         )
 
     async def emit_agui_tool_start_events(self, agent, tool_call):
@@ -186,16 +172,16 @@ class Tool:
         await agent.agui_event(
             events.ToolCallEndEvent(
                 timestamp=int(time.time()),
-                tool_call_id=str(tool_call["id"]) # may be more than one?
+                tool_call_id=str(tool_call["id"])
             )
         )
         await agent.agui_event(
             events.ToolCallResultEvent(
-                type=EventType.TOOL_CALL_RESULT, # bug in the lib, this should not be necessary
+                type=EventType.TOOL_CALL_RESULT,  # bug in the lib, this should not be necessary
                 timestamp=int(time.time()),
-                message_id=str(uuid4()), # shold be the id of the last user message
+                message_id=str(uuid4()),  # should be the id of the last user message
                 tool_call_id=str(tool_call["id"]),
-                content=tool_output.content.text,
+                content=tool_output.text,
                 raw_event=tool_output.model_dump()
             )
         )

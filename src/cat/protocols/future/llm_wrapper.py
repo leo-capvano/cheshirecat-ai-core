@@ -78,25 +78,32 @@ class LLMWrapper:
         return new_mex
 
     @classmethod
-    def langchainfy_message(cls, message):
-        # TODOV2: should convert for every mcp ContentBlock type
+    def langchainfy_message(cls, message: Message):
         if message.role == "user":
-            return HumanMessage(
-                content=message.content.text
-            )
+            # Build multi-part content for LangChain
+            content = []
+            for block in message.content:
+                if block.type == "text":
+                    content.append({"type": "text", "text": block.text})
+                elif block.type == "image":
+                    content.append({"type": "image_url", "image_url": {"url": block.data}})
+            # If only text, simplify to string
+            if len(content) == 1 and content[0]["type"] == "text":
+                content = content[0]["text"]
+            return HumanMessage(content=content)
         elif message.role == "assistant":
             return AIMessage(
-                content=message.content.text,
+                content=message.text,
                 tool_calls=message.tool_calls
             )
         elif message.role == "tool":
             return ToolMessage(
-                content=message.content.text, # TODOV2 handle other blocks,
-                tool_call_id=message.content.tool["in"]["id"],
-                name=message.content.tool["in"]["name"]
+                content=message.text,
+                tool_call_id=message.tool_call_id,
+                name=message.tool_name
             )
         else:
-            raise Exception
+            raise Exception(f"Unknown message role: {message.role}")
 
     @classmethod
     def from_langchain_message(cls, langchain_msg):
@@ -105,20 +112,19 @@ class LLMWrapper:
         text = langchain_msg.content
         if hasattr(langchain_msg, "tool_calls") \
             and len(langchain_msg.tool_calls) > 0:
-            
+
             tool_calls = langchain_msg.tool_calls
-            # Otherwise empty
+            # Summarize tool calls as text
             text = "Tool calls:"
             for call in langchain_msg.tool_calls:
                 text += f"\t{call['name']} {call['args']}"
-            
+
         return Message(
             role="assistant",
             tool_calls=tool_calls,
-            content=TextContent(
-                type="text", # assuming LLM output is text only
-                text=text,
-            )
+            content=[
+                TextContent(text=text)
+            ]
         )
 
     @classmethod
@@ -132,16 +138,15 @@ class LLMWrapper:
 
     @classmethod
     def log_chat_message(cls, message: Message | str):
-        
-        if(get_env("CCAT_DEBUG") != "true"):
+
+        if get_env("CCAT_DEBUG") != "true":
             return
-        
+
         if isinstance(message, str):
             print(
                 log.colored_text("instructions".ljust(15), "green")
             )
             print(message)
-            
         else:
             print(
                 log.colored_text(
@@ -149,11 +154,7 @@ class LLMWrapper:
                 ),
                 end=""
             )
-            if isinstance(message.content, list):
-                for block in message.content:
-                    print(block.text)
-            else:
-                print(message.content.text)
+            print(message.text)
 
     # TODOV2: move under LLMMixin and avoid using langchain objects
     @classmethod

@@ -16,13 +16,12 @@ def fast_reply(_, cat):
         user_message_json.user_id = cat.user_id
 
         cat.request = ChatRequest(
-            messages = [
+            messages=[
                 Message(
                     role="user",
-                    content=TextContent(
-                        type="text",
-                        text=user_message_json.text
-                    )
+                    content=[
+                        TextContent(text=user_message_json.text)
+                    ]
                 )
             ]
             # TODOV2 support images in the v1 format

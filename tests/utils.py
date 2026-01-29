@@ -17,10 +17,9 @@ def get_request(msg="meow"):
         messages=[
             Message(
                 role="user",
-                content=TextContent(
-                    type="text",
-                    text=msg
-                )
+                content=[
+                    TextContent(text=msg)
+                ]
             )
         ],
         stream=False
@@ -39,13 +38,12 @@ def send_http_message(
             "messages": [
                 {
                     "role": "user",
-                    "content": {
-                        "type": "text",
-                        "text": str(msg)
-                    }
+                    "content": [
+                        {"type": "text", "text": str(msg)}
+                    ]
                 }
             ],
-            "stream": streaming # TODOV2: should test streaming
+            "stream": streaming  # TODOV2: should test streaming
         }
     )
 
