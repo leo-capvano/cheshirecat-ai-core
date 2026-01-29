@@ -82,7 +82,7 @@ class LLMWrapper:
         if message.role == "user":
             # Build multi-part content for LangChain
             content = []
-            for block in message.content:
+            for block in message.content: # TODOV2: use .content_blocks instead of .content and support reasoning tokens
                 if block.type == "text":
                     content.append({"type": "text", "text": block.text})
                 elif block.type == "image":
