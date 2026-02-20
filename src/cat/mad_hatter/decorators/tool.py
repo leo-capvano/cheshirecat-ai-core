@@ -122,9 +122,9 @@ class Tool:
         # Emit AGUI events
         await self.emit_agui_tool_end_events(agent, tool_call, tool_result)
 
-        # TODOV2: should return something analogous to:
-        #   https://modelcontextprotocol.info/specification/2024-11-05/server/tools/#tool-result
+        # TODOV2: should return CallToolResult directly
         #   Only supporting text for now
+        #   https://modelcontextprotocol.info/specification/2024-11-05/server/tools/#tool-result
         return tool_result
 
     def standardize_output(self, tool_call, tool_result):
