@@ -97,14 +97,13 @@ class CheshireCat:
         # Reset factory (shutdown existing services and clear registry)
         await self.factory.teardown()
 
-        # Register core installation settings (dogfoods the Settings pattern)
-        self.factory.register(CoreSettings)
-
         # Register all services from plugins
         for service_type, services in self.mad_hatter.service_classes.items():
             for slug, ServiceClass in services.items():
                 self.factory.register(ServiceClass)
 
+        # Register core installation settings
+        self.factory.register(CoreSettings)
         # Register default agent
         self.factory.register(DefaultAgent)
 
