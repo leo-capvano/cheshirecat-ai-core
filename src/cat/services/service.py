@@ -1,4 +1,5 @@
 from typing import Union, Literal, Type, Dict, Any, TYPE_CHECKING
+from inspect import isclass
 from pydantic import BaseModel, ConfigDict
 
 from cat.mixin.llm import LLMMixin
@@ -108,7 +109,13 @@ class Service:
     async def settings_model(self) -> Type[BaseModel] | None:
         """
         Return the Pydantic model for service settings.
-        Override in subclasses to provide settings.
+        Override in subclasses to provide dynamic settings schemas.
+
+        By default, returns the nested `Settings` class if one is declared
+        on the service class. Override this method to provide dynamic schemas
+        (e.g., schemas that depend on installed plugins). When both a nested
+        `Settings` class and a `settings_model()` override exist, the override
+        takes precedence.
 
         Returns
         -------
@@ -120,48 +127,107 @@ class Service:
         ```python
         from pydantic import BaseModel
 
-        async def settings_model(self):
-            class MyServiceSettings(BaseModel):
+        class MyService(SingletonService):
+            # Preferred: nested Settings class
+            class Settings(BaseModel):
                 api_key: str
                 timeout: int = 30
 
-            return MyServiceSettings
+            # OR: override settings_model() for dynamic schemas
+            async def settings_model(self):
+                class DynamicSettings(BaseModel):
+                    api_key: str
+                return DynamicSettings
         ```
         """
-        
+        # Default: return nested Settings class if declared
+        nested = getattr(self.__class__, 'Settings', None)
+        if nested is not None and isinstance(nested, type) and issubclass(nested, BaseModel):
+            return nested
         return None
+
+    def _settings_db_key(self) -> str:
+        """DB key for this service's settings: settings_{plugin_id}_{service_type}_{slug}."""
+        return f"settings_{self.plugin_id}_{self.service_type}_{self.slug}"
 
     async def load_settings(self) -> Dict[str, Any]:
         """
-        Load service settings.
-        Override in subclasses to implement settings storage.
+        Load service settings from KeyValueDB (installation-wide).
+        Also populates `self.settings` as a typed Pydantic model instance.
 
         Returns
         -------
         dict
-            The service settings as a dictionary.
+            The service settings, or empty dict if none saved.
         """
-        return {}
+        from cat.db import DB
+
+        raw = await DB.load(self._settings_db_key(), default={})
+        self._populate_settings(raw)
+        return raw
 
     async def save_settings(self, settings: BaseModel | Dict[str, Any]) -> Dict[str, Any]:
         """
-        Save service settings.
-        Override in subclasses to implement settings storage.
+        Save service settings to KeyValueDB (installation-wide).
+        Also updates `self.settings` as a typed Pydantic model instance.
 
         Parameters
         ----------
         settings : BaseModel | dict
-            The settings to save (as Pydantic model or dict).
+            The complete settings to save for this service.
 
         Returns
         -------
         dict
-            The saved settings as dict.
+            The saved settings.
         """
+        from cat.db import DB
+
         # Convert BaseModel to dict if needed
         if isinstance(settings, BaseModel):
-            return settings.model_dump()
+            settings = settings.model_dump()
+
+        await DB.save(self._settings_db_key(), settings)
+        self._populate_settings(settings)
         return settings
+
+    def _populate_settings(self, raw: Dict[str, Any]) -> None:
+        """
+        Populate `self.settings` as a typed Pydantic model from raw dict.
+        If a Settings class exists and raw data is available, validates and
+        creates a model instance. Otherwise sets `self.settings` to None or raw dict.
+        """
+        nested = getattr(self.__class__, 'Settings', None)
+        if nested is not None and isclass(nested) and issubclass(nested, BaseModel):
+            if raw:
+                try:
+                    self.settings = nested.model_validate(raw)
+                except Exception:
+                    # fallback to defaults if saved data is invalid
+                    self.settings = nested()
+            else:
+                self.settings = nested()
+        elif raw:
+            # No Settings class but there's data (e.g. settings_model() override)
+            self.settings = raw
+        else:
+            self.settings = None
+
+    @classmethod
+    def get_settings_schema(cls) -> dict | None:
+        """
+        Extract JSON schema from the nested Settings class at class level.
+        No instance needed — works at registration time for static discoverability.
+
+        Returns
+        -------
+        dict | None
+            JSON schema dict, or None if no Settings class.
+        """
+        nested = getattr(cls, 'Settings', None)
+        if nested is not None and isclass(nested) and issubclass(nested, BaseModel):
+            return nested.model_json_schema()
+        return None
 
     async def get_meta(self) -> ServiceMetadata:
         """
@@ -193,61 +259,10 @@ class SingletonService(Service):
     Global services are instantiated once during CheshireCat bootstrap
     and reused across all requests.
 
-    Settings are persisted in the database.
+    Settings are persisted installation-wide in KeyValueDB.
     """
 
     lifecycle = "singleton"
-
-    async def load_settings(self) -> Dict[str, Any]:
-        """
-        Load service settings from plugin namespace.
-        Settings are stored under {service_type}_{slug} key in plugin settings.
-
-        Returns
-        -------
-        dict
-            The service settings, or empty dict if none saved.
-        """
-        if not self.plugin:
-            return {}
-
-        plugin_dict = await self.plugin.load_settings()
-        namespace = f"{self.service_type}_{self.slug}"
-        return plugin_dict.get(namespace, {})
-
-    async def save_settings(self, settings: BaseModel | Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Save service settings to plugin namespace.
-        Updates only this service's namespace within the plugin settings.
-
-        Parameters
-        ----------
-        settings : BaseModel | dict
-            The complete settings to save for this service.
-
-        Returns
-        -------
-        dict
-            The saved settings.
-        """
-        if not self.plugin:
-            raise Exception("Cannot save settings for service without plugin")
-
-        # Convert BaseModel to dict if needed
-        if isinstance(settings, BaseModel):
-            settings = settings.model_dump()
-
-        # Load full plugin settings
-        plugin_dict = await self.plugin.load_settings()
-
-        # Update this service's namespace
-        namespace = f"{self.service_type}_{self.slug}"
-        plugin_dict[namespace] = settings
-
-        # Save back to plugin
-        await self.plugin.save_settings(plugin_dict)
-
-        return settings
 
 
 class RequestService(Service, LLMMixin, EventStreamMixin):
@@ -255,7 +270,7 @@ class RequestService(Service, LLMMixin, EventStreamMixin):
     Base class for request-scoped services (e.g. Agent).
     Request services are instantiated fresh for each request and related to a specific user.
 
-    Settings are persisted per-user in user settings.
+    Settings are persisted installation-wide in KeyValueDB (admin-configured defaults).
     """
 
     lifecycle = "request"
@@ -270,48 +285,3 @@ class RequestService(Service, LLMMixin, EventStreamMixin):
     def user_id(self) -> str:
         """Get the current user ID."""
         return self.user.id
-
-    async def load_settings(self) -> Dict[str, Any]:
-        """
-        Load service settings from user namespace.
-        Settings are stored under {service_type}_{slug} key in user settings.
-
-        Returns
-        -------
-        dict
-            The service settings for this user, or empty dict if none saved.
-        """
-        user_dict = await self.user.load_settings()
-        namespace = f"{self.service_type}_{self.slug}"
-        return user_dict.get(namespace, {})
-
-    async def save_settings(self, settings: BaseModel | Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Save service settings to user namespace.
-        Updates only this service's namespace within the user settings.
-
-        Parameters
-        ----------
-        settings : BaseModel | dict
-            The complete settings to save for this service.
-
-        Returns
-        -------
-        dict
-            The saved settings.
-        """
-        # Convert BaseModel to dict if needed
-        if isinstance(settings, BaseModel):
-            settings = settings.model_dump()
-
-        # Load full user settings
-        user_dict = await self.user.load_settings()
-
-        # Update this service's namespace
-        namespace = f"{self.service_type}_{self.slug}"
-        user_dict[namespace] = settings
-
-        # Save back to user
-        await self.user.save_settings(user_dict)
-
-        return settings

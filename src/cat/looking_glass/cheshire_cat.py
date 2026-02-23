@@ -92,9 +92,13 @@ class CheshireCat:
         from cat.services.auths.default import DefaultAuth
         from cat.services.agents.default import DefaultAgent
         from cat.services.model_providers.default import DefaultModelProvider
-        
+        from cat.services.core_settings import CoreSettings
+
         # Reset factory (shutdown existing services and clear registry)
         await self.factory.teardown()
+
+        # Register core installation settings (dogfoods the Settings pattern)
+        self.factory.register(CoreSettings)
 
         # Register all services from plugins
         for service_type, services in self.mad_hatter.service_classes.items():
