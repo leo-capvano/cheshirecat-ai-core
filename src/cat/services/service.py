@@ -1,6 +1,6 @@
 from typing import Union, Literal, Type, Dict, Any, TYPE_CHECKING
 from inspect import isclass
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 from cat.mixin.llm import LLMMixin
 from cat.mixin.stream import EventStreamMixin
@@ -16,20 +16,6 @@ if TYPE_CHECKING:
     from cat.protocols.model_context.client import MCPClients
 
 LifeCycle = Literal["singleton", "request"]
-
-class ServiceMetadata(BaseModel):
-    """Metadata about a service."""
-
-    lifecycle: LifeCycle
-    service_type: str
-    slug: str
-    name: str
-    description: str
-    plugin_id: str | None
-    settings_schema: dict | None = None
-
-    # allow extra fields
-    model_config = ConfigDict(extra="allow")
 
 class Service:
     """
@@ -213,27 +199,6 @@ class Service:
         else:
             self.settings = None
 
-    async def get_meta(self) -> ServiceMetadata:
-        """
-        Get service metadata.
-
-        Returns
-        -------
-        ServiceMetadata
-            Service metadata including settings schema.
-        """
-        model = await self.settings_model()
-        settings_schema = model.model_json_schema() if model else None
-
-        return ServiceMetadata(
-            service_type=self.service_type,
-            lifecycle=self.lifecycle,
-            slug=self.slug,
-            name=self.name,
-            description=self.description,
-            plugin_id=self.plugin_id,
-            settings_schema=settings_schema
-        )
 
 
 class SingletonService(Service):

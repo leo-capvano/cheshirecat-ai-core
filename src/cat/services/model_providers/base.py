@@ -85,10 +85,3 @@ class ModelProvider(SingletonService):
         Override this in subclasses to implement embedder instantiation.
         """
         return None
-
-    async def get_meta(self):
-        """Get metadata including available model lists."""
-        meta = await super().get_meta()
-        meta.llms = self.list_llms()
-        meta.embedders = self.list_embedders()
-        return meta

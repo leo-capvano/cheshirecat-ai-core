@@ -8,8 +8,8 @@ from cat.routes import (
     home,
     status,
     openapi,
-    services,
     settings,
+    models,
 )
 
 from cat.routes.me import me
@@ -70,7 +70,7 @@ if cors_enabled == "true":
 
 # API routers
 for r in [
-    home, me, status, services, settings, oauth,
+    home, me, status, settings, models, oauth,
     plugins, uploads, websocket
 ]:
     cheshire_cat_api.include_router(r.router, prefix="/api/v2")
