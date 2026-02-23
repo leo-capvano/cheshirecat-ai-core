@@ -213,22 +213,6 @@ class Service:
         else:
             self.settings = None
 
-    @classmethod
-    def get_settings_schema(cls) -> dict | None:
-        """
-        Extract JSON schema from the nested Settings class at class level.
-        No instance needed — works at registration time for static discoverability.
-
-        Returns
-        -------
-        dict | None
-            JSON schema dict, or None if no Settings class.
-        """
-        nested = getattr(cls, 'Settings', None)
-        if nested is not None and isclass(nested) and issubclass(nested, BaseModel):
-            return nested.model_json_schema()
-        return None
-
     async def get_meta(self) -> ServiceMetadata:
         """
         Get service metadata.

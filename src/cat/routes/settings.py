@@ -45,10 +45,7 @@ async def list_settings(
             if plugin_id is not None and ServiceClass.plugin_id != plugin_id:
                 continue
 
-            # Check if service has settings (nested Settings class or settings_model)
-            has_nested = ServiceClass.get_settings_schema() is not None
-
-            # Get instance to check settings_model() (may be dynamic)
+            # Get instance to check settings_model() (the authoritative source)
             try:
                 if ServiceClass.lifecycle == "request":
                     instance = await factory.get(service_type, slug, request=r)
@@ -59,10 +56,10 @@ async def list_settings(
                 continue
 
             model = await instance.settings_model()
-            if model is None and not has_nested:
+            if model is None:
                 continue
 
-            settings_schema = model.model_json_schema() if model else None
+            settings_schema = model.model_json_schema()
             current_settings = await instance.load_settings()
 
             entries.append(SettingsEntry(
