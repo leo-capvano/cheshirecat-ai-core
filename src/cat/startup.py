@@ -5,11 +5,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from cat.env import get_env
 from cat.routes import (
-    home,
     status,
     openapi,
     settings,
     models,
+    agents,
 )
 
 from cat.routes.me import me
@@ -70,7 +70,7 @@ if cors_enabled == "true":
 
 # API routers
 for r in [
-    home, me, status, settings, models, oauth,
+    me, status, settings, models, agents, oauth,
     plugins, uploads, websocket
 ]:
     cheshire_cat_api.include_router(r.router, prefix="/api/v2")

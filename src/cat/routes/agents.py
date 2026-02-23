@@ -1,23 +1,20 @@
+from typing import List, Dict
+from inspect import isclass
+
+from pydantic import BaseModel, Field
 from fastapi import APIRouter, Body, Request, HTTPException
 
-from typing import List, Dict
-from pydantic import BaseModel, Field
-
+from cat.auth import AuthPermission, AuthResource, get_user, get_ccat
 from cat.types import Task, TaskResult
-from cat.auth import AuthResource, AuthPermission, get_user, get_ccat
 from cat.looking_glass import prompts
 from cat.protocols.model_context.server import MCPServer
 from cat.protocols.agui.streaming import AGUIStream
-from cat.types import Message
 
-router = APIRouter(prefix="", tags=["Home"])
+
+router = APIRouter(prefix="/agents", tags=["Agents"])
+
 
 class ChatRequest(Task):
-
-    agent: str = Field(
-        "default",
-        description="Agent slug, must be one of the available agents."
-    )
 
     model: str = Field(
         "default",
@@ -39,14 +36,47 @@ class ChatRequest(Task):
         description="Whether to enable streaming tokens or not."
     )
 
-    custom: Dict = Field(
+    args: Dict = Field(
         default_factory=dict,
-        description="Dictionary to hold extra custom data."
+        description="Runtime parameters for the agent. Validated against the agent's ArgsSchema when defined."
     )
 
-      
-@router.post("/message")
-async def message(
+
+class AgentCard(BaseModel):
+    slug: str
+    name: str | None
+    description: str | None
+    plugin_id: str | None
+    args_schema: dict | None = None
+
+
+@router.get("")
+async def list_agents(
+    ccat=get_ccat(),
+    _=get_user(AuthResource.CHAT, AuthPermission.READ),
+) -> List[AgentCard]:
+    """List all registered agents with full details."""
+
+    agents = []
+    for slug, Cls in ccat.factory.class_index.get("agents", {}).items():
+        args_schema = None
+        ArgsSchema = getattr(Cls, 'ArgsSchema', None)
+        if ArgsSchema is not None and isclass(ArgsSchema) and issubclass(ArgsSchema, BaseModel):
+            args_schema = ArgsSchema.model_json_schema()
+
+        agents.append(AgentCard(
+            slug=slug,
+            name=Cls.name or Cls.__name__,
+            description=Cls.description,
+            plugin_id=Cls.plugin_id,
+            args_schema=args_schema,
+        ))
+    return agents
+
+
+@router.post("/{slug}/message")
+async def agent_message(
+    slug: str,
     http_request: Request,
     chat_request: ChatRequest = Body(
         ...,
@@ -54,7 +84,6 @@ async def message(
             "simple": {
                 "summary": "Simple text message",
                 "value": {
-                    "agent": "default",
                     "model": "openai:gpt-4o",
                     "system_prompt": "You are the Cheshire Cat, and always talk in rhymes.",
                     "messages": [
@@ -65,30 +94,38 @@ async def message(
                     ],
                     "stream": False,
                 }
+            },
+            "with_args": {
+                "summary": "Message with agent args",
+                "value": {
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": [{"type": "text", "text": "Hello!"}]
+                        }
+                    ],
+                    "args": {"temperature": 0.5},
+                }
             }
         }
     ),
-    _ = get_user(AuthResource.CHAT, AuthPermission.EDIT),
-    ccat = get_ccat(),
+    _=get_user(AuthResource.CHAT, AuthPermission.EDIT),
+    ccat=get_ccat(),
 ) -> TaskResult:
-    """
-    Send a message to the Cat. Allows choosing agent, model, system prompt and MCPs.
-    """
+    """Send a message to a specific agent identified by its slug."""
 
-    # Store chat_request in request.state for access in downstream services
     http_request.state.chat_request = chat_request
 
-    # Get agent from factory
     agent = await ccat.factory.get(
         "agents",
-        chat_request.agent,
+        slug,
         request=http_request,
         raise_error=False
     )
     if agent is None:
         raise HTTPException(
             status_code=404,
-            detail=f"Agent '{chat_request.agent}' not found."
+            detail=f"Agent '{slug}' not found."
         )
 
     task = Task(

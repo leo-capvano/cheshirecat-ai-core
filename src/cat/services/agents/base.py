@@ -1,4 +1,7 @@
 from typing import List, TYPE_CHECKING
+from inspect import isclass
+
+from pydantic import BaseModel
 
 from cat.types import Message, Context, Task, TaskResult
 from cat.mad_hatter.decorators import Tool
@@ -17,6 +20,8 @@ class Agent(RequestService):
 
     directives: List["Directive"] = []
 
+    args: BaseModel | None = None
+
     async def __call__(self, task: Task) -> TaskResult:
         """
         Main entry point for the agent, to run an agent like a function.
@@ -33,6 +38,8 @@ class Agent(RequestService):
         response : ChatResponse
             ChatResponse object, the agent's answer.
         """
+
+        self._validate_args()
 
         async with self.ccat.mcp_clients.get_user_client(self) as mcp_client:
             self.mcp = mcp_client
@@ -181,6 +188,14 @@ class Agent(RequestService):
             raise_error=True
         )
         return await agent(task)
+
+    def _validate_args(self) -> None:
+        """Validate and inject ArgsSchema from request."""
+        ArgsSchema = getattr(self.__class__, 'ArgsSchema', None)
+        if ArgsSchema is not None and isclass(ArgsSchema) and issubclass(ArgsSchema, BaseModel):
+            raw_args = getattr(self.request.state, 'chat_request', None)
+            raw_args = getattr(raw_args, 'args', {}) if raw_args else {}
+            self.args = ArgsSchema.model_validate(raw_args)
 
     def instantiate_agent_tools(self) -> List[Tool]:
         """Find Tool instances on class and bind them to the agent instance."""
