@@ -22,10 +22,15 @@ class Task(BaseModel):
         description="List of resources (documents, context, data)"
     )
 
-    #custom: Dict[str, Any] = Field(
-    #    default_factory=dict,
-    #    description="Extra metadata or custom fields"
-    #)
+    args: dict = Field(
+        default_factory=dict,
+        description="Runtime parameters for the agent. Validated against the agent's ArgsSchema when defined."
+    )
+
+    stream: bool = Field(
+        True,
+        description="Whether to enable streaming tokens or not."
+    )
 
 class TaskResult(Task):
     """

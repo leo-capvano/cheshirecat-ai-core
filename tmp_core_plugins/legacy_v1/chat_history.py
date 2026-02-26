@@ -1,6 +1,6 @@
 
 from cat.mad_hatter.decorators import hook
-from cat.types import ChatRequest, Message, TextContent
+from cat.types import Task, Message, TextContent
 
 from .convo import UserMessage
 
@@ -8,14 +8,14 @@ from .convo import UserMessage
 @hook(priority=-1000)
 def fast_reply(_, cat):
 
-    if not isinstance(cat.request, ChatRequest):
+    if not isinstance(cat.request, Task):
         # legacy `user_message_json`
         user_message_json = UserMessage.model_validate(cat.request)
         # Impose user_id as the one authenticated
         # (ws message may contain a fake id)
         user_message_json.user_id = cat.user_id
 
-        cat.request = ChatRequest(
+        cat.request = Task(
             messages=[
                 Message(
                     role="user",

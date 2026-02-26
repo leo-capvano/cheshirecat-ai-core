@@ -239,7 +239,7 @@ def test_jwt_self_signature_fails(client, admin_headers):
             assert str(e_info.type.__name__) == "WebSocketDisconnect"
 
 
-# TODOV2: all tests messaging the cat with the old `user_message_json` object must be updated to ChatRequest
+# TODOV2: all tests messaging the cat with the old `user_message_json` object must be updated to Task
 
 
 

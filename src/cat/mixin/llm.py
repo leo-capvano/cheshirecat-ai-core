@@ -20,17 +20,11 @@ class LLMMixin:
     ) -> "Message":
         """Generate a response using the Large Language Model."""
 
-        # Get model slug from chat_request in request.state
-        chat_request = getattr(self.request.state, "chat_request", None)
-        slug_from_request = chat_request.model if chat_request else None
-
+        # TODOV2: re-introduce request-level model override (via settings or task args)
         if model:
             slug = model
-        elif slug_from_request:
-            slug = slug_from_request
         elif self.model:
             slug = self.model
-        # TODOV2 search also in settings? global or user?
         else:
             raise Exception("No LLM specified for generation.")
 

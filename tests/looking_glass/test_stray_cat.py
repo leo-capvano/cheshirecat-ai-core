@@ -1,7 +1,7 @@
 import pytest
 
 from cat.auth import User
-from cat.types import ChatResponse, ChatRequest
+from cat.types import Task, TaskResult
 from cat.looking_glass.stray_cat import StrayCat
 from cat.memory.working_memory import WorkingMemory
 from cat.mad_hatter.decorators.hook import Hook
@@ -38,7 +38,7 @@ async def test_stray_call_with_text(stray_cat):
 
     reply = await stray_cat( get_request() )
 
-    assert isinstance(reply, ChatResponse)
+    assert isinstance(reply, TaskResult)
     assert "You did not configure" in reply.text
     assert reply.user_id == "Alice"
 
@@ -48,7 +48,7 @@ async def test_stray_call_with_text_and_image(stray_cat):
     
     reply = await stray_cat( get_request() )
 
-    assert isinstance(reply, ChatResponse)
+    assert isinstance(reply, TaskResult)
     assert "You did not configure" in reply.text
     assert reply.user_id == "Alice"
 
@@ -93,13 +93,13 @@ async def test_stray_fast_reply_hook(stray_cat):
 
     def fast_reply_hook(fast_reply: dict, cat):
         if user_msg in stray_cat.request.messages[-1].content.text:
-            return ChatResponse(user_id=cat.user_id, text=fast_reply_msg)
+            return TaskResult(user_id=cat.user_id, text=fast_reply_msg)
 
     fast_reply_hook = Hook(name="fast_reply", func=fast_reply_hook, priority=0)
     fast_reply_hook.plugin_id = "fast_reply_hook"
     stray_cat.mad_hatter.hooks["fast_reply"] = [fast_reply_hook]
 
-    msg = ChatRequest.model_validate({
+    msg = Task.model_validate({
             "messages": [
                 {
                     "role": "user",
@@ -115,7 +115,7 @@ async def test_stray_fast_reply_hook(stray_cat):
     # send message
     res = await stray_cat.__call__(msg)
 
-    assert isinstance(res, ChatResponse)
+    assert isinstance(res, TaskResult)
     assert res.text == fast_reply_msg
 
     # there should be NO side effects

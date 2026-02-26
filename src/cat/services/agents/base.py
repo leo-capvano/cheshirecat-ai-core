@@ -26,20 +26,19 @@ class Agent(RequestService):
         """
         Main entry point for the agent, to run an agent like a function.
         Calls main lifecycle hooks and delegates actual agent logic to `execute()`.
-        Sets request and response as instance attributes for easy access within the agent.
-        
+
         Parameters
         ----------
-        request : ChatRequest
-            ChatRequest object received from the client or from another agent.
+        task : Task
+            Task object received from the client or from another agent.
 
         Returns
         -------
-        response : ChatResponse
-            ChatResponse object, the agent's answer.
+        TaskResult
+            The agent's answer.
         """
 
-        self._validate_args()
+        self._validate_args(task)
 
         async with self.ccat.mcp_clients.get_user_client(self) as mcp_client:
             self.mcp = mcp_client
@@ -93,7 +92,7 @@ class Agent(RequestService):
                 # pass tools
                 tools=self.ctx.tools,
                 # whether to stream or not
-                stream=self.request.stream
+                stream=self.ctx.task.stream
             )
 
             self.ctx.result.messages.append(llm_mex)
@@ -120,8 +119,8 @@ class Agent(RequestService):
         Override for custom behavior.
         """
 
-        # Get base prompt from self.system_prompt or http request override
-        prompt = getattr(self.request, "system_prompt", self.system_prompt)
+        # TODOV2: re-introduce system_prompt override (via settings or task args)
+        prompt = self.system_prompt
 
         prompt = await self.execute_hook(
             "agent_prompt_prefix",
@@ -189,13 +188,11 @@ class Agent(RequestService):
         )
         return await agent(task)
 
-    def _validate_args(self) -> None:
-        """Validate and inject ArgsSchema from request."""
+    def _validate_args(self, task: Task) -> None:
+        """Validate and inject ArgsSchema from task."""
         ArgsSchema = getattr(self.__class__, 'ArgsSchema', None)
         if ArgsSchema is not None and isclass(ArgsSchema) and issubclass(ArgsSchema, BaseModel):
-            raw_args = getattr(self.request.state, 'chat_request', None)
-            raw_args = getattr(raw_args, 'args', {}) if raw_args else {}
-            self.args = ArgsSchema.model_validate(raw_args)
+            self.args = ArgsSchema.model_validate(task.args)
 
     def instantiate_agent_tools(self) -> List[Tool]:
         """Find Tool instances on class and bind them to the agent instance."""

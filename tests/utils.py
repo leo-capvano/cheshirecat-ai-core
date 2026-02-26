@@ -1,5 +1,5 @@
 import shutil
-from cat.types import ChatRequest, Message, TextContent
+from cat.types import Task, Message, TextContent
 from urllib.parse import urlencode
 
 
@@ -13,7 +13,7 @@ def get_mock_plugin_info():
     }
 
 def get_request(msg="meow"):
-    return ChatRequest(
+    return Task(
         messages=[
             Message(
                 role="user",
