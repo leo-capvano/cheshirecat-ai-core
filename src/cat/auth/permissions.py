@@ -15,7 +15,7 @@ class AuthResource(str, Enum):
     #PROFILE = "PROFILE"
     CHAT = "CHAT"
     PLUGIN = "PLUGIN"
-    FILE = "FILE"
+    UPLOAD = "UPLOAD"
 
 
 class AuthPermission(str, Enum):

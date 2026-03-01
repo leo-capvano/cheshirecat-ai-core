@@ -18,6 +18,9 @@ class CoreSettings(SingletonService):
         default_llm: str = "default:default"
         default_embedder: str = "default:default"
 
+    async def setup(self):
+        await self.load_settings()
+
     async def settings_model(self) -> Type[BaseModel]:
         """Build a dynamic settings model with enum options from all model providers."""
 

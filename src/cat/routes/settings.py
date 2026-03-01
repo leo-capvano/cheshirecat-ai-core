@@ -1,6 +1,6 @@
 from typing import Dict, List
 from pydantic import BaseModel, Field, ValidationError
-from fastapi import APIRouter, Request, HTTPException, Body, Query
+from fastapi import APIRouter, Request, HTTPException, Body
 
 from cat.auth import AuthPermission, AuthResource, get_user
 from cat import log
@@ -10,41 +10,42 @@ router = APIRouter(prefix="/settings", tags=["Settings"])
 
 class SettingsEntry(BaseModel):
     """A single service's settings entry."""
+    id: str
     slug: str
     type: str
     name: str
     plugin_id: str | None
-    settings: dict
+    value: dict
     schema_: dict | None = Field(None, alias="schema")
 
     model_config = {"populate_by_name": True}
 
 
+def _make_id(plugin_id: str | None, service_type: str, slug: str) -> str:
+    return f"{plugin_id}__{service_type}__{slug}"
+
+
+def _parse_id(id: str) -> tuple[str, str, str]:
+    parts = id.split("__")
+    if len(parts) != 3:
+        raise HTTPException(status_code=404, detail=f"Invalid settings id: {id}")
+    return parts[0], parts[1], parts[2]
+
+
 @router.get("")
 async def list_settings(
     r: Request,
-    type: str | None = Query(None, description="Filter by service type"),
-    plugin_id: str | None = Query(None, description="Filter by plugin ID"),
     user=get_user(AuthResource.PLUGIN, AuthPermission.READ),
 ) -> List[SettingsEntry]:
     """
     List all services that have settings, with metadata, current values, and schemas.
-    Supports filtering by service type and/or plugin_id.
     """
     ccat = r.app.state.ccat
     factory = ccat.factory
 
     entries = []
     for service_type, service_dict in factory.class_index.items():
-        # Apply type filter
-        if type is not None and service_type != type:
-            continue
-
         for slug, ServiceClass in service_dict.items():
-            # Apply plugin_id filter
-            if plugin_id is not None and ServiceClass.plugin_id != plugin_id:
-                continue
-
             # Get instance to check settings_model() (the authoritative source)
             try:
                 if ServiceClass.lifecycle == "request":
@@ -63,46 +64,48 @@ async def list_settings(
             current_settings = await instance.load_settings()
 
             entries.append(SettingsEntry(
+                id=_make_id(ServiceClass.plugin_id, service_type, slug),
                 slug=slug,
                 type=service_type,
                 name=ServiceClass.name or ServiceClass.__name__,
                 plugin_id=ServiceClass.plugin_id,
-                settings=current_settings,
+                value=current_settings,
                 schema=settings_schema,
             ))
 
     return entries
 
 
-@router.put("/{type}/{slug}")
+@router.put("/{id}")
 async def update_settings(
-    type: str,
-    slug: str,
+    id: str,
     r: Request,
     payload: Dict = Body(...),
     user=get_user(AuthResource.PLUGIN, AuthPermission.EDIT),
 ) -> SettingsEntry:
     """
-    Save settings for a single service identified by type and slug.
+    Save settings for a single service identified by its composite id.
     Validates against schema, saves to DB, triggers service refresh.
     """
+    plugin_id, service_type, slug = _parse_id(id)
+
     ccat = r.app.state.ccat
     factory = ccat.factory
 
     # Look up the service class
-    ServiceClass = factory.class_index.get(type, {}).get(slug)
-    if ServiceClass is None:
+    ServiceClass = factory.class_index.get(service_type, {}).get(slug)
+    if ServiceClass is None or ServiceClass.plugin_id != plugin_id:
         raise HTTPException(
             status_code=404,
-            detail=f"Service {type}:{slug} not found"
+            detail=f"Settings {id} not found"
         )
 
     # Get instance
     try:
         if ServiceClass.lifecycle == "request":
-            instance = await factory.get(type, slug, request=r)
+            instance = await factory.get(service_type, slug, request=r)
         else:
-            instance = await factory.get(type, slug)
+            instance = await factory.get(service_type, slug)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -111,7 +114,7 @@ async def update_settings(
     if settings_model is None:
         raise HTTPException(
             status_code=400,
-            detail=f"Service {type}:{slug} does not support settings"
+            detail=f"Settings {id} does not support settings"
         )
 
     # Validate
@@ -130,10 +133,11 @@ async def update_settings(
     await ccat.mad_hatter.refresh_caches()
 
     return SettingsEntry(
+        id=id,
         slug=slug,
-        type=type,
+        type=service_type,
         name=ServiceClass.name or ServiceClass.__name__,
         plugin_id=ServiceClass.plugin_id,
-        settings=saved,
+        value=saved,
         schema=settings_model.model_json_schema(),
     )

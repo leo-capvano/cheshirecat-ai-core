@@ -20,13 +20,14 @@ class LLMMixin:
     ) -> "Message":
         """Generate a response using the Large Language Model."""
 
-        # TODOV2: re-introduce request-level model override (via settings or task args)
         if model:
             slug = model
         elif self.model:
             slug = self.model
         else:
-            raise Exception("No LLM specified for generation.")
+            # Fall back to CoreSettings default_llm
+            core_settings = await self.factory.get("core", "core")
+            slug = core_settings.settings.default_llm
 
         # Get LLM instance from CheshireCat
         model = await self.ccat.get_llm(slug, self.request)

@@ -10,6 +10,8 @@ from fastapi import UploadFile, File, Path
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
+from urllib.parse import urljoin
+
 from cat import paths, urls
 from cat.auth import get_user, get_ccat, AuthResource, AuthPermission
 
@@ -30,7 +32,7 @@ class UploadedFileResponse(BaseModel):
 @router.post("")
 async def upload_file(
     file: UploadFile = File(...),
-    user = get_user(AuthResource.FILE, AuthPermission.WRITE),
+    user = get_user(AuthResource.UPLOAD, AuthPermission.WRITE),
     ccat = get_ccat(),
 ) -> UploadedFileResponse:
     hashed_user_id = str(uuid5(NAMESPACE_URL, str(user.id)))
@@ -48,7 +50,7 @@ async def upload_file(
     if not mime_type:
         mime_type = "application/octet-stream"
 
-    url = f"{urls.API_URL}/uploads/{hashed_user_id}/{safe_filename}"
+    url = urljoin(urls.API_URL, f"uploads/{hashed_user_id}/{safe_filename}")
 
     await ccat.mad_hatter.execute_hook(
         "after_file_upload",
@@ -67,7 +69,7 @@ async def upload_file(
 
 @router.get("")
 async def get_uploaded_files(
-    user = get_user(AuthResource.FILE, AuthPermission.LIST)
+    user = get_user(AuthResource.UPLOAD, AuthPermission.LIST)
 ) -> List[UploadedFileResponse]:
     """Retrieve list of uploaded file URLs uploaded by a specific user."""
 
@@ -80,7 +82,7 @@ async def get_uploaded_files(
     for path in file_paths:
         uploads.append(
             UploadedFileResponse(
-                url=path.replace(paths.UPLOADS_PATH, urls.API_URL + "/uploads"),
+                url=path.replace(paths.UPLOADS_PATH, urljoin(urls.API_URL, "uploads")),
                 mime_type=mimetypes.guess_type(path)[0]
             )
         )
@@ -89,7 +91,7 @@ async def get_uploaded_files(
 @router.get("/{path:path}")
 async def get_uploaded_file(
     path: str = Path(...),
-    user = get_user(AuthResource.FILE, AuthPermission.READ)
+    user = get_user(AuthResource.UPLOAD, AuthPermission.READ)
 )-> FileResponse:
     full_path = os.path.join(paths.UPLOADS_PATH, path)
 

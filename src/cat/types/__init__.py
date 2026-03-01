@@ -10,7 +10,6 @@ from cat.protocols.model_context.type_wrappers import (
 
 from .messages import Message
 from .tasks import Task, TaskResult
-from .contexts import Context
 
 __all__ = [
     "Resource",
@@ -21,7 +20,6 @@ __all__ = [
     "ResourceLink",
     "EmbeddedResource",
     "Message",
-    "Context",
     "Task",
     "TaskResult",
 ]

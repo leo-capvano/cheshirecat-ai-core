@@ -1,24 +1,44 @@
 
-from typing import List, TYPE_CHECKING
+from __future__ import annotations
+from typing import TYPE_CHECKING
 
-from cat.types import Context
 from ..service import RequestService
+
+if TYPE_CHECKING:
+    from cat.services.agents.base import Agent
 
 
 class Directive(RequestService):
-    """Base class for a Directive, to inspect and change model context before generation."""
+    """Base class for a Directive, to inspect and change the Agent before generation."""
 
     service_type = "directives"
 
-    async def step(self, context: Context) -> Context | None:
-        """
-        Modify the model context before generation. Override in subclasses.
+    async def start(self, agent: Agent) -> None:
+        """Called once before the agentic loop begins. Use for permanent setup (filter tools, adjust base prompt).
 
         Parameters
         ----------
-        context : Context
-            The model context to modify.
-        user : User
-            The user storing the resources.
+        agent : Agent
+            The agent instance to modify in place.
         """
-        return context
+        pass
+
+    async def step(self, agent: Agent) -> None:
+        """Called each iteration of the agentic loop, after prompt reset. Use for per-iteration context (RAG, guardrails).
+
+        Parameters
+        ----------
+        agent : Agent
+            The agent instance to modify in place.
+        """
+        pass
+
+    async def finish(self, agent: Agent) -> None:
+        """Called once after the agentic loop ends. Use for post-processing (save memories, log).
+
+        Parameters
+        ----------
+        agent : Agent
+            The agent instance to modify in place.
+        """
+        pass

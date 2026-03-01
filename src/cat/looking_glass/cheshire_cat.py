@@ -97,21 +97,14 @@ class CheshireCat:
         # Reset factory (shutdown existing services and clear registry)
         await self.factory.teardown()
 
+        # Register default services
+        for ServiceClass in [CoreSettings, DefaultAuth, DefaultModelProvider, DefaultAgent]:
+            self.factory.register(ServiceClass)
+
         # Register all services from plugins
         for service_type, services in self.mad_hatter.service_classes.items():
             for slug, ServiceClass in services.items():
                 self.factory.register(ServiceClass)
-
-        # Register core installation settings
-        self.factory.register(CoreSettings)
-        # Register default agent
-        self.factory.register(DefaultAgent)
-
-        # If no auth or model_provider from plugins, use defaults
-        if not "auths" in self.factory.class_index:
-            self.factory.register(DefaultAuth)
-        if not "model_providers" in self.factory.class_index:
-            self.factory.register(DefaultModelProvider)
 
     def refresh_endpoints(self):
         """Sync plugin endpoints in the fastapi app."""

@@ -43,7 +43,7 @@ class Auth(ABC, SingletonService):
         # TODOV2: should include plugins defined permissions
         return {
             AuthResource.CHAT: all_permissions,
-            AuthResource.FILE: all_permissions,
+            AuthResource.UPLOAD: all_permissions,
         }
         
     def is_jwt(self, token: str) -> bool:

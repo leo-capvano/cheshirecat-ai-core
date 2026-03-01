@@ -3,7 +3,7 @@ from inspect import isclass
 
 from pydantic import BaseModel
 
-from cat.types import Message, Context, Task, TaskResult
+from cat.types import Message, Task, TaskResult
 from cat.mad_hatter.decorators import Tool
 
 from ..service import RequestService
@@ -16,7 +16,7 @@ class Agent(RequestService):
 
     service_type = "agents"
     system_prompt = "You are an Agent in the Cheshire Cat AI fleet. Help the user and other agents with their requests."
-    model = None # can be a slug like "openai:gpt-4o", if None will be taken from request or settings
+    model = None # can be a slug like "openai:gpt-4o", if None will be taken from settings
 
     directives: List["Directive"] = []
 
@@ -25,7 +25,7 @@ class Agent(RequestService):
     async def __call__(self, task: Task) -> TaskResult:
         """
         Main entry point for the agent, to run an agent like a function.
-        Calls main lifecycle hooks and delegates actual agent logic to `execute()`.
+        Calls main lifecycle hooks and runs the agentic loop.
 
         Parameters
         ----------
@@ -42,32 +42,42 @@ class Agent(RequestService):
 
         async with self.ccat.mcp_clients.get_user_client(self) as mcp_client:
             self.mcp = mcp_client
-            
-            self.ctx = Context(
-                system_prompt = await self.get_system_prompt(),
-                task = task,
-                result = TaskResult(),
-                tools = await self.list_tools()
+
+            # Set main attributes for the loop
+            self.task = task
+            self.result = TaskResult()
+            self.system_prompt = await self.get_system_prompt()
+            self.tools = await self.list_tools()
+
+            self = await self.execute_hook(
+                "before_agent_execution", self
             )
-            
-            self.ctx = await self.execute_hook(
-                "before_agent_execution", self.ctx
-            )
-            self.ctx = await self.execute_hook(
-                f"before_{self.slug}_agent_execution", self.ctx
-            )
-            
-            # agentic loop
-            await self.loop()
-            
-            self.ctx = await self.execute_hook(
-                f"after_{self.slug}_agent_execution", self.ctx
-            )
-            self.ctx = await self.execute_hook(
-                "after_agent_execution", self.ctx
+            self = await self.execute_hook(
+                f"before_{self.slug}_agent_execution", self
             )
 
-        return self.ctx.result
+            await self.start()
+            await self.loop()
+            await self.finish()
+
+            self = await self.execute_hook(
+                f"after_{self.slug}_agent_execution", self
+            )
+            self = await self.execute_hook(
+                "after_agent_execution", self
+            )
+
+        return self.result
+
+    async def start(self):
+        """Called before the agentic loop. Runs directive start phase."""
+        for d in self.directives:
+            await d.start(self)
+
+    async def finish(self):
+        """Called after the agentic loop. Runs directive finish phase."""
+        for d in self.directives:
+            await d.finish(self)
 
     async def loop(self):
         """
@@ -76,39 +86,35 @@ class Agent(RequestService):
         Updates chat response in place.
         """
 
+        # snapshot system prompt to be reset before each step (good old RAG use cases)
+        _base_prompt = self.system_prompt
+
         while True:
-            
-            # let directives work on the context
+
+            # reset system prompt to baseline
+            self.system_prompt = _base_prompt
+
+            # let directives work on the agent
             for d in self.directives:
-                tmp_ctx = await d.step(self.ctx)
-                if tmp_ctx is not None and isinstance(tmp_ctx, Context):
-                    self.ctx = tmp_ctx
+                await d.step(self)
 
             llm_mex: Message = await self.llm(
-                # prompt construction
-                self.ctx.system_prompt,
-                # pass conversation messages
-                messages=self.ctx.task.messages + self.ctx.result.messages,
-                # pass tools
-                tools=self.ctx.tools,
-                # whether to stream or not
-                stream=self.ctx.task.stream
+                self.system_prompt,
+                messages=self.task.messages + self.result.messages,
+                tools=self.tools,
+                stream=self.task.stream
             )
 
-            self.ctx.result.messages.append(llm_mex)
-            
+            self.result.messages.append(llm_mex)
+
             if len(llm_mex.tool_calls) == 0:
-                # No tool calls, exit
+                # No tool calls, exit the loop
                 return
             else:
                 # LLM has chosen to use tools, run them
                 for tool_call in llm_mex.tool_calls:
-                    # actually executing the tool
                     tool_message = await self.call_tool(tool_call)
-                    # append tool message
-                    self.ctx.result.messages.append(tool_message)
-
-            self.ctx.step_number += 1
+                    self.result.messages.append(tool_message)
 
     async def get_system_prompt(self) -> str:
         """
@@ -119,8 +125,7 @@ class Agent(RequestService):
         Override for custom behavior.
         """
 
-        # TODOV2: re-introduce system_prompt override (via settings or task args)
-        prompt = self.system_prompt
+        prompt = type(self).system_prompt
 
         prompt = await self.execute_hook(
             "agent_prompt_prefix",
@@ -150,7 +155,7 @@ class Agent(RequestService):
             for t in mcp_tools
         ]
 
-        # Get agent's own tools decorated with @agent_tool
+        # Get agent's own internal tools
         agent_tools = self.instantiate_agent_tools()
 
         # Combine all tools
