@@ -230,6 +230,9 @@ Auth system semplifications (TODO review):
 ### agents
 
 - Provide easy methods to load and save resources / memories (after refactoring the vector memory plugin)
+- Remove `Context` object: flatten state onto Agent (`self.task`, `self.result`, `self.system_prompt`, `self.tools`, etc.). Directives receive the agent instance directly.
+- Directives lifecycle: add `.start(agent)`, `.step(agent)`, `.finish(agent)` to map before-loop / each-iteration / after-loop phases. Loop resets `system_prompt` before each `.step()` so directives don't accumulate.
+- Hooks should modify stuff in place (agent, tools list, prompt, etc.), no need to force a return value like it is now
 
 ### auth
 
