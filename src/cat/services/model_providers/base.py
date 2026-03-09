@@ -1,8 +1,6 @@
 from typing import List, TYPE_CHECKING
 from abc import abstractmethod
 
-from langchain_core.embeddings import Embeddings
-
 from cat.services.service import SingletonService
 
 if TYPE_CHECKING:
@@ -15,8 +13,8 @@ class ModelProvider(SingletonService):
     """
     Base class to expose deep learning models.
 
-    ModelProviders are singleton services that make LLM calls directly
-    and provide factory methods for embedders.
+    ModelProviders are singleton services that make LLM and embedding
+    calls directly.
     """
 
     service_type = "model_providers"
@@ -84,20 +82,22 @@ class ModelProvider(SingletonService):
         """
         ...
 
-    async def get_embedder(self, slug: str) -> Embeddings | None:
+    async def embed(self, text: str, model: str) -> list[float] | None:
         """
-        Create and return an Embedder instance for the given slug.
+        Embed a single text string.
 
         Parameters
         ----------
-        slug : str
-            The embedder slug (without provider prefix, e.g., "text-embedding-3-small").
+        text : str
+            The text to embed.
+        model : str
+            Model identifier (e.g. "text-embedding-3-small").
 
         Returns
         -------
-        Embeddings | None
-            The Embedder instance if the slug is valid, None otherwise.
+        list[float] | None
+            The embedding vector, or None if not supported.
 
-        Override this in subclasses to implement embedder instantiation.
+        Override this in subclasses to implement embedding.
         """
         return None

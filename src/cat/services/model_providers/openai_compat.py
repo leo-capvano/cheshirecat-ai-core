@@ -98,6 +98,10 @@ class OpenAICompatibleProvider(ModelProvider):
             tool_calls=tool_calls
         )
 
+    async def embed(self, text: str, model: str) -> list[float]:
+        resp = await self.client.embeddings.create(model=model, input=text)
+        return resp.data[0].embedding
+
     async def stream_completion(self, model, oai_messages, oai_tools, on_token) -> Message:
         full_text = ""
         tool_calls_acc = {}  # index -> {id, name, args}

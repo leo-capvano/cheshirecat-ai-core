@@ -28,9 +28,11 @@ async def test_stray_nlp(stray_cat):
     res = await stray_cat.llm("hey") # TODOV2: more tests for .llm
     assert "You did not configure" in res
 
-    embedding = stray_cat.embedder.embed_documents(["hey"])
-    assert isinstance(embedding[0], list)
-    assert isinstance(embedding[0][0], float)
+    # TODOV2: test embed via provider directly
+    provider = await stray_cat.ccat.factory.get("model_providers", "default")
+    embedding = await provider.embed("hey", model="default")
+    assert isinstance(embedding, list)
+    assert isinstance(embedding[0], float)
 
 
 @pytest.mark.asyncio

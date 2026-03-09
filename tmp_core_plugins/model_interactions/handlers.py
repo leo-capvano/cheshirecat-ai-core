@@ -2,15 +2,13 @@
 from typing import Dict, Any, List
 import tiktoken
 import time
-from langchain_core.callbacks.base import BaseCallbackHandler
-from.interactions_types import LLMModelInteraction
-from langchain_core.outputs.llm_result import LLMResult
+from .interactions_types import LLMModelInteraction
 
 from cat import log
 
-class ModelInteractionHandler(BaseCallbackHandler):
+class ModelInteractionHandler:
     """
-    Langchain callback handler for tracking model interactions.
+    Callback handler for tracking model interactions.
     """
 
     def __init__(self, cat, source: str):
@@ -59,7 +57,7 @@ class ModelInteractionHandler(BaseCallbackHandler):
         self.last_interaction.input_tokens = int(input_tokens * 1.2) # You never know
         self.last_interaction.prompt = input_prompt
 
-    def on_llm_end(self, response: LLMResult, **kwargs) -> None:
+    def on_llm_end(self, response, **kwargs) -> None:
         self.last_interaction.output_tokens = self._count_tokens(response.generations[0][0].text)
         self.last_interaction.reply = response.generations[0][0].text
         self.last_interaction.ended_at = time.time()

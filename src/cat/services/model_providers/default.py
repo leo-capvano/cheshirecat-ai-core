@@ -1,9 +1,8 @@
+import random
 from typing import List, TYPE_CHECKING
 from collections.abc import Awaitable, Callable
-from langchain_core.embeddings import Embeddings
 
 from .base import ModelProvider
-from ...protocols.future.embedder import DefaultEmbedder
 from ...types import Message
 from ...protocols.model_context.type_wrappers import TextContent
 
@@ -41,5 +40,5 @@ class DefaultModelProvider(ModelProvider):
             content=[TextContent(text=text)]
         )
 
-    async def get_embedder(self, slug: str) -> Embeddings:
-        return DefaultEmbedder()
+    async def embed(self, text: str, model: str) -> list[float]:
+        return [random.random() for _ in range(8)]

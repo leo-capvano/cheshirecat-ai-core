@@ -1,7 +1,5 @@
 import pytest
 
-from langchain_core.embeddings import Embeddings
-
 from cat.mad_hatter.mad_hatter import MadHatter
 from cat.services.model_providers.default import DefaultModelProvider
 

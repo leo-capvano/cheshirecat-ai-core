@@ -122,35 +122,6 @@ class CheshireCat:
         # reset openapi schema
         self.fastapi_app.openapi_schema = None
 
-    async def get_embedder(self, slug: str, request=None):
-        """
-        Get an Embedder instance by its slug.
-
-        Parameters
-        ----------
-        slug : str
-            The embedder slug in format "provider:model" (e.g., "openai:text-embedding-3-small").
-        request : Request, optional
-            The FastAPI request (for future extensibility).
-
-        Returns
-        -------
-        Embeddings
-            The embedder instance.
-        """
-        if ":" in slug:
-            provider_slug, model_slug = slug.split(":", 1)
-        else:
-            provider_slug, model_slug = "default", slug
-
-        provider = await self.factory.get(
-            "model_providers",
-            provider_slug,
-            raise_error=True
-        )
-
-        return await provider.get_embedder(model_slug)
-
     async def get_auth_handlers(self) -> dict[str, "Auth"]:
         """
         Get all auth handlers instances as a dictionary slug -> instance.
