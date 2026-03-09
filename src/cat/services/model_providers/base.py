@@ -80,9 +80,9 @@ class ModelProvider(SingletonService):
             content=[TextContent(...)], and optionally
             tool_calls=[{"id": ..., "name": ..., "args": {...}}, ...]
         """
-        ...
+        pass
 
-    async def embed(self, text: str, model: str) -> list[float] | None:
+    async def embed(self, text: str, model: str) -> list[float]:
         """
         Embed a single text string.
 
@@ -100,4 +100,4 @@ class ModelProvider(SingletonService):
 
         Override this in subclasses to implement embedding.
         """
-        return None
+        return [0.0]
