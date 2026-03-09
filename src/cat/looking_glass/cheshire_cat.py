@@ -1,8 +1,6 @@
 import sys
 from typing import TYPE_CHECKING
 
-from rich import inspect
-
 from cat import log
 from cat.protocols.model_context.client import MCPClients
 from cat.mad_hatter.mad_hatter import MadHatter
@@ -123,36 +121,6 @@ class CheshireCat:
         
         # reset openapi schema
         self.fastapi_app.openapi_schema = None
-
-    async def get_llm(self, slug: str, request=None):
-        """
-        Get an LLM instance by its slug.
-
-        Parameters
-        ----------
-        slug : str
-            The LLM slug in format "provider:model" (e.g., "openai:gpt-4").
-        request : Request, optional
-            The FastAPI request (for future extensibility).
-
-        Returns
-        -------
-        BaseChatModel
-            The LLM instance.
-        """
-
-        if ":" in slug:
-            provider_slug, model_slug = slug.split(":", 1)
-        else:
-            provider_slug, model_slug = "default", slug
-
-        provider = await self.factory.get(
-            "model_providers",
-            provider_slug,
-            raise_error=True
-        )
-
-        return await provider.get_llm(model_slug)
 
     async def get_embedder(self, slug: str, request=None):
         """

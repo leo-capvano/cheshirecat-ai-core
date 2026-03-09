@@ -1,32 +1,31 @@
-from typing import Dict, List
+from typing import List, TYPE_CHECKING
+from abc import abstractmethod
 
-from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.embeddings import Embeddings
 
 from cat.services.service import SingletonService
 
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+    from cat.types import Message
+    from cat.mad_hatter.decorators import Tool
 
-# TODOV2: would be cool to:
-# - totally eradicate langchain from core
-# - allow plugins to expose also image generators, audio (stt and tts) and others.
+
 class ModelProvider(SingletonService):
     """
     Base class to expose deep learning models.
 
-    ModelProviders are singleton services that provide factory methods to create
-    LLM and Embedder instances on-demand, rather than pre-creating all instances.
+    ModelProviders are singleton services that make LLM calls directly
+    and provide factory methods for embedders.
     """
 
     service_type = "model_providers"
-
 
     async def setup(self):
         """
         Setup the vendor (e.g. load API keys from settings).
 
-        Override this method to load configuration (API keys, hosts, etc.)
-        but do NOT create model instances here. Models should be created
-        on-demand via get_llm() and get_embedder().
+        Override this method to load configuration (API keys, hosts, etc.).
         """
         pass
 
@@ -50,23 +49,40 @@ class ModelProvider(SingletonService):
         """
         return []
 
-    async def get_llm(self, slug: str) -> BaseChatModel | None:
+    @abstractmethod
+    async def llm(
+        self,
+        model: str,
+        messages: list["Message"],
+        system_prompt: str = "",
+        tools: list["Tool"] = [],
+        on_token: "Callable[[str], Awaitable[None]] | None" = None,
+    ) -> "Message":
         """
-        Create and return an LLM instance for the given slug.
+        Chat completion.
 
         Parameters
         ----------
-        slug : str
-            The model slug (without provider prefix, e.g., "gpt-4").
+        model : str
+            Model identifier (e.g. "gpt-4", "llama3").
+        messages : list[Message]
+            Conversation history (user, assistant, tool messages).
+        system_prompt : str
+            System instructions.
+        tools : list[Tool]
+            Available tools. Each has .name, .description, .input_schema.
+        on_token : callback
+            If provided, enables streaming. Called with each text delta
+            as it arrives.
 
         Returns
         -------
-        BaseChatModel | None
-            The LLM instance if the slug is valid, None otherwise.
-
-        Override this in subclasses to implement model instantiation.
+        Message
+            Complete assistant Message with role="assistant",
+            content=[TextContent(...)], and optionally
+            tool_calls=[{"id": ..., "name": ..., "args": {...}}, ...]
         """
-        return None
+        ...
 
     async def get_embedder(self, slug: str) -> Embeddings | None:
         """

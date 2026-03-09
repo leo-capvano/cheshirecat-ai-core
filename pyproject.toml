@@ -36,6 +36,7 @@ dependencies = [
     "cachetools>=6.2.0",
     "httpx>=0.28.1",
     "punq>=0.7.0",
+    "openai>=2.26.0",
 ]
 [project.urls]
 Homepage = "https://github.com/cheshire-cat-ai/core"

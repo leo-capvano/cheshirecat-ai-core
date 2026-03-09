@@ -3,8 +3,6 @@
 import inspect
 from datetime import timedelta
 from typing import Any
-from pydantic import BaseModel
-
 from rapidfuzz.distance import Levenshtein
 
 from cat import log
@@ -74,20 +72,6 @@ def verbal_timedelta(td: timedelta) -> str:
 def levenshtein_distance(prediction: str, reference: str) -> int:
     res = Levenshtein.normalized_distance(prediction, reference)
     return res
-
-
-def parse_json(
-        json_string: str,
-        pydantic_model: BaseModel = None
-    ) -> dict | BaseModel:
-    """
-    Parse a JSON string produced by an LLM in an actual dictionary.
-    Optionally provide a pydantic BaseModel to get an instance.
-    """
-    
-    # to avoid circular imports
-    from cat.protocols.future.llm_wrapper import LLMWrapper
-    return LLMWrapper.parse_json(json_string, pydantic_model)
 
 
 def get_caller_info(skip=2, return_short=True, return_string=True):

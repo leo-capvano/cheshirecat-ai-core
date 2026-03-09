@@ -1,6 +1,9 @@
-from typing import List, Dict, TYPE_CHECKING
-from cat.protocols.future.llm_wrapper import LLMWrapper
-from cat import utils, log
+import time
+from uuid import uuid4
+from typing import List, TYPE_CHECKING
+
+from cat.protocols.agui import events
+from cat import log
 
 if TYPE_CHECKING:
     from cat.types import Message
@@ -8,7 +11,7 @@ if TYPE_CHECKING:
 
 
 class LLMMixin:
-    """Mixin for LLM interaction methods (generation, classification)."""
+    """Mixin for LLM interaction methods."""
 
     async def llm(
         self,
@@ -25,53 +28,49 @@ class LLMMixin:
         elif self.model:
             slug = self.model
         else:
-            # Fall back to CoreSettings default_llm
             core_settings = await self.factory.get("core", "core")
             slug = core_settings.settings.default_llm
 
-        # Get LLM instance from CheshireCat
-        model = await self.ccat.get_llm(slug, self.request)
-
-        new_mex: Message = await LLMWrapper.invoke(
-            self,
-            model=model,
-            system_prompt=system_prompt,
-            messages=messages,
-            tools=tools,
-            stream=stream
-        )
-        return new_mex
-    
-    async def classify(
-        self, sentence: str, labels: List[str] | Dict[str, List[str]], score_threshold: float = 0.5
-    ) -> str | None:
-        """Classify a sentence."""
-
-        if isinstance(labels, dict):
-            labels_names = labels.keys()
-            examples_list = "\n\nExamples:"
-            for label, examples in labels.items():
-                for ex in examples:
-                    examples_list += f'\n"{ex}" -> "{label}"'
+        # Parse "provider:model" slug
+        if ":" in slug:
+            provider_slug, model_slug = slug.split(":", 1)
         else:
-            labels_names = labels
-            examples_list = ""
+            provider_slug, model_slug = "default", slug
 
-        labels_list = '"' + '", "'.join(labels_names) + '"'
-
-        prompt = f"""Classify this sentence:
-"{sentence}"
-
-Allowed classes are:
-{labels_list}{examples_list}
-
-"{sentence}" -> """
-
-        response = (await self.llm(prompt)).text
-
-        best_label, score = min(
-            ((label, utils.levenshtein_distance(response, label)) for label in labels_names),
-            key=lambda x: x[1],
+        provider = await self.factory.get(
+            "model_providers", provider_slug, raise_error=True
         )
 
-        return best_label if score < score_threshold else None
+        # Build on_token callback for streaming AGUI events
+        on_token = None
+        if stream:
+            await self.agui_event(
+                events.TextMessageStartEvent(
+                    message_id=str(uuid4()),
+                    timestamp=int(time.time())
+                )
+            )
+
+            async def on_token(token: str):
+                if token:
+                    await self.agui_event(
+                        events.TextMessageContentEvent(
+                            message_id=str(uuid4()),
+                            delta=token,
+                            timestamp=int(time.time())
+                        )
+                    )
+
+        result = await provider.llm(
+            model_slug, messages, system_prompt, tools, on_token
+        )
+
+        if stream:
+            await self.agui_event(
+                events.TextMessageEndEvent(
+                    message_id=str(uuid4()),
+                    timestamp=int(time.time())
+                )
+            )
+
+        return result

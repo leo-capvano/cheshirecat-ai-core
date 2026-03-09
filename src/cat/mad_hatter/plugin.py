@@ -300,7 +300,10 @@ class Plugin:
                 hooks += getmembers(plugin_module, self._is_cat_hook)
                 tools += getmembers(plugin_module, self._is_cat_tool)
                 endpoints += getmembers(plugin_module, self._is_custom_endpoint)
-                services += getmembers(plugin_module, self._is_cat_service)
+                services += getmembers(
+                    plugin_module,
+                    lambda S: self._is_cat_service(S, module_name)
+                )
                 plugin_overrides += getmembers(plugin_module, self._is_cat_plugin_override)
 
             except Exception:
@@ -370,13 +373,15 @@ class Plugin:
     def _is_cat_tool(obj):
         return isinstance(obj, Tool)
     
-    # a plugin service is a subclass of SingletonService or RequestService, but not a direct one
+    # a plugin service is a subclass of SingletonService or RequestService,
+    # defined in the plugin module (not imported from core)
     @staticmethod
-    def _is_cat_service(S):
+    def _is_cat_service(S, module_name=None):
         return isclass(S) \
             and issubclass(S, (SingletonService, RequestService)) \
             and S not in (Service, SingletonService, RequestService) \
-            and not any(base in S.__bases__ for base in (Service, SingletonService, RequestService))
+            and not any(base in S.__bases__ for base in (Service, SingletonService, RequestService)) \
+            and (module_name is None or S.__module__ == module_name)
             
 
     # a plugin override function has to be decorated with @plugin

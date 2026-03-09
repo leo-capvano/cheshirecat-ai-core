@@ -53,18 +53,6 @@ async def test_stray_call_with_text_and_image(stray_cat):
     assert reply.user_id == "Alice"
 
 
-# TODO: update these tests once we have a real LLM in tests
-@pytest.mark.asyncio
-async def test_stray_classify(stray_cat):
-    label = await stray_cat.classify("I feel good", labels=["positive", "negative"])
-    assert label is None  # TODO: should be "positive"
-
-    label = await stray_cat.classify(
-        "I feel bad", labels={"positive": ["I'm happy"], "negative": ["I'm sad"]}
-    )
-    assert label is None  # TODO: should be "negative"
-
-
 # TODOV2: where do we put this
 """
 def test_recall_to_working_memory(stray_cat):

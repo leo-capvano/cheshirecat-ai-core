@@ -1,20 +1,45 @@
+from typing import List, TYPE_CHECKING
+from collections.abc import Awaitable, Callable
 
-from typing import List, Type
+from cat.base import ModelProvider
+from cat.types import Message
+from cat.protocols.model_context.type_wrappers import TextContent
 
-from langchain_core.language_models.fake_chat_models import FakeListChatModel
+if TYPE_CHECKING:
+    from cat.mad_hatter.decorators import Tool
 
-from cat.mad_hatter.decorators import hook
-from cat.protocols.future.llm import LLMSettings
 
-class TestLLMConfig(LLMSettings):
-    """Fake LLM for testing purposes."""
+class MockModelProvider(ModelProvider):
+    """Mock model provider for testing."""
+
+    slug = "mock"
+    description = "Mock model provider for testing."
 
     responses: List[str] = ["I'm a fake LLM!"]
+    _call_count: int = 0
 
-    _pyclass: Type = FakeListChatModel
-    
+    async def setup(self):
+        pass
 
-@hook
-def factory_allowed_llms(models, cat) -> List:
-    models["test"] = TestLLMConfig()
-    return models
+    def list_llms(self) -> List[str]:
+        return ["mock"]
+
+    async def llm(
+        self,
+        model: str,
+        messages: list[Message],
+        system_prompt: str = "",
+        tools: list["Tool"] = [],
+        on_token: Callable[[str], Awaitable[None]] | None = None,
+    ) -> Message:
+        text = self.responses[self._call_count % len(self.responses)]
+        self._call_count += 1
+
+        if on_token:
+            for word in text.split(" "):
+                await on_token(word + " ")
+
+        return Message(
+            role="assistant",
+            content=[TextContent(text=text)]
+        )

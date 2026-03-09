@@ -1,10 +1,15 @@
-from typing import List
-from langchain_core.language_models.chat_models import BaseChatModel
+from typing import List, TYPE_CHECKING
+from collections.abc import Awaitable, Callable
 from langchain_core.embeddings import Embeddings
 
 from .base import ModelProvider
-from ...protocols.future.llm import DefaultLLM
 from ...protocols.future.embedder import DefaultEmbedder
+from ...types import Message
+from ...protocols.model_context.type_wrappers import TextContent
+
+if TYPE_CHECKING:
+    from cat.mad_hatter.decorators import Tool
+
 
 class DefaultModelProvider(ModelProvider):
     """Default model provider (placeholder models)."""
@@ -14,21 +19,27 @@ class DefaultModelProvider(ModelProvider):
     description = "Default model provider with placeholder models."
 
     async def setup(self):
-        """Setup is minimal for default provider."""
         pass
 
     def list_llms(self) -> List[str]:
-        """Return list of available LLM slugs."""
         return ["default"]
 
     def list_embedders(self) -> List[str]:
-        """Return list of available embedder slugs."""
         return ["default"]
 
-    async def get_llm(self, slug: str) -> BaseChatModel:
-        """Create and return LLM instance."""
-        return DefaultLLM()
+    async def llm(
+        self,
+        model: str,
+        messages: list[Message],
+        system_prompt: str = "",
+        tools: list["Tool"] = [],
+        on_token: Callable[[str], Awaitable[None]] | None = None,
+    ) -> Message:
+        text = "You did not configure a Language Model. Do it in the settings!"
+        return Message(
+            role="assistant",
+            content=[TextContent(text=text)]
+        )
 
     async def get_embedder(self, slug: str) -> Embeddings:
-        """Create and return embedder instance."""
         return DefaultEmbedder()
