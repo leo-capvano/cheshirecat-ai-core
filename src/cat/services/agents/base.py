@@ -207,7 +207,3 @@ class Agent(RequestService):
             if isinstance(attr := getattr(self.__class__, name, None), Tool)
         ]
 
-    @property
-    def plugin(self):
-        """Access the calling plugin object (resolved via stack introspection)."""
-        return self.ccat.plugin

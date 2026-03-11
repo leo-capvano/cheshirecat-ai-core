@@ -2,7 +2,6 @@ import os
 import inspect
 import glob
 import shutil
-from copy import deepcopy
 from typing import List, Dict, Any, Callable, Type, Union, TYPE_CHECKING
 
 from cat import log, paths, utils
@@ -289,31 +288,28 @@ class MadHatter:
 
         # Hook with arguments.
         #  First argument is passed to `execute_hook` is the pipeable one.
-        #  We call it `tea_cup` as every hook called will receive it as an input,
-        #  can add sugar, milk, or whatever, and return it for the next hook
-        value = deepcopy(default_value)
+        #  Plugins can mutate value and caller in place, or return a new value.
+        value = default_value
 
         # run hooks
         for hook in self.hooks[hook_name]:
             try:
-                # pass tea_cup to the hooks, along other args
-                # hook has at least one argument, and it will be piped
                 log.debug(
                     f"Executing {hook.plugin_id}::{hook.name} with priority {hook.priority}"
                 )
-                tmp_value = await utils.run_sync_or_async(
+                returned = await utils.run_sync_or_async(
                     hook.function,
-                    deepcopy(value),
+                    value,
                     caller,
                 )
-                if tmp_value is not None:
-                    value = tmp_value
+                if returned is not None:
+                    value = returned
             except Exception:
                 log.error(f"Error in plugin {hook.plugin_id}::{hook.name}")
                 plugin_obj = self.plugins[hook.plugin_id]
                 log.warning(plugin_obj.plugin_specific_error_message())
 
-        # tea_cup has passed through all hooks. Return final output
+        # value has passed through all hooks. Return final output
         return value
 
 
