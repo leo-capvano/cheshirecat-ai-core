@@ -2,7 +2,9 @@ from typing import Dict
 from importlib import metadata
 from pydantic import BaseModel
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter
+
+from cat.auth import get_ccat
 
 router = APIRouter(prefix="/status", tags=["Status"])
 
@@ -21,11 +23,10 @@ class StatusResponse(BaseModel):
 
 @router.get("")
 async def status(
-    r: Request
+    ccat=get_ccat(),
 ) -> StatusResponse:
     """Server status"""
 
-    ccat = r.app.state.ccat
     ahs = await ccat.get_all("auths")
 
     return StatusResponse(

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Request, HTTPException, Body
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field, ValidationError
 
-from cat.auth import User
+from cat.auth import User, get_ccat
 from cat import urls
 from cat.env import get_env
 
@@ -31,11 +31,10 @@ def logout(r: Request) -> RedirectResponse:
 @router.get("/login/{name}")
 async def oauth_login(
     r: Request,
-    name: str
+    name: str,
+    ccat=get_ccat(),
 ) -> RedirectResponse:
     """Starts the OAuth flow."""
-    
-    ccat = r.app.state.ccat
     ahs = await ccat.get_all("auths")
     auth = ahs.get(name, None)
     
@@ -61,10 +60,9 @@ async def oauth_login(
     return response
 
 @router.get("/callback/{name}")
-async def oauth_callback(r: Request, name: str):
+async def oauth_callback(r: Request, name: str, ccat=get_ccat()):
     """OAuth callback."""
 
-    ccat = r.app.state.ccat
     ahs = await ccat.get_all("auths")
     auth = ahs.get(name, None)
 

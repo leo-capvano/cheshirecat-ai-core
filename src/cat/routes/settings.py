@@ -2,7 +2,7 @@ from typing import Dict, List
 from pydantic import BaseModel, Field, ValidationError
 from fastapi import APIRouter, Request, HTTPException, Body
 
-from cat.auth import get_user
+from cat.auth import get_user, get_ccat
 from cat import log
 
 router = APIRouter(prefix="/settings", tags=["Settings"])
@@ -36,11 +36,11 @@ def _parse_id(id: str) -> tuple[str, str, str]:
 async def list_settings(
     r: Request,
     user=get_user("settings:read"),
+    ccat=get_ccat(),
 ) -> List[SettingsEntry]:
     """
     List all services that have settings, with metadata, current values, and schemas.
     """
-    ccat = r.app.state.ccat
 
     entries = []
     for service_type, service_dict in ccat.factory.class_index.items():
@@ -81,14 +81,13 @@ async def update_settings(
     r: Request,
     payload: Dict = Body(...),
     user=get_user("settings:edit"),
+    ccat=get_ccat(),
 ) -> SettingsEntry:
     """
     Save settings for a single service identified by its composite id.
     Validates against schema, saves to DB, triggers service refresh.
     """
     plugin_id, service_type, slug = _parse_id(id)
-
-    ccat = r.app.state.ccat
 
     # Look up the service class
     ServiceClass = ccat.factory.class_index.get(service_type, {}).get(slug)
