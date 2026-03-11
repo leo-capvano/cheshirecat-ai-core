@@ -2,18 +2,32 @@
 from importlib.metadata import metadata
 from fastapi import FastAPI, APIRouter, Request
 from fastapi.openapi.utils import get_openapi
-from scalar_fastapi import get_scalar_api_reference
+from fastapi.responses import HTMLResponse
 
 router = APIRouter()
+
+SCALAR_FAVICON = "https://cheshirecat.ai/wp-content/uploads/2023/10/Logo-Cheshire-Cat.svg"
 
 # Endpoint playground
 @router.get("/docs", include_in_schema=False)
 async def scalar_docs(r: Request):
     r.app.openapi = get_openapi_configuration_function(r.app)
-    return get_scalar_api_reference(
-        openapi_url="/openapi.json",
-        title=r.app.title,
-        scalar_favicon_url="https://cheshirecat.ai/wp-content/uploads/2023/10/Logo-Cheshire-Cat.svg",
+    return HTMLResponse(
+        f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>{r.app.title}</title>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <link rel="icon" href="{SCALAR_FAVICON}" />
+        </head>
+        <body>
+            <script id="api-reference" data-url="/openapi.json"></script>
+            <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+        </body>
+        </html>
+        """
     )
 
 def get_openapi_configuration_function(cheshire_cat_api: FastAPI):

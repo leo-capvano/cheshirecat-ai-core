@@ -59,6 +59,7 @@ def main():
         "cat.startup:cheshire_cat_api",
         host="0.0.0.0",
         port=port,
+        ws="none",
         use_colors=True,
         log_level=get_env("CCAT_LOG_LEVEL").lower(),
         **debug_config,
