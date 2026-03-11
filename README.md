@@ -35,7 +35,7 @@ The Cheshire Cat is a framework to build custom AI agents:
     - Custom multiple agents
     - Event callbacks
 - 📱 Easy to use Web UI supporting the AGUI protocol
-- 🦜 Supports any language model via langchain
+- 🦜 Supports any language model via adapter pattern
 - 👥 Multiuser with granular permissions, SSO/Oauth2 compatible
 - 🐋 100% dockerized
 - 🦄 Active [Discord community](https://discord.gg/bHX5sNFCYU) and clear [docs](https://cheshire-cat-ai.github.io/docs/)

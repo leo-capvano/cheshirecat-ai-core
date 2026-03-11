@@ -19,7 +19,7 @@ def test_main_modules_loaded(cheshire_cat):
 async def test_default_provider_loaded(cheshire_cat):
     provider = await cheshire_cat.get("model_providers", "default")
     assert isinstance(provider, DefaultModelProvider)
-    assert provider.list_llms() == ["default"]
+    assert await provider.list_llms() == ["default"]
 
 
 @pytest.mark.asyncio

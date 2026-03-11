@@ -21,7 +21,7 @@ class MockModelProvider(ModelProvider):
     async def setup(self):
         pass
 
-    def list_llms(self) -> List[str]:
+    async def list_llms(self) -> List[str]:
         return ["mock"]
 
     async def llm(

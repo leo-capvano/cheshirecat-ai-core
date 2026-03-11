@@ -27,7 +27,7 @@ class ModelProvider(SingletonService):
         """
         pass
 
-    def list_llms(self) -> List[str]:
+    async def list_llms(self) -> List[str]:
         """
         Return a list of available LLM slugs (without provider prefix).
 
@@ -37,7 +37,7 @@ class ModelProvider(SingletonService):
         """
         return []
 
-    def list_embedders(self) -> List[str]:
+    async def list_embedders(self) -> List[str]:
         """
         Return a list of available embedder slugs (without provider prefix).
 

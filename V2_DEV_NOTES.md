@@ -64,7 +64,7 @@
 - Most core functionality has been moved to plugins (still to be fixed and published). The vision is for a super slim core and more advanced plugins.
 - There are many changes and most plugins need to be adjusted (will provide a dedicated guide). The old admin still works with v2 via core plugin `legacy_v1`.
 - The cat vector memory can be completely deactivated, or some of it, and can be replaced/extended for example with a graph memory. See plugin `qdrant_vector_memory`
-- Due to difficulties in keeping up with langchain, core only depends on `langchain_core`. All LLM and embedder vendors are now packed in a dedicated `langchain_models_pack` plugin so they are isolated and more easily maintained. All langchain imports and all conversions between langchain and cat types happen in a single folder under `cat.protocols.future` waiting for a standard protocol for all LLM services, if ever. Ditching langchain alltogether is possible.
+- Due to difficulties in keeping up with langchain, core only deals with internal types, based on MCP as a standard. All LLM and embedder vendors are now packed in a dedicated `llms` plugin so they are isolated and more easily maintained. This plugin uses vendor native libraries to convert between cat and vendor types. Langchain has been totally eradicated from the framework (you are still free to use it as a requirement in your plugin).
 - plugins can contain tests inside a folder names `tests`. This folder will be ignored by the cat at runtime but tests will be run by `pytest`
 - plugins settings are now saved and loaded from DB, so no more need for a local `settings.json`
 - `load_settings` and `save_settings` are now async. Plugin overrides for those methods are not available anymore, since no one was using them.

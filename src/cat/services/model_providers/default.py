@@ -20,10 +20,10 @@ class DefaultModelProvider(ModelProvider):
     async def setup(self):
         pass
 
-    def list_llms(self) -> List[str]:
+    async def list_llms(self) -> List[str]:
         return ["default"]
 
-    def list_embedders(self) -> List[str]:
+    async def list_embedders(self) -> List[str]:
         return ["default"]
 
     async def llm(

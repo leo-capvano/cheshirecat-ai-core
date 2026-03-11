@@ -30,9 +30,9 @@ class CoreSettings(SingletonService):
         for slug in self.ccat.factory.class_index.get("model_providers", {}):
             try:
                 provider = await self.ccat.get("model_providers", slug)
-                for llm in provider.list_llms():
+                for llm in await provider.list_llms():
                     llm_options.append(f"{slug}:{llm}")
-                for emb in provider.list_embedders():
+                for emb in await provider.list_embedders():
                     embedder_options.append(f"{slug}:{emb}")
             except Exception as e:
                 log.error(f"Error querying model provider {slug}: {e}")
