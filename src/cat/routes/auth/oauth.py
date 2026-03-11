@@ -36,7 +36,7 @@ async def oauth_login(
     """Starts the OAuth flow."""
     
     ccat = r.app.state.ccat
-    ahs = await ccat.get_auth_handlers()
+    ahs = await ccat.get_all("auths")
     auth = ahs.get(name, None)
     
     if auth is None:
@@ -65,7 +65,7 @@ async def oauth_callback(r: Request, name: str):
     """OAuth callback."""
 
     ccat = r.app.state.ccat
-    ahs = await ccat.get_auth_handlers()
+    ahs = await ccat.get_all("auths")
     auth = ahs.get(name, None)
 
     if auth is None:

@@ -161,7 +161,7 @@ class Agent(RequestService):
         # Combine all tools
         tools = await self.execute_hook(
             "agent_allowed_tools",
-            mcp_tools + self.mad_hatter.tools + agent_tools
+            mcp_tools + self.ccat.mad_hatter.tools + agent_tools
         )
 
         return tools
@@ -185,7 +185,7 @@ class Agent(RequestService):
         ```
         """
         
-        agent = self.factory.get(
+        agent = await self.ccat.get(
             "agents",
             slug,
             request=self.request,
@@ -209,20 +209,5 @@ class Agent(RequestService):
 
     @property
     def plugin(self):
-        """Access plugin object (used from within a plugin)."""
+        """Access the calling plugin object (resolved via stack introspection)."""
         return self.ccat.plugin
-    
-    @property
-    def mcpqqqqq(self):
-        """Gives access to the MCP client."""
-        return self._mcp
-
-    @property
-    def mad_hatter(self):
-        """Gives access to the `MadHatter` plugin manager."""
-        return self.ccat.mad_hatter
-    
-    @property
-    def user_id(self) -> str:
-        """Get the user ID."""
-        return self.user.id

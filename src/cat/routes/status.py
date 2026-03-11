@@ -26,7 +26,7 @@ async def status(
     """Server status"""
 
     ccat = r.app.state.ccat
-    ahs = await ccat.get_auth_handlers()
+    ahs = await ccat.get_all("auths")
 
     return StatusResponse(
         status="We're all mad here, dear!",

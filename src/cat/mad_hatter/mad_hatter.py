@@ -14,7 +14,6 @@ from cat.mad_hatter.plugin import Plugin
 
 if TYPE_CHECKING:
     from cat.looking_glass.cheshire_cat import CheshireCat
-    from cat.looking_glass.hook_context import HookContext
     from cat.services.service import Service
     from cat.mad_hatter.decorators import (
         Hook,
@@ -275,8 +274,7 @@ class MadHatter:
         default_value : Any
             Default value passed through hooks.
         caller : Union[CheshireCat, Service, Callable]
-            The caller (CheshireCat, SingletonService, RequestService) that invoked the hook.
-            Used to build HookContext internally.
+            The caller (CheshireCat or Service instance) passed directly to hooks.
 
         Returns
         -------
@@ -288,10 +286,6 @@ class MadHatter:
         if hook_name not in self.hooks.keys():
             log.debug(f"Hook {hook_name} not present in any plugin")
             return default_value
-
-        # Build HookContext from caller
-        from cat.looking_glass.hook_context import HookContext
-        ctx = HookContext(caller)
 
         # Hook with arguments.
         #  First argument is passed to `execute_hook` is the pipeable one.
@@ -310,7 +304,7 @@ class MadHatter:
                 tmp_value = await utils.run_sync_or_async(
                     hook.function,
                     deepcopy(value),
-                    ctx,
+                    caller,
                 )
                 if tmp_value is not None:
                     value = tmp_value

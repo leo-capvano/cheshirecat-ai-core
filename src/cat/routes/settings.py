@@ -41,17 +41,16 @@ async def list_settings(
     List all services that have settings, with metadata, current values, and schemas.
     """
     ccat = r.app.state.ccat
-    factory = ccat.factory
 
     entries = []
-    for service_type, service_dict in factory.class_index.items():
+    for service_type, service_dict in ccat.factory.class_index.items():
         for slug, ServiceClass in service_dict.items():
             # Get instance to check settings_model() (the authoritative source)
             try:
                 if ServiceClass.lifecycle == "request":
-                    instance = await factory.get(service_type, slug, request=r)
+                    instance = await ccat.get(service_type, slug, request=r)
                 else:
-                    instance = await factory.get(service_type, slug)
+                    instance = await ccat.get(service_type, slug)
             except Exception as e:
                 log.error(f"Error getting service {service_type}:{slug} for settings: {e}")
                 continue
@@ -90,10 +89,9 @@ async def update_settings(
     plugin_id, service_type, slug = _parse_id(id)
 
     ccat = r.app.state.ccat
-    factory = ccat.factory
 
     # Look up the service class
-    ServiceClass = factory.class_index.get(service_type, {}).get(slug)
+    ServiceClass = ccat.factory.class_index.get(service_type, {}).get(slug)
     if ServiceClass is None or ServiceClass.plugin_id != plugin_id:
         raise HTTPException(
             status_code=404,
@@ -103,9 +101,9 @@ async def update_settings(
     # Get instance
     try:
         if ServiceClass.lifecycle == "request":
-            instance = await factory.get(service_type, slug, request=r)
+            instance = await ccat.get(service_type, slug, request=r)
         else:
-            instance = await factory.get(service_type, slug)
+            instance = await ccat.get(service_type, slug)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

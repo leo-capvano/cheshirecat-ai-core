@@ -27,9 +27,9 @@ class CoreSettings(SingletonService):
         llm_options = ["default:default"]
         embedder_options = ["default:default"]
 
-        for slug in self.factory.class_index.get("model_providers", {}):
+        for slug in self.ccat.factory.class_index.get("model_providers", {}):
             try:
-                provider = await self.factory.get("model_providers", slug)
+                provider = await self.ccat.get("model_providers", slug)
                 for llm in provider.list_llms():
                     llm_options.append(f"{slug}:{llm}")
                 for emb in provider.list_embedders():

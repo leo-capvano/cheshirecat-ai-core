@@ -8,11 +8,8 @@ from cat.mixin.stream import EventStreamMixin
 if TYPE_CHECKING:
     from fastapi import Request
     from cat.looking_glass.cheshire_cat import CheshireCat
-    from cat.looking_glass.hook_context import HookContext
     from cat.auth.user import User
-    from cat.mad_hatter.mad_hatter import MadHatter
     from cat.mad_hatter.plugin import Plugin
-    from cat.services.__factory import ServiceFactory
     from cat.protocols.model_context.client import MCPClients
 
 LifeCycle = Literal["singleton", "request"]
@@ -33,21 +30,11 @@ class Service:
     ccat: "CheshireCat"
 
     @property
-    def factory(self) -> "ServiceFactory":
-        """Access to the ServiceFactory."""
-        return self.ccat.factory
-
-    @property
-    def mad_hatter(self) -> "MadHatter":
-        """Access to the MadHatter plugin manager."""
-        return self.ccat.mad_hatter
-    
-    @property
     def plugin(self) -> Union["Plugin", None]:
         """Access to the Plugin that provided this service, if any."""
         if self.plugin_id is None:
             return None
-        return self.mad_hatter.plugins[self.plugin_id]
+        return self.ccat.mad_hatter.plugins[self.plugin_id]
 
     @property
     def mcp_clients(self) -> "MCPClients":
@@ -72,7 +59,6 @@ class Service:
     async def execute_hook(self, hook_name: str, default_value: Any) -> Any:
         """
         Execute a hook for plugins to be intercepted.
-        MadHatter will build HookContext internally from this service.
 
         Parameters
         ----------
@@ -86,7 +72,7 @@ class Service:
         Any
             The value after hook execution.
         """
-        return await self.mad_hatter.execute_hook(
+        return await self.ccat.mad_hatter.execute_hook(
             hook_name,
             default_value,
             caller=self

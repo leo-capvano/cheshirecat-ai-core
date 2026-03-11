@@ -7,7 +7,7 @@ from cat.mad_hatter.mad_hatter import MadHatter
 from cat.services.factory import ServiceFactory
 
 if TYPE_CHECKING:
-    from cat.base import Auth
+    from cat.services.service import Service
     from cat.mad_hatter.plugin import Plugin
 
 
@@ -122,20 +122,54 @@ class CheshireCat:
         # reset openapi schema
         self.fastapi_app.openapi_schema = None
 
-    async def get_auth_handlers(self) -> dict[str, "Auth"]:
+    async def get(
+        self,
+        type: str,
+        slug: str,
+        request=None,
+        raise_error: bool = True
+    ) -> "Service | None":
         """
-        Get all auth handlers instances as a dictionary slug -> instance.
+        Get a service instance by type and slug.
+        Delegates to the internal factory.
+
+        Parameters
+        ----------
+        type : str
+            The type of service (e.g. "agents", "auths", "model_providers").
+        slug : str
+            The slug identifier for the service.
+        request : Request, optional
+            The FastAPI request object, required for request-scoped services.
+        raise_error : bool, optional
+            Whether to raise an error if the service is not found. Default is True.
 
         Returns
         -------
-        dict[str, Auth]
-            Dictionary of auth handler instances.
+        Service | None
+            The service instance if found, None otherwise.
         """
-        ahs = {}
-        for slug in self.factory.class_index.get("auths", {}):
-            ahs[slug] = await self.factory.get("auths", slug)
-        return ahs
-    
+        return await self.factory.get(type, slug, request=request, raise_error=raise_error)
+
+    async def get_all(self, type: str) -> "dict[str, Service]":
+        """
+        Get all service instances of a given type as a dictionary slug -> instance.
+
+        Parameters
+        ----------
+        type : str
+            The type of service (e.g. "agents", "auths", "model_providers").
+
+        Returns
+        -------
+        dict[str, Service]
+            Dictionary of service instances keyed by slug.
+        """
+        result = {}
+        for slug in self.factory.class_index.get(type, {}):
+            result[slug] = await self.factory.get(type, slug)
+        return result
+
     @property
     def plugin(self) -> "Plugin":
         """Access to the Plugin that provided this service, if any."""

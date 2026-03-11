@@ -85,7 +85,7 @@ async def agent_message(
 ) -> TaskResult:
     """Send a message to a specific agent identified by its slug."""
 
-    agent = await ccat.factory.get(
+    agent = await ccat.get(
         "agents",
         slug,
         request=http_request,

@@ -57,7 +57,7 @@ def get_user(*permissions: str) -> Depends:
         )),
     ) -> User:
         ccat = request.app.state.ccat
-        auth_handlers = await ccat.get_auth_handlers()
+        auth_handlers = await ccat.get_all("auths")
 
         for ah in auth_handlers.values():
             user = await ah.authenticate(request)

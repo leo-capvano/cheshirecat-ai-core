@@ -28,7 +28,7 @@ class LLMMixin:
         elif self.model:
             slug = self.model
         else:
-            core_settings = await self.factory.get("core", "core")
+            core_settings = await self.ccat.get("core", "core")
             slug = core_settings.settings.default_llm
 
         # Parse "provider:model" slug
@@ -37,7 +37,7 @@ class LLMMixin:
         else:
             provider_slug, model_slug = "default", slug
 
-        provider = await self.factory.get(
+        provider = await self.ccat.get(
             "model_providers", provider_slug, raise_error=True
         )
 
