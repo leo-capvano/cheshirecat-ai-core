@@ -26,7 +26,7 @@ class JWTHelper:
         jwt_content = {
             "sub": str(user.id),
             "username": user.name,
-            "permissions": user.permissions,
+            "roles": user.roles,
             "custom": user.custom,
             "exp": expires,
         }

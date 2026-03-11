@@ -6,16 +6,16 @@ from .convo import UserMessage
 
 
 @hook(priority=-1000)
-def fast_reply(_, cat):
+def fast_reply(_, caller):
 
-    if not isinstance(cat.request, Task):
+    if not isinstance(caller.request, Task):
         # legacy `user_message_json`
-        user_message_json = UserMessage.model_validate(cat.request)
+        user_message_json = UserMessage.model_validate(caller.request)
         # Impose user_id as the one authenticated
         # (ws message may contain a fake id)
-        user_message_json.user_id = cat.user_id
+        user_message_json.user_id = caller.user_id
 
-        cat.request = Task(
+        caller.request = Task(
             messages=[
                 Message(
                     role="user",
@@ -30,11 +30,11 @@ def fast_reply(_, cat):
         )
 
         # make available the good ol' user message in wm
-        cat.working_memory.user_message_json = user_message_json
+        caller.working_memory.user_message_json = user_message_json
 
 
 @hook(priority=-1000)
-def before_cat_sends_message(mex, cat):
+def before_cat_sends_message(mex, caller):
     mex.type = "chat"
     mex.content = mex.text
     return mex

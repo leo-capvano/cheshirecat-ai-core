@@ -4,19 +4,8 @@ from typing import Dict
 
 from cat import urls
 from cat.env import get_env
-from cat.auth.permissions import get_all_permissions
 
 from .base import Auth, User
-
-
-# Admin gets all registered permissions
-ADMIN_PERMISSIONS = [
-    "chat:read", "chat:edit",
-    "plugins:list", "plugins:read", "plugins:write", "plugins:edit", "plugins:delete",
-    "uploads:write", "uploads:list", "uploads:read",
-    "settings:read", "settings:edit",
-    "connectors:list",
-]
 
 
 class DefaultAuth(Auth):
@@ -27,12 +16,10 @@ class DefaultAuth(Auth):
     description = "Default auth handler, only admin user, based on environment variables."
 
     def get_admin(self) -> User:
-        # Merge hardcoded admin permissions with any auto-registered by plugins
-        all_perms = list(set(ADMIN_PERMISSIONS) | get_all_permissions())
         return User(
             id=uuid5(NAMESPACE_DNS, "admin"),
             name="admin",
-            permissions=all_perms,
+            roles=["admin"],
         )
 
     async def authorize_user_from_jwt(
@@ -44,7 +31,7 @@ class DefaultAuth(Auth):
             return User(
                 id=payload["sub"],
                 name=payload["username"],
-                permissions=list(set(ADMIN_PERMISSIONS) | get_all_permissions()),
+                roles=payload.get("roles", []),
             )
 
     async def authorize_user_from_key(

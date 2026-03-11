@@ -29,7 +29,6 @@
 The Cheshire Cat is a framework to build custom AI agents:
 
 - ⚡️ API first, to easily add a conversational layer to your app
-- 💬 Chat via HTTP streaming or WebSocket
 - 🌐 Acts as an MCP client
 - 🚀 Extensible via plugins
     - Extend endpoints

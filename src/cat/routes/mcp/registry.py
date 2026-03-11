@@ -37,7 +37,7 @@ class RegistryConnector(BaseModel):
 @router.get("")
 async def public_registry(
     search: Optional[str] = Query(None),
-    _ = get_user("connectors:list"),
+    _ = get_user(role="admin"),
 ) -> Page[RegistryConnector]:
     """MCP servers available in registry. Only remote ones with http stream transport."""
 

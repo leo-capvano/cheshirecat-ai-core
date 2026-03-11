@@ -35,7 +35,7 @@ def _parse_id(id: str) -> tuple[str, str, str]:
 @router.get("")
 async def list_settings(
     r: Request,
-    user=get_user("settings:read"),
+    user=get_user(role="admin"),
     ccat=get_ccat(),
 ) -> List[SettingsEntry]:
     """
@@ -80,7 +80,7 @@ async def update_settings(
     id: str,
     r: Request,
     payload: Dict = Body(...),
-    user=get_user("settings:edit"),
+    user=get_user(role="admin"),
     ccat=get_ccat(),
 ) -> SettingsEntry:
     """

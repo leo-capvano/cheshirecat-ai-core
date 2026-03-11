@@ -51,7 +51,7 @@ class Tool:
         
         parsed_function = ParsedFunction.from_function(
             func,
-            exclude_args=["cat", "self"], # awesome, will only be used at execution
+            exclude_args=["caller", "self"], # awesome, will only be used at execution
             validate=False
         )
 
@@ -109,7 +109,7 @@ class Tool:
         if self.is_internal:
             # internal tool
             tool_result: str = await run_sync_or_async(
-                self.func, **tool_call["args"], cat=agent # TODOV2: cat optional
+                self.func, **tool_call["args"], caller=agent
             )
         else:
             # MCP tool

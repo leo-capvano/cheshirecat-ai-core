@@ -13,9 +13,9 @@ from cat.mad_hatter.decorators import hook
 
 
 @hook
-def before_cat_bootstrap(cat):
+def before_cat_bootstrap(caller):
     # Start scheduling system and attach it to the CheshireCat core class
-    cat.white_rabbit = WhiteRabbit()
+    caller.white_rabbit = WhiteRabbit()
 
 
 # I'm late, I'm late, for a very important date!

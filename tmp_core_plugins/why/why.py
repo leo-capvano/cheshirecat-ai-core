@@ -27,26 +27,26 @@ class MessageWhy(BaseModelDict):
 
 
 @hook
-def before_cat_sends_message(msg, cat):
+def before_cat_sends_message(msg, caller):
 
     # build data structure for output (response and why with memories)
-    
+
     episodic_report = []
     declarative_report = []
     procedural_report = []
 
-    if hasattr(cat.working_memory, "episodic_memories"): # vector memory may not be enabled
+    if hasattr(caller.working_memory, "episodic_memories"): # vector memory may not be enabled
         episodic_report = [
             dict(d[0]) | {"score": float(d[1]), "id": d[3]}
-            for d in cat.working_memory.episodic_memories
+            for d in caller.working_memory.episodic_memories
         ]
         declarative_report = [
             dict(d[0]) | {"score": float(d[1]), "id": d[3]}
-            for d in cat.working_memory.declarative_memories
+            for d in caller.working_memory.declarative_memories
         ]
         procedural_report = [
             dict(d[0]) | {"score": float(d[1]), "id": d[3]}
-            for d in cat.working_memory.procedural_memories
+            for d in caller.working_memory.procedural_memories
         ]
 
     intermediate_steps = [] # agent_output.intermediate_steps
@@ -54,7 +54,7 @@ def before_cat_sends_message(msg, cat):
 
     # why this response?
     msg.why = MessageWhy(
-        input=cat.request.messages[-1].content.text,
+        input=caller.request.messages[-1].content.text,
         intermediate_steps=intermediate_steps,
         # agent_output=agent_output,
         memory={

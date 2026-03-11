@@ -13,7 +13,7 @@ router = APIRouter(prefix="/registry")
 @router.get("")
 async def registry_get_plugins(
     search: str = None,
-    _ = get_user("plugins:list"),
+    _ = get_user(),
     ccat = get_ccat(),
     # author: str = None, to be activated in case of more granular search
     # tag: str = None, to be activated in case of more granular search
@@ -59,7 +59,7 @@ class PluginRegistryUpload(BaseModel):
 @router.post("/install")
 async def registry_install_plugin(
     payload: PluginRegistryUpload,
-    _ = get_user("plugins:write"),
+    _ = get_user(role="admin"),
     ccat = get_ccat(),
 ) -> PluginManifest:
     """Install a new plugin from registry"""

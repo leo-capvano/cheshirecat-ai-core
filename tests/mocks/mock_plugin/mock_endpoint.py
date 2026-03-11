@@ -15,15 +15,15 @@ def test_endpoint():
 def test_endpoint_prefix():
     return {"result":"endpoint prefix tests"}
 
-# from this one on endpoints are secured with permissions checks
+# from this one on endpoints are secured with role checks
 @endpoint.get(path="/crud", prefix="/tests", tags=["Tests"])
-def test_get(user: User = get_user("plugins:list")):
+def test_get(user: User = get_user(role="admin")):
     return {"result":"ok", "user_id": str(user.id)}
 
 @endpoint.post(path="/crud", prefix="/tests", tags=["Tests"])
 def test_post(
     item: Item,
-    user: User = get_user("plugins:edit")
+    user: User = get_user(role="admin")
 ):
     return {"id": 1, "name": item.name, "description": item.description}
 
@@ -31,19 +31,19 @@ def test_post(
 def test_put(
     item_id: int,
     item: Item,
-    user: User = get_user("plugins:write")
+    user: User = get_user(role="admin")
 ):
     return {"id": item_id, "name": item.name, "description": item.description}
 
 @endpoint.delete(path="/crud/{item_id}", prefix="/tests", tags=["Tests"])
 def test_delete(
     item_id: int,
-    user: User = get_user("plugins:delete")
+    user: User = get_user(role="admin")
 ):
     return {"result": "ok", "deleted_id": item_id}
 
-@endpoint.get(path="/permission", prefix="/tests", tags=["Tests"])
-def test_custom_permissions(
-    user: User = get_user("custom-resource:custom-permission")
+@endpoint.get(path="/role", prefix="/tests", tags=["Tests"])
+def test_custom_role(
+    user: User = get_user(role="custom")
 ):
     return {"result": "ok"}

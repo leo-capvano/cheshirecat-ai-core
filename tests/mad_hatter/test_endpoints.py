@@ -97,14 +97,14 @@ def test_delete_endpoint(client, mad_hatter_with_mock_plugin):
     assert endpoint.tags == ["Tests"]
 
 
-def test_custom_permissions_endpoint(client, mad_hatter_with_mock_plugin):
+def test_custom_role_endpoint(client, mad_hatter_with_mock_plugin):
 
     for e in mad_hatter_with_mock_plugin.endpoints:
-        if e.path == "/permission" and "GET" in e.methods:
+        if e.path == "/role" and "GET" in e.methods:
             endpoint = e
             break
-    
-    assert endpoint.name == "/tests/permission"
+
+    assert endpoint.name == "/tests/role"
     assert endpoint.prefix == "/tests"  
     assert endpoint.methods == {"GET"}
     assert endpoint.tags == ["Tests"]

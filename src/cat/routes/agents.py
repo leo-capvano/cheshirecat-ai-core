@@ -26,7 +26,7 @@ class AgentCard(BaseModel):
 @router.get("")
 async def list_agents(
     ccat=get_ccat(),
-    _=get_user("chat:read"),
+    _=get_user(),
 ) -> List[AgentCard]:
     """List all registered agents with full details."""
 
@@ -80,7 +80,7 @@ async def agent_message(
             }
         }
     ),
-    _=get_user("chat:edit"),
+    _=get_user(),
     ccat=get_ccat(),
 ) -> TaskResult:
     """Send a message to a specific agent identified by its slug."""

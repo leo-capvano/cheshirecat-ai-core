@@ -13,7 +13,7 @@ class PluginSettings(BaseModel):
 @router.get("/{id}/settings")
 async def get_plugin_settings(
     id: str,
-    _ = get_user("plugins:read"),
+    _ = get_user(),
     ccat = get_ccat(),
 ) -> PluginSettings:
     """
@@ -61,7 +61,7 @@ async def get_plugin_settings(
 async def patch_plugin_settings(
     id: str,
     payload: Dict = Body({"model_provider_openai": {"api_key": "sk-..."}}),
-    _ = get_user("plugins:edit"),
+    _ = get_user(role="admin"),
     ccat = get_ccat(),
 ) -> PluginSettings:
     """

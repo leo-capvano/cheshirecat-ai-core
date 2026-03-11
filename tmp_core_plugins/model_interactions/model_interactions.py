@@ -25,7 +25,7 @@ from cat.mad_hatter.decorators import hook
 # add to hook `llm_callbacks` (revise name)
 # ModelInteractionHandler(cat, utils.get_caller_info(skip=1))
 @hook
-def llm_callbacks(callbacks, cat):
+def llm_callbacks(callbacks, caller):
     return callbacks # TODOV2 append the handlers
 
 

@@ -12,10 +12,10 @@ def create_crud(
     db_model: Table,
     prefix: str,
     tag: str,
-    auth_resource: str,
-    select_schema: BaseModel,
-    create_schema: BaseModel,
-    update_schema: BaseModel,
+    role: str | None = None,
+    select_schema: BaseModel = None,
+    create_schema: BaseModel = None,
+    update_schema: BaseModel = None,
     restrict_by_user_id: bool = False,
     search_fields: List[str] = [],
 ) -> APIRouter:
@@ -28,7 +28,7 @@ def create_crud(
     @router.get("", description=f"List and search {tag}")
     async def get_list(
         search: Optional[str] = Query(None, description="Search query"),
-        user: User = get_user(f"{auth_resource}:list"),
+        user: User = get_user(role=role),
     ) -> Page[SelectSchema]:
 
         if restrict_by_user_id:
@@ -57,7 +57,7 @@ def create_crud(
     @router.get("/{id}", description=f"Get a {tag}")
     async def get_one(
         id: str,
-        user: User = get_user(f"{auth_resource}:read"),
+        user: User = get_user(role=role),
     ) -> SelectSchema:
 
         q = DBModel.objects().where(DBModel.id == id)
@@ -72,7 +72,7 @@ def create_crud(
     @router.post("", description=f"Create new {tag}")
     async def create(
         data: CreateSchema = Body(...),
-        user: User = get_user(f"{auth_resource}:write"),
+        user: User = get_user(role=role),
     ) -> SelectSchema:
 
         payload = data.model_dump()
@@ -87,7 +87,7 @@ def create_crud(
     async def edit(
         id: str,
         data: UpdateSchema = Body(...),
-        user: User = get_user(f"{auth_resource}:edit"),
+        user: User = get_user(role=role),
     ) -> SelectSchema:
 
         q = DBModel.objects().where(DBModel.id == id)
@@ -108,7 +108,7 @@ def create_crud(
     @router.delete("/{id}")
     async def delete(
         id: str,
-        user: User = get_user(f"{auth_resource}:delete"),
+        user: User = get_user(role=role),
     ):
 
         q = DBModel.objects().where(DBModel.id == id)

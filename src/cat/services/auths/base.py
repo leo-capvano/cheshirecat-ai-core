@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Dict
 
-from fastapi import Request, WebSocket
+from fastapi import Request
 
 from cat.auth.jwt import JWTHelper
 from cat.auth.user import User
@@ -19,15 +19,12 @@ class Auth(ABC, SingletonService):
 
     jwt = JWTHelper()
 
-    def get_credential(self, request: Request | WebSocket) -> str | None:
+    def get_credential(self, request: Request) -> str | None:
         """Extract credential from request.
         Override for custom credential sources.
 
         Default: Authorization header (strip "Bearer ") → access_token cookie (HTTP)
-                 token query param (WebSocket)
         """
-        if isinstance(request, WebSocket):
-            return request.query_params.get("token")
 
         # HTTP request
         auth_header = request.headers.get("Authorization")
@@ -37,7 +34,7 @@ class Auth(ABC, SingletonService):
         # Fallback to cookie
         return request.cookies.get("access_token")
 
-    async def authenticate(self, request: Request | WebSocket) -> User | None:
+    async def authenticate(self, request: Request) -> User | None:
         """Main entry point for authentication.
         Override for full control over the authentication flow.
 

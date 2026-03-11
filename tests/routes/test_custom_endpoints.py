@@ -9,7 +9,7 @@ custom_endpoints = [
     ("POST", "/tests/crud", {"name": "the cat", "description": "it's magic"}),
     ("PUT", "/tests/crud/123", {"name": "the cat", "description": "it's magic"}),
     ("DELETE", "/tests/crud/123", None),
-    ("GET", "/tests/permission", None),
+    ("GET", "/tests/role", None),
 ]
 
 def test_custom_endpoint_base(client, just_installed_plugin, admin_headers):
@@ -48,7 +48,7 @@ def test_custom_endpoint_post(client, just_installed_plugin, admin_headers):
 def test_custom_endpoint_put(client, just_installed_plugin, admin_headers):
     payload = {"name": "the cat", "description": "it's magic"}
     response = client.put("/tests/crud/123", headers=admin_headers, json=payload)
-    
+
     assert response.status_code == 200
     assert response.json()["id"] == 123
     assert response.json()["name"] == "the cat"
@@ -56,7 +56,7 @@ def test_custom_endpoint_put(client, just_installed_plugin, admin_headers):
 
 def test_custom_endpoint_delete(client, just_installed_plugin, admin_headers):
     response = client.delete("/tests/crud/123", headers=admin_headers)
-    
+
     assert response.status_code == 200
     assert response.json()["result"] == "ok"
     assert response.json()["deleted_id"] == 123
@@ -94,57 +94,13 @@ def test_custom_endpoint_security(just_installed_plugin, client):
     for verb, endpoint, payload in custom_endpoints:
         response = client.request(verb, endpoint, json=payload)
         if "/endpoint" in endpoint:
-            # open endpoints (no StrayCat dependency)
+            # open endpoints (no auth dependency)
             assert response.status_code == 200
             n_open += 1
         else:
-            # closed endpoints (require StrayCat)
+            # closed endpoints (require get_user)
             assert response.status_code == 403
             n_protected += 1
 
     assert n_open == 2
-    assert n_protected == 5 
-
-@pytest.mark.parametrize("resource", ["PLUGIN", "LLM", "CUSTOMRESOURCE"])
-@pytest.mark.parametrize("permission", ["LIST", "DELETE", "CUSTOMPERMISSION"])
-def test_custom_endpoint_permissions(
-    resource, permission, client, just_installed_plugin, admin_headers
-):
-
-    # create user with permissions
-    response = client.post(
-        "/users/",
-        headers=admin_headers,
-        json={
-            "username": "Alice",
-            "password": "Alice",
-            "permissions": {resource: [permission]}
-        }
-    )
-    assert response.status_code == 200
-
-    # get jwt for user
-    response = client.post(
-        "/auth/token",
-        json={"username": "Alice", "password": "Alice"}
-    )
-    assert response.status_code == 200
-    token = response.json()["access_token"]
-
-    # use custom endpoint with no permissions checks
-    response = client.get("/custom/endpoint", headers={"Authorization": f"Bearer {token}"})
-    assert response.status_code == 200
-    
-    # use custom endpoint requiring PLUGIN LIST)
-    response = client.get("/tests/crud", headers={"Authorization": f"Bearer {token}"})
-    if resource == "PLUGIN" and permission == "LIST":
-        assert response.status_code == 200
-    else:
-        assert response.status_code == 403
-
-    # use endpoint requiring CUSTOMRESOURCE CUSTOMPERMISSION)
-    response = client.get("/tests/permission", headers={"Authorization": f"Bearer {token}"})
-    if resource == "CUSTOMRESOURCE" and permission == "CUSTOMPERMISSION":
-        assert response.status_code == 200
-    else:
-        assert response.status_code == 403
+    assert n_protected == 5

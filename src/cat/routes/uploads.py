@@ -30,7 +30,7 @@ class UploadedFileResponse(BaseModel):
 @router.post("")
 async def upload_file(
     file: UploadFile = File(...),
-    user = get_user("uploads:write"),
+    user = get_user(),
     ccat = get_ccat(),
 ) -> UploadedFileResponse:
     hashed_user_id = str(uuid5(NAMESPACE_URL, str(user.id)))
@@ -67,7 +67,7 @@ async def upload_file(
 
 @router.get("")
 async def get_uploaded_files(
-    user = get_user("uploads:list")
+    user = get_user()
 ) -> List[UploadedFileResponse]:
     """Retrieve list of uploaded file URLs uploaded by a specific user."""
 
@@ -89,7 +89,7 @@ async def get_uploaded_files(
 @router.get("/{path:path}")
 async def get_uploaded_file(
     path: str = Path(...),
-    user = get_user("uploads:read")
+    user = get_user()
 )-> FileResponse:
     full_path = os.path.join(paths.UPLOADS_PATH, path)
 

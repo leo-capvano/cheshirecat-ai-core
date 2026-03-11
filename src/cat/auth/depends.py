@@ -9,44 +9,35 @@ if TYPE_CHECKING:
     from cat.looking_glass.cheshire_cat import CheshireCat
 
 
-# Auto-registration of permission strings
-_all_permissions: set[str] = set()
-
-
-def get_all_permissions() -> set[str]:
-    """Return all permission strings registered by get_user() calls across routes."""
-    return _all_permissions.copy()
-
-
-def get_user(*permissions: str) -> Depends:
+def get_user(role: str | None = None) -> Depends:
     """
-    Dependency that authenticates the user and checks permissions.
+    Dependency that authenticates the user and optionally checks role.
 
     Loops through auth handlers calling `auth.authenticate(request)`.
-    First User returned wins. Then checks `user.can(*permissions)`.
+    First User returned wins. Then checks `user.has_role(role)` if provided.
 
     Parameters
     ----------
-    *permissions : str
-        Permission strings required for this route (AND logic).
+    role : str | None
+        Role required for this route.
+        None means just authenticated (no role check).
 
     Returns
     -------
     Depends
         Dependency that resolves to the authenticated User.
-        Raises HTTPException(403) if auth fails or permissions insufficient.
+        Raises HTTPException(403) if auth fails or role insufficient.
 
     Usage
     -----
-    @router.post("/message")
-    async def message(
-        user: User = get_user("chat:edit"),
-        ccat = get_ccat(),
-    ):
+    @router.get("/agents")
+    async def list_agents(user: User = get_user()):
+        pass
+
+    @router.put("/settings/{id}")
+    async def update_settings(user: User = get_user(role="admin")):
         pass
     """
-    # Auto-register permission strings at import time
-    _all_permissions.update(permissions)
 
     async def authenticate_and_check(
         request: Request,
@@ -62,11 +53,10 @@ def get_user(*permissions: str) -> Depends:
         for ah in auth_handlers.values():
             user = await ah.authenticate(request)
             if user and isinstance(user, User):
-                # Check permissions
-                if not user.can(*permissions):
+                if role and not user.has_role(role):
                     raise HTTPException(
                         status_code=403,
-                        detail="Insufficient permissions",
+                        detail="Insufficient role",
                     )
                 request.state.user = user
                 return user

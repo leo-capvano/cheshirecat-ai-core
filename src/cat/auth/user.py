@@ -16,13 +16,13 @@ class User(BaseModel):
     id: UUID
     name: str
 
-    # permissions as flat string list (e.g. ["chat:edit", "uploads:read", "admin"])
-    permissions: List[str] = []
+    # roles as flat string list (e.g. ["admin", "user", "editor"])
+    # "admin" role passes all role checks
+    roles: List[str] = []
 
     # only put in here what you are comfortable to pass plugins:
     # - profile data
     # - custom attributes
-    # - roles
     custom: Any = {}
 
     @field_validator("id", mode="before")
@@ -37,21 +37,35 @@ class User(BaseModel):
         except Exception:
             raise ValueError("User id must be a valid UUID or UUID string")
 
-    def can(self, *required: str) -> bool:
+    def has_role(self, *required: str) -> bool:
         """
-        Check user permissions (AND logic).
+        Check if user has any of the required roles (OR logic).
+        The ``"admin"`` role passes all role checks.
 
         Returns
         -------
         bool
-            Whether the user has all required permissions.
+            Whether the user has at least one of the required roles.
 
         Examples
         --------
-        >>> user.can("chat:edit", "uploads:read")
+        >>> user.has_role("admin", "editor")
         True
         """
-        return all(p in self.permissions for p in required)
+        if "admin" in self.roles:
+            return True
+        return any(r in self.roles for r in required)
+
+    def is_admin(self) -> bool:
+        """
+        Check if user has the admin role.
+
+        Returns
+        -------
+        bool
+            Whether the user is an admin.
+        """
+        return "admin" in self.roles
 
     async def save_settings(self, settings: Dict) -> Dict:
         """
