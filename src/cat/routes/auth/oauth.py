@@ -5,12 +5,7 @@ from fastapi import APIRouter, Request, HTTPException, Body
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field, ValidationError
 
-from cat.auth import (
-    User,
-    AuthPermission, AuthResource,
-    get_user,
-    get_ccat
-)
+from cat.auth import User
 from cat import urls
 from cat.env import get_env
 
@@ -91,7 +86,7 @@ async def oauth_callback(r: Request, name: str):
             detail=f"Auth Handler {name} could not complete the OAuth flow."
         )
 
-    token = auth.issue_jwt(user)
+    token = auth.jwt.encode(user)
 
    # read origin cookie (fallback to base_url), then remove it and set JWT cookie
     origin_url = r.cookies.get("origin_url") or urls.BASE_URL

@@ -6,14 +6,14 @@ from fastapi import APIRouter, HTTPException
 from cat import log
 from cat.mad_hatter.registry import registry_search_plugins
 from cat.mad_hatter.plugin_manifest import PluginManifest
-from cat.auth import AuthPermission, AuthResource, get_user, get_ccat
+from cat.auth import get_user, get_ccat
 
 router = APIRouter(prefix="/registry")
 
 @router.get("")
 async def registry_get_plugins(
     search: str = None,
-    _ = get_user(AuthResource.PLUGIN, AuthPermission.LIST),
+    _ = get_user("plugins:list"),
     ccat = get_ccat(),
     # author: str = None, to be activated in case of more granular search
     # tag: str = None, to be activated in case of more granular search
@@ -41,7 +41,7 @@ async def registry_get_plugins(
 
         # do not show already installed plugins among registry plugins
         r = registry_plugins_index.pop(manifest.plugin_url, None)
-        
+
         manifest.local_info["upgrade"] = None
         # filter by query
         plugin_text = manifest.model_dump_json()
@@ -59,7 +59,7 @@ class PluginRegistryUpload(BaseModel):
 @router.post("/install")
 async def registry_install_plugin(
     payload: PluginRegistryUpload,
-    _ = get_user(AuthResource.PLUGIN, AuthPermission.WRITE),
+    _ = get_user("plugins:write"),
     ccat = get_ccat(),
 ) -> PluginManifest:
     """Install a new plugin from registry"""

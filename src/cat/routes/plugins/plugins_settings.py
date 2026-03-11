@@ -1,9 +1,7 @@
-
-
 from typing import Dict
 from pydantic import BaseModel, Field, ValidationError
 from fastapi import Body, APIRouter, HTTPException
-from cat.auth import AuthPermission, AuthResource, get_user, get_ccat
+from cat.auth import get_user, get_ccat
 
 router = APIRouter(prefix="/plugins")
 
@@ -15,7 +13,7 @@ class PluginSettings(BaseModel):
 @router.get("/{id}/settings")
 async def get_plugin_settings(
     id: str,
-    _ = get_user(AuthResource.PLUGIN, AuthPermission.READ),
+    _ = get_user("plugins:read"),
     ccat = get_ccat(),
 ) -> PluginSettings:
     """
@@ -63,7 +61,7 @@ async def get_plugin_settings(
 async def patch_plugin_settings(
     id: str,
     payload: Dict = Body({"model_provider_openai": {"api_key": "sk-..."}}),
-    _ = get_user(AuthResource.PLUGIN, AuthPermission.EDIT),
+    _ = get_user("plugins:edit"),
     ccat = get_ccat(),
 ) -> PluginSettings:
     """

@@ -4,7 +4,7 @@ from typing import List
 from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException, UploadFile
 from cat import log
-from cat.auth import AuthPermission, AuthResource, get_user, get_ccat
+from cat.auth import get_user, get_ccat
 from cat.mad_hatter.plugin_manifest import PluginManifest
 
 router = APIRouter(prefix="/plugins")
@@ -19,7 +19,7 @@ class InstalledPlugin(BaseModel):
 @router.get("")
 async def get_plugins(
     search: str = None,
-    _ = get_user(AuthResource.PLUGIN, AuthPermission.LIST),
+    _ = get_user("plugins:list"),
     ccat = get_ccat()
 ) -> List[InstalledPlugin]:
     """List installed plugins"""
@@ -47,7 +47,7 @@ async def get_plugins(
 @router.get("/{id}")
 async def get_plugin(
     id: str,
-    _ = get_user(AuthResource.PLUGIN, AuthPermission.READ),
+    _ = get_user("plugins:read"),
     ccat = get_ccat(),
 ) -> InstalledPlugin:
     """Returns information on a single plugin"""
@@ -68,7 +68,7 @@ async def get_plugin(
 @router.post("")
 async def install_plugin(
     file: UploadFile,
-    _ = get_user(AuthResource.PLUGIN, AuthPermission.WRITE),
+    _ = get_user("plugins:write"),
     ccat = get_ccat(),
 ) -> InstalledPlugin:
     """Install a new plugin from a zip file"""
@@ -105,7 +105,7 @@ async def install_plugin(
 @router.put("/{id}/toggle", status_code=200)
 async def toggle_plugin(
     id: str,
-    _ = get_user(AuthResource.PLUGIN, AuthPermission.WRITE),
+    _ = get_user("plugins:write"),
     ccat = get_ccat(),
 ):
     """Enable or disable a single plugin"""
@@ -125,7 +125,7 @@ async def toggle_plugin(
 @router.delete("/{id}")
 async def remove_plugin(
     id: str,
-    _ = get_user(AuthResource.PLUGIN, AuthPermission.DELETE),
+    _ = get_user("plugins:delete"),
     ccat = get_ccat(),
 ):
     """Physically remove plugin."""

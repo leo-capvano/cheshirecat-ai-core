@@ -98,7 +98,7 @@ class OpenAICompatibleProvider(ModelProvider):
             tool_calls=tool_calls
         )
 
-    async def embed(self, text: str, model: str) -> list[float]:
+    async def embed(self, model: str, text: str) -> list[float]:
         resp = await self.client.embeddings.create(model=model, input=text)
         return resp.data[0].embedding
 

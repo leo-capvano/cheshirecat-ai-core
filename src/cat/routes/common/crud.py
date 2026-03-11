@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Body, Query, Depends
 from pydantic import BaseModel
 from piccolo.table import Table
 
-from cat.auth import AuthPermission, AuthResource, User, get_user
+from cat.auth import User, get_user
 from .schemas import Page
 
 
@@ -12,7 +12,7 @@ def create_crud(
     db_model: Table,
     prefix: str,
     tag: str,
-    auth_resource: AuthResource,
+    auth_resource: str,
     select_schema: BaseModel,
     create_schema: BaseModel,
     update_schema: BaseModel,
@@ -28,9 +28,9 @@ def create_crud(
     @router.get("", description=f"List and search {tag}")
     async def get_list(
         search: Optional[str] = Query(None, description="Search query"),
-        user: User = get_user(auth_resource, AuthPermission.LIST),
+        user: User = get_user(f"{auth_resource}:list"),
     ) -> Page[SelectSchema]:
-        
+
         if restrict_by_user_id:
             q = DBModel.objects().where(DBModel.user_id == user.id)
         else:
@@ -57,9 +57,9 @@ def create_crud(
     @router.get("/{id}", description=f"Get a {tag}")
     async def get_one(
         id: str,
-        user: User = get_user(auth_resource, AuthPermission.READ),
+        user: User = get_user(f"{auth_resource}:read"),
     ) -> SelectSchema:
-        
+
         q = DBModel.objects().where(DBModel.id == id)
         if restrict_by_user_id:
             q = q.where(DBModel.user_id == user.id)
@@ -72,9 +72,9 @@ def create_crud(
     @router.post("", description=f"Create new {tag}")
     async def create(
         data: CreateSchema = Body(...),
-        user: User = get_user(auth_resource, AuthPermission.WRITE),
+        user: User = get_user(f"{auth_resource}:write"),
     ) -> SelectSchema:
-        
+
         payload = data.model_dump()
         if restrict_by_user_id:
             payload["user_id"] = user.id
@@ -87,9 +87,9 @@ def create_crud(
     async def edit(
         id: str,
         data: UpdateSchema = Body(...),
-        user: User = get_user(auth_resource, AuthPermission.EDIT),
+        user: User = get_user(f"{auth_resource}:edit"),
     ) -> SelectSchema:
-        
+
         q = DBModel.objects().where(DBModel.id == id)
         if restrict_by_user_id:
             q = q.where(DBModel.user_id == user.id)
@@ -98,28 +98,28 @@ def create_crud(
 
         if obj is None:
             raise HTTPException(status_code=404, detail=f"{tag} not found.")
-    
+
         for key, value in data.model_dump().items():
             setattr(obj, key, value)
         await obj.save()
-    
+
         return obj
 
     @router.delete("/{id}")
     async def delete(
         id: str,
-        user: User = get_user(auth_resource, AuthPermission.DELETE),
+        user: User = get_user(f"{auth_resource}:delete"),
     ):
-        
+
         q = DBModel.objects().where(DBModel.id == id)
         if restrict_by_user_id:
             q = q.where(DBModel.user_id == user.id)
-        
+
         obj = await q.first()
 
         if obj is None:
             raise HTTPException(status_code=404, detail=f"{tag} not found.")
-        
+
         await obj.remove()
 
     return router

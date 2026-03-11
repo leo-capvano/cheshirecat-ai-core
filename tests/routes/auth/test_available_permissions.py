@@ -1,14 +1,15 @@
+from cat.auth import get_all_permissions
 
-from cat.auth import get_full_permissions
 
 def test_get_available_permissions(client, admin_headers):
 
-    response = client.get(
-        "/auth/available-permissions",
-        headers=admin_headers
-    )
-    assert response.status_code == 200
-    data = response.json()
-    
-    assert isinstance(data, dict)
-    assert data == get_full_permissions()
+    # After routes are imported, all permission strings should be registered
+    all_perms = get_all_permissions()
+
+    assert isinstance(all_perms, set)
+    # Core permissions should be registered
+    assert "chat:edit" in all_perms
+    assert "chat:read" in all_perms
+    assert "plugins:list" in all_perms
+    assert "uploads:write" in all_perms
+    assert "settings:read" in all_perms

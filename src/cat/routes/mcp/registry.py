@@ -4,7 +4,7 @@ import httpx
 
 from fastapi import APIRouter, Query
 
-from cat.auth import AuthPermission, AuthResource, get_user
+from cat.auth import get_user
 from cat.routes.common.crud import Page
 
 
@@ -29,15 +29,15 @@ class RegistryConnector(BaseModel):
             if "stream" in t.type:
                 return True
         return False
-    
+
     def is_latest(self) -> bool:
         return self.meta["io.modelcontextprotocol.registry/official"]["isLatest"]
-    
+
 # server status
 @router.get("")
 async def public_registry(
     search: Optional[str] = Query(None),
-    _ = get_user(AuthResource.CONNECTOR, AuthPermission.LIST),
+    _ = get_user("connectors:list"),
 ) -> Page[RegistryConnector]:
     """MCP servers available in registry. Only remote ones with http stream transport."""
 
@@ -45,7 +45,7 @@ async def public_registry(
         res = await client.get(
             REGISTRY_URL,
             params={"search": search, "limit": 100})
-    
+
     raw_servers = res.json()["servers"]
     servers = []
     for rs in raw_servers:
@@ -56,7 +56,7 @@ async def public_registry(
                 servers.append(server)
         except Exception:
             pass
-    
+
     return Page(
         items=servers,
         cursor=""

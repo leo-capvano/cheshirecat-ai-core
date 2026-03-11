@@ -2,7 +2,7 @@ from typing import Dict, List
 from pydantic import BaseModel, Field, ValidationError
 from fastapi import APIRouter, Request, HTTPException, Body
 
-from cat.auth import AuthPermission, AuthResource, get_user
+from cat.auth import get_user
 from cat import log
 
 router = APIRouter(prefix="/settings", tags=["Settings"])
@@ -35,7 +35,7 @@ def _parse_id(id: str) -> tuple[str, str, str]:
 @router.get("")
 async def list_settings(
     r: Request,
-    user=get_user(AuthResource.PLUGIN, AuthPermission.READ),
+    user=get_user("settings:read"),
 ) -> List[SettingsEntry]:
     """
     List all services that have settings, with metadata, current values, and schemas.
@@ -81,7 +81,7 @@ async def update_settings(
     id: str,
     r: Request,
     payload: Dict = Body(...),
-    user=get_user(AuthResource.PLUGIN, AuthPermission.EDIT),
+    user=get_user("settings:edit"),
 ) -> SettingsEntry:
     """
     Save settings for a single service identified by its composite id.

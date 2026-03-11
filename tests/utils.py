@@ -1,6 +1,5 @@
 import shutil
 from cat.types import Task, Message, TextContent
-from urllib.parse import urlencode
 
 
 def get_mock_plugin_info():
@@ -43,49 +42,12 @@ def send_http_message(
                     ]
                 }
             ],
-            "stream": streaming  # TODOV2: should test streaming
+            "stream": streaming
         }
     )
 
     assert res.status_code == 200
-    return res.json()        
-        
-
-
-# utility function to communicate with the cat via websocket
-def send_websocket_message(msg, client, user_id="admin", query_params=None):
-    url = "/ws"
-    if query_params:
-        url += "?" + urlencode(query_params)
-
-    with client.websocket_connect(url) as websocket:
-
-        # send ws message
-        websocket.send_json({"text": str(msg)})
-        # get reply
-        reply = websocket.receive_json()
-
-    return reply
-
-
-# utility to send n messages via chat
-def send_n_websocket_messages(num_messages, client, query_params=None):
-    responses = []
-
-    url = "/ws"
-    if query_params:
-        url += "?" + urlencode(query_params)
-
-    with client.websocket_connect(url) as websocket:
-        for m in range(num_messages):
-            message = {"text": f"Red Queen {m}"}
-            # sed ws message
-            websocket.send_json(message)
-            # get reply
-            reply = websocket.receive_json()
-            responses.append(reply)
-
-    return responses
+    return res.json()
 
 
 # create a plugin zip out of the mock plugin folder.
@@ -105,4 +67,3 @@ def create_mock_plugin_zip(flat: bool):
         root_dir=root_dir,
         base_dir=base_dir,
     )
-

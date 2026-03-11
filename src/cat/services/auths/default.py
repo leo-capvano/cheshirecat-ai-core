@@ -4,60 +4,61 @@ from typing import Dict
 
 from cat import urls
 from cat.env import get_env
+from cat.auth.permissions import get_all_permissions
 
-from .base import Auth, AuthPermission, AuthResource, User
+from .base import Auth, User
+
+
+# Admin gets all registered permissions
+ADMIN_PERMISSIONS = [
+    "chat:read", "chat:edit",
+    "plugins:list", "plugins:read", "plugins:write", "plugins:edit", "plugins:delete",
+    "uploads:write", "uploads:list", "uploads:read",
+    "settings:read", "settings:edit",
+    "connectors:list",
+]
+
 
 class DefaultAuth(Auth):
-    """Defaul auth handler, only admin user, based on environment variables."""
+    """Default auth handler, only admin user, based on environment variables."""
 
     slug = "default"
     name = "Default Auth handler"
     description = "Default auth handler, only admin user, based on environment variables."
 
     def get_admin(self) -> User:
+        # Merge hardcoded admin permissions with any auto-registered by plugins
+        all_perms = list(set(ADMIN_PERMISSIONS) | get_all_permissions())
         return User(
             id=uuid5(NAMESPACE_DNS, "admin"),
             name="admin",
-            permissions=self.get_full_permissions()
+            permissions=all_perms,
         )
-    
+
     async def authorize_user_from_jwt(
         self,
         token: str,
-        auth_resource: AuthResource,
-        auth_permission: AuthPermission
     ) -> User | None:
-            
-        # decode token
-        payload = self.decode_jwt(token)
-
+        payload = self.jwt.decode(token)
         if payload:
             return User(
                 id=payload["sub"],
                 name=payload["username"],
-                permissions=self.get_full_permissions()
+                permissions=list(set(ADMIN_PERMISSIONS) | get_all_permissions()),
             )
-        # if no user is returned, request shall not pass
 
     async def authorize_user_from_key(
-            self,
-            key: str,
-            auth_resource: AuthResource,
-            auth_permission: AuthPermission,
+        self,
+        key: str,
     ) -> User | None:
-        
         env_key = get_env("CCAT_API_KEY")
-
         if (env_key is None) or (env_key == key):
             return self.get_admin()
-        
-        # if no user is returned, request shall not pass
 
     async def get_provider_login_url(
         self,
         redirect_uri: str
     ) -> str:
-        
         return urljoin(
             urls.BASE_URL, f"/auth/internal-idp?redirect_uri={redirect_uri}"
         )
@@ -65,12 +66,9 @@ class DefaultAuth(Auth):
     async def authorize_user_from_oauth_code(
         self,
         redirect_uri: str,
-        query_params: Dict 
+        query_params: Dict
     ) -> User | None:
-        
         # mock idp, not calling /token endpoint
-        #  not sure how to simulate the code
         if query_params["code"] == "1":
-            return 
-        
+            return
         return self.get_admin()

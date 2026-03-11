@@ -15,7 +15,6 @@ dependencies = [
     "uvicorn[standard]>=0.38.0",
     "fastapi[standard]>=0.121.0",
     "scalar-fastapi>=1.4.3",
-    "websockets>=15.0",
     "PyJWT>=2.8.0",
     "piccolo[all]>=1.30.0",
     "bcrypt>=4.1.3",

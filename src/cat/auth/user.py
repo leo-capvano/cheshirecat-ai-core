@@ -1,17 +1,14 @@
-from typing import Dict, List, Any, TYPE_CHECKING
+from typing import Dict, List, Any
 from uuid import UUID
 from pydantic import BaseModel, field_validator
 
 from cat.db import UserDB
 
-if TYPE_CHECKING:
-    from .permissions import AuthResource, AuthPermission
-
 
 class User(BaseModel):
     """
     Class to represent a User.
-    Will be creted by Auth handler(s) starting from a credential (jwt or key).
+    Will be created by Auth handler(s) starting from a credential (jwt or key).
     Instance of the authenticated user is stored under request.state.user and is available in request services.
     Will be accessible in services via `Service.user`
     """
@@ -19,8 +16,8 @@ class User(BaseModel):
     id: UUID
     name: str
 
-    # permissions
-    permissions: Dict[str, List[str]]
+    # permissions as flat string list (e.g. ["chat:edit", "uploads:read", "admin"])
+    permissions: List[str] = []
 
     # only put in here what you are comfortable to pass plugins:
     # - profile data
@@ -40,29 +37,21 @@ class User(BaseModel):
         except Exception:
             raise ValueError("User id must be a valid UUID or UUID string")
 
-    def can(
-            self,
-            resource: str,
-            permission: str
-        ) -> bool:
+    def can(self, *required: str) -> bool:
         """
-        Check user permissions.
+        Check user permissions (AND logic).
 
         Returns
         -------
-        boolean : bool
-            Whether the user has permission on the resource.
+        bool
+            Whether the user has all required permissions.
 
         Examples
         --------
-
-        Check if user can delete a plugin:
-        >>> cat.user.can("PLUGIN", "DELETE")
+        >>> user.can("chat:edit", "uploads:read")
         True
         """
-
-        return (resource in self.permissions) and \
-            permission in self.permissions[resource]
+        return all(p in self.permissions for p in required)
 
     async def save_settings(self, settings: Dict) -> Dict:
         """

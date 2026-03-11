@@ -1,19 +1,14 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List
-from datetime import datetime, timedelta
+from typing import Dict
 
-from pytz import utc
-import jwt
-from jwt.exceptions import InvalidTokenError
+from fastapi import Request, WebSocket
 
-from cat.auth.permissions import (
-    AuthPermission, AuthResource
-)
+from cat.auth.jwt import JWTHelper
 from cat.auth.user import User
-from cat.env import get_env
 from cat import log
 
 from ..service import SingletonService
+
 
 class Auth(ABC, SingletonService):
     """
@@ -22,98 +17,50 @@ class Auth(ABC, SingletonService):
 
     service_type = "auths"
 
-    def get_full_permissions(self) -> Dict[AuthResource, List[AuthPermission]]:
-        """
-        Returns all available resources and permissions.
-        """
-        # TODOV2: should include plugins defined permissions
-        perms = {}
-        for res in AuthResource:
-            perms[res.name] = [p.name for p in AuthPermission]
-        return perms
+    jwt = JWTHelper()
 
+    def get_credential(self, request: Request | WebSocket) -> str | None:
+        """Extract credential from request.
+        Override for custom credential sources.
 
-    def get_base_permissions(self) -> Dict[AuthResource, List[AuthPermission]]:
+        Default: Authorization header (strip "Bearer ") → access_token cookie (HTTP)
+                 token query param (WebSocket)
         """
-        Returns the default permissions for new users (chat only!).
+        if isinstance(request, WebSocket):
+            return request.query_params.get("token")
+
+        # HTTP request
+        auth_header = request.headers.get("Authorization")
+        if auth_header:
+            return auth_header.replace("Bearer ", "")
+
+        # Fallback to cookie
+        return request.cookies.get("access_token")
+
+    async def authenticate(self, request: Request | WebSocket) -> User | None:
+        """Main entry point for authentication.
+        Override for full control over the authentication flow.
+
+        Default: get_credential() → authorize_user_from_credential()
         """
-
-        all_permissions = [p.name for p in AuthPermission]
-
-        # TODOV2: should include plugins defined permissions
-        return {
-            AuthResource.CHAT: all_permissions,
-            AuthResource.UPLOAD: all_permissions,
-        }
-        
-    def is_jwt(self, token: str) -> bool:
-        """
-        Returns whether a given string is a JWT.
-        """
-        try:
-            # Decode the JWT without verification to check its structure
-            jwt.decode(token, options={"verify_signature": False})
-            return True
-        except InvalidTokenError:
-            return False
-
-    def issue_jwt(self, user: User) -> str | None:
-        
-        # TODOAUTH: expiration with timezone needs to be tested
-        # using seconds for easier testing
-        expire_delta_in_seconds = float(get_env("CCAT_JWT_EXPIRE_MINUTES")) * 60
-        expires = datetime.now(utc) + timedelta(seconds=expire_delta_in_seconds)
-
-        jwt_content = {
-            "sub": str(user.id),                 # Subject (the user ID)
-            "username": user.name,               # Username
-            "permissions": user.permissions,     # User permissions
-            "custom": user.custom,                 # Additional information
-            "exp": expires                       # Expiry date as a Unix timestamp
-        }
-        return jwt.encode(
-            jwt_content,
-            get_env("CCAT_JWT_SECRET"),
-            algorithm="HS256",
-        )
-    
-    def decode_jwt(self, token) -> dict:
-        """Decode jwt.
-        Will return None if not able to decode or signature is wrong."""
-        try:
-            payload = jwt.decode(
-                token,
-                get_env("CCAT_JWT_SECRET"),
-                algorithms=["HS256"],
-            )
-            return payload
-        except Exception:
-            log.warning("Could not decode JWT")
+        credential = self.get_credential(request)
+        if credential is None:
+            return None
+        return await self.authorize_user_from_credential(credential)
 
     async def authorize_user_from_credential(
         self,
         credential: str,
-        auth_resource: AuthResource,
-        auth_permission: AuthPermission,
     ) -> User | None:
-
-        if self.is_jwt(credential):
-            # JSON Web Token auth
-            return await self.authorize_user_from_jwt(
-                credential, auth_resource, auth_permission
-            )
+        if self.jwt.is_jwt(credential):
+            return await self.authorize_user_from_jwt(credential)
         else:
-            # API_KEY auth
-            return await self.authorize_user_from_key(
-                credential, auth_resource, auth_permission
-            )
-    
+            return await self.authorize_user_from_key(credential)
+
     @abstractmethod
     async def authorize_user_from_jwt(
         self,
         token: str,
-        auth_resource: AuthResource,
-        auth_permission: AuthPermission
     ) -> User | None:
         pass
 
@@ -121,8 +68,6 @@ class Auth(ABC, SingletonService):
     async def authorize_user_from_key(
         self,
         api_key: str,
-        auth_resource: AuthResource,
-        auth_permission: AuthPermission
     ) -> User | None:
         pass
 
@@ -135,13 +80,13 @@ class Auth(ABC, SingletonService):
         """
         raise Exception(
             "To support OAuth, auth handlers must implement " +
-            "`build_redirect_uri` and `authorize_user_from_oauth_code`"
+            "`get_provider_login_url` and `authorize_user_from_oauth_code`"
         )
 
     async def authorize_user_from_oauth_code(
         self,
         redirect_uri: str,
-        query_params: Dict 
+        query_params: Dict
     ) -> User | None:
         """
         Exchange OAuth provider code/state for user info and map it to internal User.
@@ -149,5 +94,5 @@ class Auth(ABC, SingletonService):
         """
         raise Exception(
             "To support OAuth, auth handlers must implement " +
-            "`build_redirect_uri` and `authorize_user_from_oauth_code`"
+            "`get_provider_login_url` and `authorize_user_from_oauth_code`"
         )

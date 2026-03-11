@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 from cat.mad_hatter.decorators import endpoint
-from cat.auth import AuthPermission, AuthResource, check_permissions
+from cat.auth import get_user, User
 
 class Item(BaseModel):
     name: str
@@ -17,13 +17,13 @@ def test_endpoint_prefix():
 
 # from this one on endpoints are secured with permissions checks
 @endpoint.get(path="/crud", prefix="/tests", tags=["Tests"])
-def test_get(cat=check_permissions(AuthResource.PLUGIN, AuthPermission.LIST)):
-    return {"result":"ok", "user_id":cat.user_id}
+def test_get(user: User = get_user("plugins:list")):
+    return {"result":"ok", "user_id": str(user.id)}
 
 @endpoint.post(path="/crud", prefix="/tests", tags=["Tests"])
 def test_post(
     item: Item,
-    cat=check_permissions(AuthResource.PLUGIN, AuthPermission.EDIT)
+    user: User = get_user("plugins:edit")
 ):
     return {"id": 1, "name": item.name, "description": item.description}
 
@@ -31,19 +31,19 @@ def test_post(
 def test_put(
     item_id: int,
     item: Item,
-    cat=check_permissions("PLUGIN", "WRITE") # string notation
+    user: User = get_user("plugins:write")
 ):
     return {"id": item_id, "name": item.name, "description": item.description}
 
-@endpoint.delete(path="/crud/{item_id}", prefix="/tests", tags=["Tests"]) 
+@endpoint.delete(path="/crud/{item_id}", prefix="/tests", tags=["Tests"])
 def test_delete(
     item_id: int,
-    cat=check_permissions("PLUGIN", "DELETE") # string notation
+    user: User = get_user("plugins:delete")
 ):
     return {"result": "ok", "deleted_id": item_id}
 
-@endpoint.get(path="/permission", prefix="/tests", tags=["Tests"]) 
+@endpoint.get(path="/permission", prefix="/tests", tags=["Tests"])
 def test_custom_permissions(
-    cat=check_permissions("CUSTOMRESOURCE", "CUSTOMPERMISSION") # totally new permissions
+    user: User = get_user("custom-resource:custom-permission")
 ):
     return {"result": "ok"}

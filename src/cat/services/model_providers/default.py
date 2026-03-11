@@ -40,5 +40,5 @@ class DefaultModelProvider(ModelProvider):
             content=[TextContent(text=text)]
         )
 
-    async def embed(self, text: str, model: str) -> list[float]:
+    async def embed(self, model: str, text: str) -> list[float]:
         return [random.random() for _ in range(8)]

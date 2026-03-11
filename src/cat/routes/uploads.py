@@ -13,9 +13,7 @@ from fastapi.responses import FileResponse
 from urllib.parse import urljoin
 
 from cat import paths, urls
-from cat.auth import get_user, get_ccat, AuthResource, AuthPermission
-
-# TODOV2: test these routes
+from cat.auth import get_user, get_ccat
 
 router = APIRouter(prefix="/uploads", tags=["Uploads"])
 
@@ -32,7 +30,7 @@ class UploadedFileResponse(BaseModel):
 @router.post("")
 async def upload_file(
     file: UploadFile = File(...),
-    user = get_user(AuthResource.UPLOAD, AuthPermission.WRITE),
+    user = get_user("uploads:write"),
     ccat = get_ccat(),
 ) -> UploadedFileResponse:
     hashed_user_id = str(uuid5(NAMESPACE_URL, str(user.id)))
@@ -69,7 +67,7 @@ async def upload_file(
 
 @router.get("")
 async def get_uploaded_files(
-    user = get_user(AuthResource.UPLOAD, AuthPermission.LIST)
+    user = get_user("uploads:list")
 ) -> List[UploadedFileResponse]:
     """Retrieve list of uploaded file URLs uploaded by a specific user."""
 
@@ -91,7 +89,7 @@ async def get_uploaded_files(
 @router.get("/{path:path}")
 async def get_uploaded_file(
     path: str = Path(...),
-    user = get_user(AuthResource.UPLOAD, AuthPermission.READ)
+    user = get_user("uploads:read")
 )-> FileResponse:
     full_path = os.path.join(paths.UPLOADS_PATH, path)
 
@@ -102,4 +100,3 @@ async def get_uploaded_file(
             status_code=404,
             detail="File not found"
         )
-

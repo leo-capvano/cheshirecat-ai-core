@@ -4,7 +4,7 @@ from inspect import isclass
 from pydantic import BaseModel
 from fastapi import APIRouter, Body, Request, HTTPException
 
-from cat.auth import AuthPermission, AuthResource, get_user, get_ccat
+from cat.auth import get_user, get_ccat
 from cat.types import Task, TaskResult
 from cat.protocols.agui.streaming import AGUIStream
 
@@ -26,7 +26,7 @@ class AgentCard(BaseModel):
 @router.get("")
 async def list_agents(
     ccat=get_ccat(),
-    _=get_user(AuthResource.CHAT, AuthPermission.READ),
+    _=get_user("chat:read"),
 ) -> List[AgentCard]:
     """List all registered agents with full details."""
 
@@ -80,7 +80,7 @@ async def agent_message(
             }
         }
     ),
-    _=get_user(AuthResource.CHAT, AuthPermission.EDIT),
+    _=get_user("chat:edit"),
     ccat=get_ccat(),
 ) -> TaskResult:
     """Send a message to a specific agent identified by its slug."""

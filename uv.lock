@@ -286,7 +286,6 @@ dependencies = [
     { name = "ruff" },
     { name = "scalar-fastapi" },
     { name = "uvicorn", extra = ["standard"] },
-    { name = "websockets" },
 ]
 
 [package.metadata]
@@ -315,7 +314,6 @@ requires-dist = [
     { name = "ruff", specifier = ">=0.4.7" },
     { name = "scalar-fastapi", specifier = ">=1.4.3" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.38.0" },
-    { name = "websockets", specifier = ">=15.0" },
 ]
 
 [[package]]

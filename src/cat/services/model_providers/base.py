@@ -82,7 +82,7 @@ class ModelProvider(SingletonService):
         """
         pass
 
-    async def embed(self, text: str, model: str) -> list[float]:
+    async def embed(self, model: str, text: str) -> list[float]:
         """
         Embed a single text string.
 
