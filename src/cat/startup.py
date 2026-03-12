@@ -13,7 +13,6 @@ from cat.routes import (
 
 from cat.routes.me import me
 from cat.routes.plugins import plugins
-from cat.routes import uploads
 from cat.routes.auth import oauth
 from cat.routes.auth.default_idp import idp
 from cat.looking_glass.cheshire_cat import CheshireCat
@@ -69,7 +68,7 @@ if cors_enabled == "true":
 # API routers
 for r in [
     me, status, settings, agents, oauth,
-    plugins, uploads
+    plugins
 ]:
     cheshire_cat_api.include_router(r.router, prefix="/api/v2")
 
