@@ -19,7 +19,8 @@ def get_supported_env_variables():
         "CCAT_TELEMETRY": "true",
         "CCAT_PREINSTALLED_PLUGINS": ",".join([
             "https://github.com/cheshire-cat-ai/llms",
-            "https://github.com/cheshire-cat-ai/ui"
+            "https://github.com/cheshire-cat-ai/ui",
+            #"https://github.com/cheshire-cat-ai/uploads",
         ]),
     }
 

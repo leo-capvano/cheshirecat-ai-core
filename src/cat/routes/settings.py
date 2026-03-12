@@ -1,8 +1,10 @@
 from typing import Dict, List
+from inspect import isclass
 from pydantic import BaseModel, Field, ValidationError
 from fastapi import APIRouter, Request, HTTPException, Body
 
 from cat.auth import get_user, get_ccat
+from cat.db import DB
 from cat import log
 
 router = APIRouter(prefix="/settings", tags=["Settings"])
@@ -32,6 +34,19 @@ def _parse_id(id: str) -> tuple[str, str, str]:
     return parts[0], parts[1], parts[2]
 
 
+def _has_settings_model_override(ServiceClass) -> bool:
+    """Check if a service class overrides settings_model() beyond the base default."""
+    return "settings_model" in ServiceClass.__dict__
+
+
+def _get_nested_settings(ServiceClass) -> type | None:
+    """Get the nested Settings class from a service class, if it exists."""
+    nested = getattr(ServiceClass, 'Settings', None)
+    if nested is not None and isclass(nested) and issubclass(nested, BaseModel):
+        return nested
+    return None
+
+
 @router.get("")
 async def list_settings(
     r: Request,
@@ -45,22 +60,36 @@ async def list_settings(
     entries = []
     for service_type, service_dict in ccat.factory.class_index.items():
         for slug, ServiceClass in service_dict.items():
-            # Get instance to check settings_model() (the authoritative source)
-            try:
-                if ServiceClass.lifecycle == "request":
-                    instance = await ccat.get(service_type, slug, request=r)
-                else:
-                    instance = await ccat.get(service_type, slug)
-            except Exception as e:
-                log.error(f"Error getting service {service_type}:{slug} for settings: {e}")
-                continue
+            db_key = ServiceClass._settings_db_key()
 
-            model = await instance.settings_model()
-            if model is None:
-                continue
+            # Try static nested Settings class first (no instantiation needed)
+            nested = _get_nested_settings(ServiceClass)
 
-            settings_schema = model.model_json_schema()
-            current_settings = await instance.load_settings()
+            if nested is not None and not _has_settings_model_override(ServiceClass):
+                # Static schema — no instance needed
+                settings_schema = nested.model_json_schema()
+                raw = await DB.load(db_key)
+                value = raw if raw is not None else nested().model_dump()
+            elif _has_settings_model_override(ServiceClass):
+                # Dynamic schema — need running instance
+                try:
+                    if ServiceClass.lifecycle == "request":
+                        instance = await ccat.get(service_type, slug, request=r)
+                    else:
+                        instance = await ccat.get(service_type, slug)
+                except Exception as e:
+                    log.error(f"Error getting service {service_type}:{slug} for settings: {e}")
+                    continue
+
+                model = await instance.settings_model()
+                if model is None:
+                    continue
+                settings_schema = model.model_json_schema()
+                raw = await DB.load(db_key)
+                value = raw if raw is not None else model().model_dump()
+            else:
+                # No settings at all
+                continue
 
             entries.append(SettingsEntry(
                 id=_make_id(ServiceClass.plugin_id, service_type, slug),
@@ -68,7 +97,7 @@ async def list_settings(
                 type=service_type,
                 name=ServiceClass.name or ServiceClass.__name__,
                 plugin_id=ServiceClass.plugin_id,
-                value=current_settings,
+                value=value,
                 schema=settings_schema,
             ))
 
@@ -85,7 +114,7 @@ async def update_settings(
 ) -> SettingsEntry:
     """
     Save settings for a single service identified by its composite id.
-    Validates against schema, saves to DB, triggers service refresh.
+    Validates against schema, saves to DB, triggers full factory refresh.
     """
     plugin_id, service_type, slug = _parse_id(id)
 
@@ -97,17 +126,23 @@ async def update_settings(
             detail=f"Settings {id} not found"
         )
 
-    # Get instance
-    try:
-        if ServiceClass.lifecycle == "request":
-            instance = await ccat.get(service_type, slug, request=r)
-        else:
-            instance = await ccat.get(service_type, slug)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    # Resolve settings model
+    nested = _get_nested_settings(ServiceClass)
+    if _has_settings_model_override(ServiceClass):
+        # Need instance for dynamic schema
+        try:
+            if ServiceClass.lifecycle == "request":
+                instance = await ccat.get(service_type, slug, request=r)
+            else:
+                instance = await ccat.get(service_type, slug)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+        settings_model = await instance.settings_model()
+    elif nested is not None:
+        settings_model = nested
+    else:
+        settings_model = None
 
-    # Get settings model for validation
-    settings_model = await instance.settings_model()
     if settings_model is None:
         raise HTTPException(
             status_code=400,
@@ -120,13 +155,12 @@ async def update_settings(
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=e.errors())
 
-    # Save
-    try:
-        saved = await instance.save_settings(validated)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save settings: {e}")
+    # Save to DB
+    db_key = ServiceClass._settings_db_key()
+    saved = validated.model_dump()
+    await DB.save(db_key, saved)
 
-    # Trigger service refresh
+    # Trigger full factory refresh
     await ccat.mad_hatter.refresh_caches()
 
     return SettingsEntry(

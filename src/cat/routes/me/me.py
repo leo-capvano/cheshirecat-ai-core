@@ -1,6 +1,8 @@
+from fastapi import APIRouter
+
 from cat.auth import get_user, User
 
-from .settings import router
+router = APIRouter(prefix="/me", tags=["User"])
 
 @router.get("")
 async def get_user_info(

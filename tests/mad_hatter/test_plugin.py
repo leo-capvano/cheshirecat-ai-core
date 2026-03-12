@@ -23,7 +23,7 @@ def plugin(client):
         "tests/mocks/mock_plugin",
         mock_plugin_path
     )
-    
+
     p = Plugin(mock_plugin_path)
     yield p
 
@@ -48,7 +48,6 @@ def test_not_create_plugin_with_empty_folder():
 
 
 def test_create_plugin(plugin):
-    assert not plugin.active
 
     assert plugin.path == paths.PLUGINS_PATH + "/mock_plugin"
     assert plugin.id == "mock_plugin"
@@ -63,18 +62,11 @@ def test_create_plugin(plugin):
     assert plugin.hooks == []
     assert plugin.tools == []
     assert plugin.endpoints == []
-    assert plugin.forms == []
-    assert plugin.overrides == {}
-
-    assert not hasattr(plugin, "custom_activation_executed")
-    assert not hasattr(plugin, "custom_deactivation_executed")
 
 
 def test_activate_plugin(plugin):
     # activate it
     plugin.activate()
-
-    assert plugin.active is True
 
     # hooks
     assert len(plugin.hooks) == get_mock_plugin_info()["hooks"]
@@ -114,64 +106,25 @@ def test_activate_plugin(plugin):
         assert isinstance(endpoint, Endpoint)
         assert endpoint.plugin_id == "mock_plugin"
 
-    # overrides by @plugin decorator
-    assert len(plugin.overrides) == 4
-    assert set(plugin.overrides.keys()) == {
-        "settings_model",
-        "activated",
-        "deactivated",
-    }
-    assert plugin.custom_activation_executed is True
-    assert not hasattr(plugin, "custom_deactivation_executed")
-
 
 def test_deactivate_plugin(plugin):
-    
+
     # activate plugin
     plugin.activate()
 
     # deactivate it
     plugin.deactivate()
 
-    assert plugin.active is False
-
-    # overrides by @plugin decorator
-    assert plugin.custom_activation_executed is True
-    assert plugin.custom_deactivation_executed is True
-
     # decorators
     assert len(plugin.hooks) == 0
     assert len(plugin.tools) == 0
     assert len(plugin.endpoints) == 0
-    assert len(plugin.forms) == 0
-    assert len(plugin.overrides) == 0
-    
-
-def test_settings_schema(plugin):
-    settings_schema = plugin.settings_schema()
-    assert isinstance(settings_schema, dict)
-    assert settings_schema["properties"] == {}
-    assert settings_schema["title"] == "PluginSettingsModel"
-    assert settings_schema["type"] == "object"
-
-
-def test_load_settings(plugin):
-    settings = plugin.load_settings()
-    assert settings == {}
-
-
-def test_save_settings(plugin):
-    fake_settings = {"a": 42}
-    plugin.save_settings(fake_settings)
-
-    settings = plugin.load_settings()
-    assert settings["a"] == fake_settings["a"]
 
 
 # utility ot obtain installed python packages
 def list_packages():
     result = subprocess.run(["uv", "pip", "list"], stdout=subprocess.PIPE)
-    return str(result.stdout.decode()) 
+    return str(result.stdout.decode())
 
 
 def test_plugin_dependencies_not_installed_if_plugin_not_present(client):

@@ -29,7 +29,7 @@ class LLMMixin:
             slug = self.model
         else:
             core_settings = await self.ccat.get("core", "core")
-            slug = core_settings.settings.default_llm
+            slug = (await core_settings.load_settings()).default_llm
 
         # Parse "provider:model" slug
         if ":" in slug:

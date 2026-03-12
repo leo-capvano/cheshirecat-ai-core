@@ -5,25 +5,18 @@ import glob
 import tempfile
 import importlib
 import subprocess
-from typing import Dict, List, Callable, Type, TYPE_CHECKING
+from typing import List, Type, TYPE_CHECKING
 from inspect import getmembers, isclass
-from pydantic import BaseModel, ValidationError
 from packaging.requirements import Requirement
 
-from cat.db import DB
 from cat.mad_hatter.decorators import (
-    Tool, Hook, PluginDecorator,
+    Tool, Hook,
     Endpoint
 )
 from cat.mad_hatter.plugin_manifest import PluginManifest
 from cat.services.service import Service, SingletonService, RequestService
 from cat import log, paths
 
-
-
-# Empty class to represent basic plugin Settings model
-class PluginEmptySettingsModel(BaseModel):
-    pass
 
 
 class Plugin:
@@ -64,12 +57,9 @@ class Plugin:
         self._endpoints: List[Endpoint] = [] # list of plugin endpoints
         self._services: List[Type[Service]] = [] # list of service classes
 
-        # list of @plugin decorated functions overriding default plugin behaviour
-        self._plugin_overrides = {}
-
     def activate(self):
         """Activate plugin."""
-        
+
         # install plugin requirements on activation
         try:
             self._install_requirements()
@@ -79,16 +69,8 @@ class Plugin:
         # Load of hook, tools and endpoints
         self._load_decorated_functions()
 
-        # run custom activation from @plugin
-        if "activated" in self.overrides:
-            self.overrides["activated"].function(self)
-
     def deactivate(self):
         """Deactivate plugin."""
-
-        # run custom deactivation from @plugin
-        if "deactivated" in self.overrides:
-            self.overrides["deactivated"].function(self)
 
         # Remove the imported modules
         for py_file in self.py_files:
@@ -104,98 +86,6 @@ class Plugin:
         self._tools = []
         self._endpoints = []
         self._services = []
-        self._plugin_overrides = {}
-
-        # TODOV2: remove settings from DB?
-
-    def settings_model(self):
-        """Get plugin settings Pydantic model"""
-        # is "settings_model" hook defined in the plugin?
-        if "settings_model" in self.overrides:
-            return self.overrides["settings_model"].function()
-
-        # default schema (empty)
-        return PluginEmptySettingsModel
-
-    async def load_settings(self) -> Dict:
-        """
-        Load plugin settings.
-        If settings exist but can't be validated against current model,
-        returns empty dict (prevents blocking on schema changes).
-        """
-
-        db_key = f"{self.id}_plugin_settings"
-
-        try:
-            # Load settings from DB
-            loaded_settings = await DB.load(db_key)
-
-            # If not found, create with defaults
-            if loaded_settings is None:
-                defaults = self._create_settings_from_model()
-                await DB.save(db_key, defaults)
-                return defaults
-
-            # Validate against current model (sync or async)
-            model = self.settings_model()
-            try:
-                model.model_validate(loaded_settings)
-            except ValidationError as e:
-                log.warning(
-                    f"Settings for plugin {self.id} are invalid "
-                    f"(schema changed?). Resetting to defaults. Error: {e}"
-                )
-                return {}
-
-            return loaded_settings
-
-        except Exception:
-            log.error(f"Unable to load plugin {self._id} settings.")
-            log.warning(self.plugin_specific_error_message())
-            raise
-
-    async def save_settings(self, settings: BaseModel | Dict) -> Dict:
-        """
-        Save plugin settings (full replacement, not partial merge).
-
-        Parameters
-        ----------
-        settings : BaseModel | dict
-            The complete settings to save (replaces existing).
-
-        Returns
-        -------
-        dict
-            The saved settings.
-        """
-        from cat.db import DB
-
-        # Convert BaseModel to dict if needed
-        if isinstance(settings, BaseModel):
-            settings = settings.model_dump()
-
-        db_key = f"{self.id}_plugin_settings"
-
-        try:
-            return await DB.save(db_key, settings)
-        except Exception:
-            log.error(f"Unable to save plugin {self._id} settings.")
-            log.warning(self.plugin_specific_error_message())
-            raise
-
-    def _create_settings_from_model(self) -> bool:
-        """Create settings dict directly from the pydantic Model, skipping required fields."""
-
-        Model = self.settings_model()
-        settings = {}
-
-        for name, field in Model.model_fields.items():
-            if not field.is_required():
-                if isinstance(field.default, Callable):
-                    settings[name] = field.default()
-                else:
-                    settings[name] = field.default
-        return settings
 
     def _load_manifest(self) -> PluginManifest:
         
@@ -277,13 +167,12 @@ class Plugin:
         tools = []
         endpoints = []
         services = []
-        plugin_overrides = []
 
         # TODOV2: this should probably go in mad_hatter
         base_path = paths.PLUGINS_PATH
         if base_path not in sys.path:
             sys.path.insert(0, base_path)
-        
+
         for py_file in self.py_files:
 
             # Turn file path in module notation and relative to plugins folders
@@ -304,7 +193,6 @@ class Plugin:
                     plugin_module,
                     lambda S: self._is_cat_service(S, module_name)
                 )
-                plugin_overrides += getmembers(plugin_module, self._is_cat_plugin_override)
 
             except Exception:
                 log.error(f"Error in {module_name}. Unable to load plugin {self._id}")
@@ -316,7 +204,6 @@ class Plugin:
         self._tools = list(map(self._clean_tool, tools))
         self._endpoints = list(map(self._clean_endpoint, endpoints))
         self._services = list(map(self._clean_service, services))
-        self._plugin_overrides = {override.name: override for override in list(map(self._clean_plugin_override, plugin_overrides))}
 
 
     def plugin_specific_error_message(self):
@@ -358,9 +245,6 @@ class Plugin:
         s.plugin_id = self._id
         return s
 
-    def _clean_plugin_override(self, plugin_override):
-        return plugin_override[1]
-
     # a plugin hook function has to be decorated with @hook
     # (which returns an instance of Hook)
     @staticmethod
@@ -383,12 +267,6 @@ class Plugin:
             and not any(base in S.__bases__ for base in (Service, SingletonService, RequestService)) \
             and (module_name is None or S.__module__ == module_name)
             
-
-    # a plugin override function has to be decorated with @plugin
-    # (which returns an instance of PluginDecorator)
-    @staticmethod
-    def _is_cat_plugin_override(obj):
-        return isinstance(obj, PluginDecorator)
 
     # a plugin custom endpoint has to be decorated with @endpoint
     # (which returns an instance of Endpoint)
@@ -423,7 +301,3 @@ class Plugin:
     @property
     def services(self):
         return self._services
-    
-    @property
-    def overrides(self):
-        return self._plugin_overrides

@@ -1,6 +1,5 @@
-from typing import Union, Literal, Type, Dict, Any, TYPE_CHECKING
-from inspect import isclass
-from pydantic import BaseModel
+from typing import Union, Literal, Type, Any, TYPE_CHECKING
+from pydantic import BaseModel, ValidationError
 
 from cat.mixin.llm import LLMMixin
 from cat.mixin.stream import EventStreamMixin
@@ -118,30 +117,43 @@ class Service:
             return nested
         return None
 
-    def _settings_db_key(self) -> str:
+    @classmethod
+    def _settings_db_key(cls) -> str:
         """DB key for this service's settings: settings_{plugin_id}_{service_type}_{slug}."""
-        return f"settings_{self.plugin_id}_{self.service_type}_{self.slug}"
+        return f"settings_{cls.plugin_id}_{cls.service_type}_{cls.slug}"
 
-    async def load_settings(self) -> Dict[str, Any]:
+    async def load_settings(self) -> BaseModel | None:
         """
         Load service settings from KeyValueDB (installation-wide).
-        Also populates `self.settings` as a typed Pydantic model instance.
+        Returns a typed Pydantic model instance, or None if no settings model is defined.
+        No side effects on self.
 
         Returns
         -------
-        dict
-            The service settings, or empty dict if none saved.
+        BaseModel | None
+            Validated settings model instance (with DB values or defaults), or None.
         """
         from cat.db import DB
 
-        raw = await DB.load(self._settings_db_key(), default={})
-        self._populate_settings(raw)
-        return raw
+        model = await self.settings_model()
+        if model is None:
+            return None
 
-    async def save_settings(self, settings: BaseModel | Dict[str, Any]) -> Dict[str, Any]:
+        raw = await DB.load(self._settings_db_key())
+        if raw is None:
+            return model()
+
+        try:
+            return model.model_validate(raw)
+        except ValidationError:
+            await DB.delete(self._settings_db_key())
+            return model()
+
+    async def save_settings(self, settings: BaseModel | dict) -> BaseModel | None:
         """
         Save service settings to KeyValueDB (installation-wide).
-        Also updates `self.settings` as a typed Pydantic model instance.
+        Validates payload against the settings model, persists to DB, returns the model instance.
+        No side effects on self.
 
         Parameters
         ----------
@@ -150,40 +162,22 @@ class Service:
 
         Returns
         -------
-        dict
-            The saved settings.
+        BaseModel | None
+            Validated settings model instance, or None if no settings model is defined.
         """
         from cat.db import DB
 
-        # Convert BaseModel to dict if needed
-        if isinstance(settings, BaseModel):
-            settings = settings.model_dump()
+        model = await self.settings_model()
+        if model is None:
+            return None
 
-        await DB.save(self._settings_db_key(), settings)
-        self._populate_settings(settings)
-        return settings
-
-    def _populate_settings(self, raw: Dict[str, Any]) -> None:
-        """
-        Populate `self.settings` as a typed Pydantic model from raw dict.
-        If a Settings class exists and raw data is available, validates and
-        creates a model instance. Otherwise sets `self.settings` to None or raw dict.
-        """
-        nested = getattr(self.__class__, 'Settings', None)
-        if nested is not None and isclass(nested) and issubclass(nested, BaseModel):
-            if raw:
-                try:
-                    self.settings = nested.model_validate(raw)
-                except Exception:
-                    # fallback to defaults if saved data is invalid
-                    self.settings = nested()
-            else:
-                self.settings = nested()
-        elif raw:
-            # No Settings class but there's data (e.g. settings_model() override)
-            self.settings = raw
+        if isinstance(settings, dict):
+            validated = model.model_validate(settings)
         else:
-            self.settings = None
+            validated = settings
+
+        await DB.save(self._settings_db_key(), validated.model_dump())
+        return validated
 
 
 
