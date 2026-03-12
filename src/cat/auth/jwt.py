@@ -1,6 +1,5 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
-from pytz import utc
 import jwt
 from jwt.exceptions import InvalidTokenError
 
@@ -21,7 +20,7 @@ class JWTHelper:
 
     def encode(self, user: User) -> str:
         expire_delta_in_seconds = float(get_env("CCAT_JWT_EXPIRE_MINUTES")) * 60
-        expires = datetime.now(utc) + timedelta(seconds=expire_delta_in_seconds)
+        expires = datetime.now(timezone.utc) + timedelta(seconds=expire_delta_in_seconds)
 
         jwt_content = {
             "sub": str(user.id),

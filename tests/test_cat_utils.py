@@ -44,7 +44,20 @@ def test_get_uploads_path(client):
     assert paths.UPLOADS_PATH == os.path.join(paths.DATA_PATH, "uploads")
 
 def test_levenshtein_distance():
-    assert utils.levenshtein_distance("hello world", "hello world") == 0.0
-    assert utils.levenshtein_distance("hello world", "") == 1.0
+    # identical strings → 0
+    assert utils.levenshtein_distance("cat", "cat") == 0.0
+    # both empty → 0
+    assert utils.levenshtein_distance("", "") == 0.0
+    # one empty → 1
+    assert utils.levenshtein_distance("cat", "") == 1.0
+    assert utils.levenshtein_distance("", "cat") == 1.0
+    # completely different same-length strings → 1
+    assert utils.levenshtein_distance("abc", "xyz") == 1.0
+    # single substitution: "cat" → "bat" = 1 edit / 3 chars = 0.333...
+    assert round(utils.levenshtein_distance("cat", "bat"), 3) == round(1 / 3, 3)
+    # classic example: "kitten" → "sitting" = 3 edits / 7 chars ≈ 0.429
+    assert round(utils.levenshtein_distance("kitten", "sitting"), 3) == round(3 / 7, 3)
+    # symmetry
+    assert utils.levenshtein_distance("abc", "ab") == utils.levenshtein_distance("ab", "abc")
 
 

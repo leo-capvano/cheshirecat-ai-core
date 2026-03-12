@@ -1,9 +1,10 @@
 """Various utiles used from the projects."""
 
+import base64
 import inspect
+import mimetypes
 from datetime import timedelta
 from typing import Any
-from rapidfuzz.distance import Levenshtein
 
 from cat import log
 
@@ -69,9 +70,50 @@ def verbal_timedelta(td: timedelta) -> str:
         return "{} ago".format(abs_delta)
 
 
-def levenshtein_distance(prediction: str, reference: str) -> int:
-    res = Levenshtein.normalized_distance(prediction, reference)
-    return res
+def levenshtein_distance(a: str, b: str) -> float:
+    if not a and not b:
+        return 0.0
+    if not a or not b:
+        return 1.0
+    m, n = len(a), len(b)
+    dp = list(range(n + 1))
+    for i in range(1, m + 1):
+        prev, dp[0] = dp[0], i
+        for j in range(1, n + 1):
+            temp = dp[j]
+            dp[j] = prev if a[i - 1] == b[j - 1] else 1 + min(prev, dp[j], dp[j - 1])
+            prev = temp
+    return dp[n] / max(m, n)
+
+
+async def load_image_base64(source: str) -> tuple[str, str]:
+    """Load an image from a file path or URL and return (base64_string, mime_type).
+
+    Parameters
+    ----------
+    source : str
+        A local file path or HTTP/HTTPS URL pointing to an image.
+
+    Returns
+    -------
+    tuple[str, str]
+        Base64-encoded image content and its MIME type (e.g. ``image/png``).
+    """
+    if source.startswith("http://") or source.startswith("https://"):
+        import httpx
+        async with httpx.AsyncClient() as client:
+            response = await client.get(source)
+            response.raise_for_status()
+            data = response.content
+            mime_type = response.headers.get("content-type", "application/octet-stream").split(";")[0].strip()
+    else:
+        with open(source, "rb") as f:
+            data = f.read()
+        mime_type, _ = mimetypes.guess_type(source)
+        if mime_type is None:
+            raise ValueError(f"Cannot determine MIME type for file: {source}")
+
+    return base64.b64encode(data).decode("utf-8"), mime_type
 
 
 def get_caller_info(skip=2, return_short=True, return_string=True):

@@ -1,6 +1,5 @@
 import os
 import uvicorn
-import debugpy
 from dotenv import load_dotenv
 from urllib.parse import urlparse
 
@@ -33,9 +32,6 @@ def main():
                 "plugin.json"
             ]
         }
-
-        # expose port to attach debuggers (only in debug mode)
-        debugpy.listen(("localhost", 5678))
 
     # uvicorn running behind an https proxy
     proxy_pass_config = {}

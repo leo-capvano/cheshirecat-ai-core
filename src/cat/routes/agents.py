@@ -11,10 +11,6 @@ from cat.protocols.agui.streaming import AGUIStream
 
 router = APIRouter(prefix="/agents", tags=["Agents"])
 
-# TODOV2: re-introduce model, system_prompt, mcps overrides
-#   (via query params, headers, or a separate config mechanism)
-
-
 class AgentCard(BaseModel):
     slug: str
     name: str | None

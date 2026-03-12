@@ -279,14 +279,14 @@ class Plugin:
         services = []
         plugin_overrides = []
 
-        # TODOV2: this for should probably go in mad_hatter
+        # TODOV2: this should probably go in mad_hatter
         base_path = paths.PLUGINS_PATH
         if base_path not in sys.path:
             sys.path.insert(0, base_path)
         
         for py_file in self.py_files:
 
-            # Turn file path in module notation and realtive to plugins folders
+            # Turn file path in module notation and relative to plugins folders
             if py_file.startswith(base_path):
                 module_rel_path = os.path.relpath(py_file, base_path)
                 module_name = module_rel_path.replace(".py", "").replace("/", ".")

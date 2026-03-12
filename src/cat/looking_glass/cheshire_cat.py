@@ -48,7 +48,6 @@ class CheshireCat:
             
             # allows plugins to do something before cat components are loaded
             await self.mad_hatter.execute_hook(
-                # TODOV2: cover legacy hooks
                 "before_cat_bootstrap", None, caller=self
             )
 
@@ -73,8 +72,6 @@ class CheshireCat:
 
         # update endpoints
         self.refresh_endpoints()
-
-        # TODOV2: cache plugin settings (maybe not here, in the plugin obj)
 
         # allow plugins to hook the refresh
         await self.mad_hatter.execute_hook(
