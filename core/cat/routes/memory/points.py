@@ -199,15 +199,15 @@ async def create_memory_point(
         point.metadata["when"] = time.time() #if when is not in the metadata set the current time
 
     # create point
-    qdrant_point = vector_memory.collections[collection_id].add_point(
+    stored_point = vector_memory.collections[collection_id].add_point(
         content=point.content, vector=embedding, metadata=point.metadata
     )
 
     return MemoryPoint(
-        metadata=qdrant_point.payload["metadata"],
-        content=qdrant_point.payload["page_content"],
-        vector=qdrant_point.vector,
-        id=qdrant_point.id,
+        metadata=stored_point.payload["metadata"],
+        content=stored_point.payload["page_content"],
+        vector=stored_point.vector,
+        id=stored_point.id,
     )
 
 
@@ -437,13 +437,13 @@ async def edit_memory_point(
         point.metadata["when"] = time.time() #if when is not in the metadata set the current time
 
     # edit point
-    qdrant_point = vector_memory.collections[collection_id].add_point(
+    stored_point = vector_memory.collections[collection_id].add_point(
         content=point.content, vector=embedding, metadata=point.metadata, id=point_id
     )
 
     return MemoryPoint(
-        metadata=qdrant_point.payload["metadata"],
-        content=qdrant_point.payload["page_content"],
-        vector=qdrant_point.vector,
-        id=qdrant_point.id,
+        metadata=stored_point.payload["metadata"],
+        content=stored_point.payload["page_content"],
+        vector=stored_point.vector,
+        id=stored_point.id,
     )

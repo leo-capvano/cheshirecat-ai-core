@@ -1,0 +1,39 @@
+
+services:
+
+  cheshire-cat-core:
+    build:
+      context: ./core
+      dockerfile: Dockerfile-local
+    container_name: cheshire_cat_core
+    # Uncomment the two lines below to use your .env (see .env.example)
+    # env_file:
+    #   - .env
+    ports:
+      - ${CCAT_CORE_PORT:-1865}:80
+      - 5678:5678 # only for development purposes (take away in production)
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # This add an entry to /etc/hosts file in the container mapping host.docker.internal to the host machine IP addr, allowing the container to access services running on the host, not only on Win and Mac but also Linux. See https://docs.docker.com/desktop/networking/#i-want-to-connect-from-a-container-to-a-service-on-the-host and https://docs.docker.com/reference/cli/docker/container/run/#add-host
+    environment:
+      # Timezone
+      - TZ=${CCAT_TIMEZONE:-UTC}
+      - CCAT_VECTOR_DB=postgresql
+      - CCAT_POSTGRESQL_HOST=host.docker.internal
+      - CCAT_POSTGRESQL_PORT=5433
+      - CCAT_POSTGRESQL_USER=postgres
+      - CCAT_POSTGRESQL_PASSWORD=password
+      - CCAT_POSTGRESQL_DB=vectordb
+      # - EMBEDDER_SIZE=1536 # because I have OpenAI's Embedder which has 1536 dimensions
+    env_file:
+      - .env
+    volumes:
+      - ./core:/app
+    command:
+      - python
+      - "-m"
+      - "debugpy"
+      - "--listen"
+      - "0.0.0.0:5678"
+      - "--wait-for-client"
+      - "-m"
+      - "cat.main"

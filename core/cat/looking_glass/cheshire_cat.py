@@ -1,4 +1,5 @@
 import time
+import os
 from typing import List, Dict
 from typing_extensions import Protocol
 
@@ -87,10 +88,12 @@ class CheshireCat:
         # Load memories (vector collections and working_memory)
         self.load_memory()
 
-        # After memory is loaded, we can get/create tools embeddings      
-        self.mad_hatter.on_finish_plugins_sync_callback = self.on_finish_plugins_sync_callback
- 
-        # First time launched manually       
+        # After memory is loaded, we can get/create tools embeddings
+        self.mad_hatter.on_finish_plugins_sync_callback = (
+            self.on_finish_plugins_sync_callback
+        )
+
+        # First time launched manually
         self.on_finish_plugins_sync_callback()
 
         # Main agent instance (for reasoning)
@@ -137,7 +140,7 @@ class CheshireCat:
         Bootstrapping is the process of loading the plugins, the natural language objects (e.g. the LLM), the memories,
         the *Main Agent*, the *Rabbit Hole* and the *White Rabbit*.
         """
-        
+
         selected_llm = crud.get_setting_by_name(name="llm_selected")
 
         if selected_llm is None:
@@ -287,7 +290,10 @@ class CheshireCat:
         # Memory
 
         # Get embedder size (langchain classes do not store it)
-        embedder_size = len(self.embedder.embed_query("hello world"))
+        if os.getenv("EMBEDDER_SIZE", ""):
+            embedder_size = int(os.getenv("EMBEDDER_SIZE"))
+        else:
+            embedder_size = len(self.embedder.embed_query("hello world"))
 
         # Get embedder name (useful for for vectorstore aliases)
         if hasattr(self.embedder, "model"):
@@ -373,11 +379,10 @@ class CheshireCat:
         active_triggers_to_be_embedded = [
             active_procedures_hashes[p] for p in points_to_be_embedded
         ]
-        
+
         if active_triggers_to_be_embedded:
             log.info("Embedding new procedural triggers:")
         for t in active_triggers_to_be_embedded:
-
 
             metadata = {
                 "source": t["source"],
@@ -393,12 +398,12 @@ class CheshireCat:
                 metadata,
             )
 
-            log.info(
-                f" {t['source']}.{t['trigger_type']}.{t['content']}"
-            )
+            log.info(f" {t['source']}.{t['trigger_type']}.{t['content']}")
 
     def send_ws_message(self, content: str, msg_type="notification"):
-        log.error("CheshireCat has no websocket connection. Call `send_ws_message` from a StrayCat instance.")
+        log.error(
+            "CheshireCat has no websocket connection. Call `send_ws_message` from a StrayCat instance."
+        )
 
     # REFACTOR: cat.llm should be available here, without streaming clearly
     # (one could be interested in calling the LLM anytime, not only when there is a session)
@@ -423,22 +428,22 @@ class CheshireCat:
         caller = utils.get_caller_info()
 
         # here we deal with motherfucking langchain
-        prompt = ChatPromptTemplate(
-            messages=[
-                HumanMessage(content=prompt)
-            ]
-        )
+        prompt = ChatPromptTemplate(messages=[HumanMessage(content=prompt)])
 
         chain = (
             prompt
-            | RunnableLambda(lambda x: utils.langchain_log_prompt(x, f"{caller} prompt"))
+            | RunnableLambda(
+                lambda x: utils.langchain_log_prompt(x, f"{caller} prompt")
+            )
             | self._llm
-            | RunnableLambda(lambda x: utils.langchain_log_output(x, f"{caller} prompt output"))
+            | RunnableLambda(
+                lambda x: utils.langchain_log_output(x, f"{caller} prompt output")
+            )
             | StrOutputParser()
         )
 
         output = chain.invoke(
-            {}, # in case we need to pass info to the template
+            {},  # in case we need to pass info to the template
         )
 
         return output

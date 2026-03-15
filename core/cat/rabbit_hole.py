@@ -9,7 +9,6 @@ from urllib.error import HTTPError
 
 from starlette.datastructures import UploadFile
 from langchain.docstore.document import Document
-from qdrant_client.http import models
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders.parsers.pdf import PDFMinerParser
@@ -118,10 +117,9 @@ class RabbitHole:
             )
             raise Exception(message)
 
-        # Upsert memories in batch mode # TODO REFACTOR: use VectorMemoryCollection.add_point
-        cat.memory.vectors.vector_db.upsert(
-            collection_name="declarative",
-            points=models.Batch(ids=ids, payloads=payloads, vectors=vectors),
+        # Upsert memories in batch mode
+        cat.memory.vectors.declarative.add_points_batch(
+            ids=ids, payloads=payloads, vectors=vectors,
         )
 
     def ingest_file(
