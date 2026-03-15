@@ -19,13 +19,31 @@ You can customize the variables in `.env` if needed, but the default values shou
 
 ## 2. Start the Vector Database
 
-The Cheshire Cat uses PostgreSQL with `pgvector` for its long-term memory. You can start it using the provided Docker Compose file:
+The Cheshire Cat uses PostgreSQL with `pgvector` for its long-term memory in this local setup. You can start it using the provided Docker Compose file:
 
 ```bash
 docker compose -f res/postgres/postgres-docker-compose.yml up -d
 ```
 
-This will start a PostgreSQL instance on port `5433` (as configured in `compose-local.yml`).
+This will start a PostgreSQL instance on port `5433` (as configured in the compose file).
+
+### PostgreSQL Configuration Details
+
+For a full list of PostgreSQL environment variables and configuration for production, please refer to the [PostgreSQL Documentation](POSTGRES.md).
+
+**Note for Local Development:**
+The `compose-local.yml` is pre-configured to connect to the `pgvector-local` container started in Step 2. If you use the provided compose file, ensure your settings in `.env` match:
+- `CCAT_POSTGRESQL_PORT=5433`
+- `CCAT_POSTGRESQL_USER=postgres`
+- `CCAT_POSTGRESQL_PASSWORD=password`
+- `CCAT_POSTGRESQL_DB=vectordb`
+
+### Switching back to Qdrant
+
+If you prefer to use Qdrant (the default), set the following in your `.env`:
+```bash
+CCAT_VECTOR_DB=qdrant
+```
 
 ## 3. Start the Cheshire Cat Core
 

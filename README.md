@@ -1,5 +1,11 @@
 <a name="readme-top"></a>
 
+> [!IMPORTANT]
+> **This is a fork of the [Cheshire Cat AI](https://github.com/cheshire-cat-ai/core) project.**
+> It has been enhanced to add support for **PostgreSQL with `pgvector`** as a vector database.
+> - For local setup and development, see [LOCAL_DEVELOPMENT.md](./LOCAL_DEVELOPMENT.md).
+> - For PostgreSQL production configuration and environment variables, see [POSTGRES.md](./POSTGRES.md).
+
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
