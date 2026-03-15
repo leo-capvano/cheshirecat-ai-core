@@ -1,25 +1,24 @@
-import sys
-import socket
-from cat.utils import extract_domain_from_url, is_https
+from abc import ABC, abstractmethod
 
-from qdrant_client import QdrantClient
-
-from cat.memory.vector_memory_collection import VectorMemoryCollection
+from cat.memory.vector_memory_point import CollectionInfo
 from cat.log import log
 from cat.env import get_env
-# from cat.utils import singleton
 
 
-# @singleton REFACTOR: worth it to have this (or LongTermMemory) as singleton?
-class VectorMemory:
-    local_vector_db = None
+class VectorMemory(ABC):
+    """Abstract base class for vector memory.
+
+    Manages connection to the vector database and creates collections.
+    Subclasses must implement connect_to_vector_memory, _create_collection,
+    delete_collection, and get_collection.
+    """
 
     def __init__(
         self,
         embedder_name=None,
         embedder_size=None,
     ) -> None:
-        # connects to Qdrant and creates self.vector_db attribute
+        # connects to the vector DB (implementation-specific)
         self.connect_to_vector_memory()
 
         # Create vector collections
@@ -28,9 +27,8 @@ class VectorMemory:
         # - Procedural memory will contain tools and knowledge on how to do things
         self.collections = {}
         for collection_name in ["episodic", "declarative", "procedural"]:
-            # Instantiate collection
-            collection = VectorMemoryCollection(
-                client=self.vector_db,
+            # Instantiate collection (implementation-specific)
+            collection = self._create_collection(
                 collection_name=collection_name,
                 embedder_name=embedder_name,
                 embedder_size=embedder_size,
@@ -44,55 +42,52 @@ class VectorMemory:
             # (i.e. do things like cat.memory.vectors.declarative.something())
             setattr(self, collection_name, collection)
 
+    @abstractmethod
     def connect_to_vector_memory(self) -> None:
-        db_path = "cat/data/local_vector_memory/"
-        qdrant_host = get_env("CCAT_QDRANT_HOST")
+        """Connect to the vector database. Must set up any client needed."""
+        pass
 
-        if not qdrant_host:
-            log.debug(f"Qdrant path: {db_path}")
-            # Qdrant local vector DB client
+    @abstractmethod
+    def _create_collection(self, collection_name, embedder_name, embedder_size):
+        """Create and return a VectorMemoryCollection instance for the given collection."""
+        pass
 
-            # reconnect only if it's the first boot and not a reload
-            if VectorMemory.local_vector_db is None:
-                VectorMemory.local_vector_db = QdrantClient(
-                    path=db_path, force_disable_check_same_thread=True
-                )
-
-            self.vector_db = VectorMemory.local_vector_db
-        else:
-            # Qdrant remote or in other container
-            qdrant_port = int(get_env("CCAT_QDRANT_PORT"))
-            qdrant_https = is_https(qdrant_host)
-            qdrant_host = extract_domain_from_url(qdrant_host)
-            qdrant_api_key = get_env("CCAT_QDRANT_API_KEY")
-            
-            qdrant_client_timeout = get_env("CCAT_QDRANT_CLIENT_TIMEOUT")
-            qdrant_client_timeout = int(qdrant_client_timeout) if qdrant_client_timeout is not None else None
-
-            try:
-                s = socket.socket()
-                s.connect((qdrant_host, qdrant_port))
-            except Exception:
-                log.error(f"QDrant does not respond to {qdrant_host}:{qdrant_port}")
-                sys.exit()
-            finally:
-                s.close()
-
-            # Qdrant vector DB client
-            self.vector_db = QdrantClient(
-                host=qdrant_host,
-                port=qdrant_port,
-                https=qdrant_https,
-                api_key=qdrant_api_key,
-                timeout=qdrant_client_timeout
-            )
-
+    @abstractmethod
     def delete_collection(self, collection_name: str):
-        """Delete specific vector collection"""
-        
-        return self.vector_db.delete_collection(collection_name)
-    
-    def get_collection(self, collection_name: str):
-        """Get collection info"""
-        
-        return self.vector_db.get_collection(collection_name)
+        """Delete a specific vector collection."""
+        pass
+
+    @abstractmethod
+    def get_collection(self, collection_name: str) -> CollectionInfo:
+        """Get collection info. Returns a CollectionInfo with at least points_count."""
+        pass
+
+
+def create_vector_memory(embedder_name=None, embedder_size=None) -> VectorMemory:
+    """Factory function to create the appropriate VectorMemory backend.
+
+    The backend is selected via the CCAT_VECTOR_DB env variable.
+    Supported values: 'qdrant' (default), 'postgresql'.
+
+    Each backend will have its own configuration via env variables (e.g. connection details).
+    """
+
+    vector_db_type = (get_env("CCAT_VECTOR_DB") or "qdrant").lower()
+
+    if vector_db_type == "qdrant":
+        from cat.memory.qdrant.qdrant_vector_memory import QdrantVectorMemory
+        return QdrantVectorMemory(
+            embedder_name=embedder_name,
+            embedder_size=embedder_size,
+        )
+    elif vector_db_type == "postgresql":
+        from cat.memory.postgresql.pg_vector_memory import PostgreSQLVectorMemory
+        return PostgreSQLVectorMemory(
+            embedder_name=embedder_name,
+            embedder_size=embedder_size,
+        )
+    else:
+        raise ValueError(
+            f"Unsupported vector database type: '{vector_db_type}'. "
+            "Supported: 'qdrant', 'postgresql'."
+        )

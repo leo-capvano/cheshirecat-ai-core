@@ -4,6 +4,8 @@ import logging
 import sys
 import json
 import traceback
+import os
+from pathlib import Path
 from pprint import pformat
 from loguru import logger
 
@@ -143,24 +145,41 @@ class CatLogEngine:
         for line in lines:
             logger.log(level, line)
 
+    def _get_welcome_flag_path(self):
+        """Get the path for the welcome flag file."""
+        return Path(".welcome_shown")
+
+    def _has_welcome_been_shown(self):
+        """Check if welcome message has been shown in this session."""
+        flag_file = self._get_welcome_flag_path()
+        return flag_file.exists()
+
+    def _mark_welcome_as_shown(self):
+        """Mark welcome message as shown."""
+        flag_file = self._get_welcome_flag_path()
+        flag_file.touch()
+
     def welcome(self):
-        """Welcome message in the terminal."""
+        """Welcome message in the terminal."""        
+
+        # Show full welcome message with ASCII cat
         secure = "s" if get_env("CCAT_CORE_USE_SECURE_PROTOCOLS") in ("true", "1") else ""
 
         cat_host = get_env("CCAT_CORE_HOST")
         cat_port = get_env("CCAT_CORE_PORT")
         cat_address = f"http{secure}://{cat_host}:{cat_port}"
 
-        print("\n\n")
-        with open("cat/welcome.txt", "r") as f:
-            print(f.read())
+        # Print ASCII cat only if welcome has not been shown already
+        if not self._has_welcome_been_shown():
+            print("\n\n")
+            with open("cat/welcome.txt", "r") as f:
+                print(f.read())
+            # Mark welcome as already shown
+            self._mark_welcome_as_shown()
 
         left_margin = " " * 15
         print(f"\n\n{left_margin} Cat REST API:   {cat_address}/docs")
         print(f"{left_margin} Cat ADMIN:      {cat_address}/admin\n\n")
-
-        # self.log_examples()
-
 
     def log_examples(self):
         """Log examples for the log engine."""

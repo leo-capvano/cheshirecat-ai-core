@@ -9,7 +9,7 @@ These hooks allow to intercept the uploaded documents at different places before
 from typing import List
 from langchain.text_splitter import TextSplitter
 from langchain.docstore.document import Document
-from qdrant_client.http.models import PointStruct
+from cat.memory.vector_memory_point import VectorMemoryPoint
 
 from cat.mad_hatter.decorators import hook
 
@@ -178,7 +178,7 @@ def before_rabbithole_stores_documents(docs: List[Document], cat) -> List[Docume
 
 @hook(priority=0)
 def after_rabbithole_stored_documents(
-    source, stored_points: List[PointStruct], cat
+    source, stored_points: List[VectorMemoryPoint], cat
 ) -> None:
     """Hook the Document after is inserted in the vector memory.
 
@@ -188,8 +188,8 @@ def after_rabbithole_stored_documents(
     ----------
     source: str
         Name of ingested file/url
-    docs : List[PointStruct]
-        List of Qdrant PointStruct just inserted into the db.
+    docs : List[VectorMemoryPoint]
+        List of VectorMemoryPoint just inserted into the db.
     cat : CheshireCat
         Cheshire Cat instance.
 

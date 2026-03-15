@@ -56,7 +56,9 @@ class EmbedderDumbConfig(EmbedderSettings):
 
 
 class EmbedderOpenAICompatibleConfig(EmbedderSettings):
+    oai_comp_api_key: str = None
     url: str
+    model: str
     _pyclass: Type = CustomOpenAIEmbeddings
 
     model_config = ConfigDict(
@@ -64,6 +66,7 @@ class EmbedderOpenAICompatibleConfig(EmbedderSettings):
             "humanReadableName": "OpenAI-compatible API embedder",
             "description": "Configuration for OpenAI-compatible API embeddings",
             "link": "",
+            "model": "",
         }
     )
 
