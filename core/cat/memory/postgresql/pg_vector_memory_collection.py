@@ -25,7 +25,7 @@ class PostgreSQLVectorMemoryCollection(VectorMemoryCollection):
 
     def __init__(
         self,
-        connection,
+        vector_memory,
         collection_name: str,
         embedder_name: str,
         embedder_size: int,
@@ -45,7 +45,7 @@ class PostgreSQLVectorMemoryCollection(VectorMemoryCollection):
             "CCAT_POSTGRESQL_HNSW_OPERATOR_CLASS", "vector_cosine_ops"
         )
 
-        self.connection = connection
+        self._vector_memory = vector_memory
 
         self.create_db_collection_if_not_exists()
         self.check_embedding_size()
@@ -65,50 +65,69 @@ class PostgreSQLVectorMemoryCollection(VectorMemoryCollection):
 
     def create_db_collection_if_not_exists(self):
         """Create the pgvector table if it doesn't exist."""
-        with self.connection.cursor() as cur:
-            cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
-            cur.execute(
-                f"""
-                CREATE TABLE IF NOT EXISTS {self._table_name} (
-                    id TEXT PRIMARY KEY,
-                    embedding vector({self.embedder_size}),
-                    page_content TEXT,
-                    metadata JSONB,
-                    embedder_name TEXT
+        conn = self._vector_memory.get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
+                cur.execute(
+                    f"""
+                    CREATE TABLE IF NOT EXISTS {self._table_name} (
+                        id TEXT PRIMARY KEY,
+                        embedding vector({self.embedder_size}),
+                        page_content TEXT,
+                        metadata JSONB,
+                        embedder_name TEXT
+                    )
+                    """
                 )
-                """
-            )
-            # HNSW index creation
-            cur.execute(
-                f"""
-                CREATE INDEX IF NOT EXISTS idx_{self._table_name.split('.')[-1]}_embedding
-                ON {self._table_name}
-                USING hnsw (embedding {self._hnsw_operator_class})
-                WITH (m={self._hnsw_m}, ef_construction={self._hnsw_ef_construction})
-                """
-            )
-            self.connection.commit()
+                # HNSW index creation
+                cur.execute(
+                    f"""
+                    CREATE INDEX IF NOT EXISTS idx_{self._table_name.split('.')[-1]}_embedding
+                    ON {self._table_name}
+                    USING hnsw (embedding {self._hnsw_operator_class})
+                    WITH (m={self._hnsw_m}, ef_construction={self._hnsw_ef_construction})
+                    """
+                )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            self._vector_memory.put_connection(conn)
 
     def check_embedding_size(self):
         """Check if current embedder matches. If not, recreate the table."""
-        with self.connection.cursor() as cur:
-            # Check stored embedder name
-            cur.execute(f"SELECT embedder_name FROM {self._table_name} LIMIT 1")
-            row = cur.fetchone()
+        conn = self._vector_memory.get_connection()
+        try:
+            with conn.cursor() as cur:
+                # Check stored embedder name
+                cur.execute(f"SELECT embedder_name FROM {self._table_name} LIMIT 1")
+                row = cur.fetchone()
 
-            if row is not None and row[0] != self.embedder_name:
-                log.warning(
-                    f'Collection "{self.collection_name}" has a different embedder '
-                    f"(stored: {row[0]}, current: {self.embedder_name}). Recreating."
-                )
-                if get_env("CCAT_SAVE_MEMORY_SNAPSHOTS") == "true":
-                    self.save_dump()
+                if row is not None and row[0] != self.embedder_name:
+                    log.warning(
+                        f'Collection "{self.collection_name}" has a different embedder '
+                        f"(stored: {row[0]}, current: {self.embedder_name}). Recreating."
+                    )
+                    if get_env("CCAT_SAVE_MEMORY_SNAPSHOTS") == "true":
+                        self.save_dump()
 
-                cur.execute(f"DROP TABLE IF EXISTS {self._table_name}")
-                self.connection.commit()
-                self.create_collection()
-            else:
-                log.debug(f'Collection "{self.collection_name}" embedder check passed')
+                    cur.execute(f"DROP TABLE IF EXISTS {self._table_name}")
+                    conn.commit()
+                else:
+                    log.debug(
+                        f'Collection "{self.collection_name}" embedder check passed'
+                    )
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            self._vector_memory.put_connection(conn)
+
+        # Recreate outside the previous connection scope
+        if row is not None and row[0] != self.embedder_name:
+            self.create_collection()
 
     def create_collection(self):
         """Drop and recreate the collection table."""
@@ -125,26 +144,33 @@ class PostgreSQLVectorMemoryCollection(VectorMemoryCollection):
         point_id = id or uuid.uuid4().hex
         vector_list = list(vector)
 
-        with self.connection.cursor() as cur:
-            cur.execute(
-                f"""
-                INSERT INTO {self._table_name} (id, embedding, page_content, metadata, embedder_name)
-                VALUES (%s, %s, %s, %s, %s)
-                ON CONFLICT (id) DO UPDATE SET
-                    embedding = EXCLUDED.embedding,
-                    page_content = EXCLUDED.page_content,
-                    metadata = EXCLUDED.metadata,
-                    embedder_name = EXCLUDED.embedder_name
-                """,
-                (
-                    point_id,
-                    str(vector_list),
-                    content,
-                    json.dumps(metadata) if metadata else None,
-                    self.embedder_name,
-                ),
-            )
-            self.connection.commit()
+        conn = self._vector_memory.get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"""
+                    INSERT INTO {self._table_name} (id, embedding, page_content, metadata, embedder_name)
+                    VALUES (%s, %s, %s, %s, %s)
+                    ON CONFLICT (id) DO UPDATE SET
+                        embedding = EXCLUDED.embedding,
+                        page_content = EXCLUDED.page_content,
+                        metadata = EXCLUDED.metadata,
+                        embedder_name = EXCLUDED.embedder_name
+                    """,
+                    (
+                        point_id,
+                        str(vector_list),
+                        content,
+                        json.dumps(metadata) if metadata else None,
+                        self.embedder_name,
+                    ),
+                )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            self._vector_memory.put_connection(conn)
 
         return VectorMemoryPoint(
             id=point_id,
@@ -162,31 +188,38 @@ class PostgreSQLVectorMemoryCollection(VectorMemoryCollection):
         vectors: List[List[float]],
         **kwargs: Any,
     ) -> None:
-        with self.connection.cursor() as cur:
-            for point_id, payload, vector in zip(ids, payloads, vectors):
-                cur.execute(
-                    f"""
-                    INSERT INTO {self._table_name} (id, embedding, page_content, metadata, embedder_name)
-                    VALUES (%s, %s, %s, %s, %s)
-                    ON CONFLICT (id) DO UPDATE SET
-                        embedding = EXCLUDED.embedding,
-                        page_content = EXCLUDED.page_content,
-                        metadata = EXCLUDED.metadata,
-                        embedder_name = EXCLUDED.embedder_name
-                    """,
-                    (
-                        point_id,
-                        str(list(vector)),
-                        payload.get("page_content", ""),
+        conn = self._vector_memory.get_connection()
+        try:
+            with conn.cursor() as cur:
+                for point_id, payload, vector in zip(ids, payloads, vectors):
+                    cur.execute(
+                        f"""
+                        INSERT INTO {self._table_name} (id, embedding, page_content, metadata, embedder_name)
+                        VALUES (%s, %s, %s, %s, %s)
+                        ON CONFLICT (id) DO UPDATE SET
+                            embedding = EXCLUDED.embedding,
+                            page_content = EXCLUDED.page_content,
+                            metadata = EXCLUDED.metadata,
+                            embedder_name = EXCLUDED.embedder_name
+                        """,
                         (
-                            json.dumps(payload.get("metadata"))
-                            if payload.get("metadata")
-                            else None
+                            point_id,
+                            str(list(vector)),
+                            payload.get("page_content", ""),
+                            (
+                                json.dumps(payload.get("metadata"))
+                                if payload.get("metadata")
+                                else None
+                            ),
+                            self.embedder_name,
                         ),
-                        self.embedder_name,
-                    ),
-                )
-            self.connection.commit()
+                    )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            self._vector_memory.put_connection(conn)
 
     def delete_points_by_metadata_filter(self, metadata=None):
         if not metadata:
@@ -195,27 +228,41 @@ class PostgreSQLVectorMemoryCollection(VectorMemoryCollection):
         conditions = []
         values = []
         for key, value in metadata.items():
-            conditions.append(f"metadata->>%s = %s")
+            conditions.append("metadata->>%s = %s")
             values.extend([key, str(value)])
 
         where_clause = " AND ".join(conditions)
-        with self.connection.cursor() as cur:
-            cur.execute(
-                f"DELETE FROM {self._table_name} WHERE {where_clause}",
-                values,
-            )
-            self.connection.commit()
+        conn = self._vector_memory.get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"DELETE FROM {self._table_name} WHERE {where_clause}",
+                    values,
+                )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            self._vector_memory.put_connection(conn)
 
     def delete_points(self, points_ids):
         if not points_ids:
             return
-        with self.connection.cursor() as cur:
-            placeholders = ",".join(["%s"] * len(points_ids))
-            cur.execute(
-                f"DELETE FROM {self._table_name} WHERE id IN ({placeholders})",
-                points_ids,
-            )
-            self.connection.commit()
+        conn = self._vector_memory.get_connection()
+        try:
+            with conn.cursor() as cur:
+                placeholders = ",".join(["%s"] * len(points_ids))
+                cur.execute(
+                    f"DELETE FROM {self._table_name} WHERE id IN ({placeholders})",
+                    points_ids,
+                )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            self._vector_memory.put_connection(conn)
 
     def recall_memories_from_embedding(
         self, embedding, metadata=None, k=5, threshold=None
@@ -226,7 +273,7 @@ class PostgreSQLVectorMemoryCollection(VectorMemoryCollection):
         where_values = []
         if metadata:
             for key, value in metadata.items():
-                where_parts.append(f"metadata->>%s = %s")
+                where_parts.append("metadata->>%s = %s")
                 where_values.extend([key, str(value)])
 
         where_clause = ""
@@ -245,25 +292,32 @@ class PostgreSQLVectorMemoryCollection(VectorMemoryCollection):
         params = [vector_str] + where_values + [vector_str, k]
 
         results = []
-        with self.connection.cursor() as cur:
-            cur.execute(query, params)
-            for row in cur.fetchall():
-                point_id, page_content, meta, vec_str, score = row
-                if threshold is not None and score < threshold:
-                    continue
-                # Parse vector from string
-                vec = [float(x) for x in vec_str.strip("[]").split(",")]
-                results.append(
-                    (
-                        Document(
-                            page_content=page_content or "",
-                            metadata=meta or {},
-                        ),
-                        float(score),
-                        vec,
-                        point_id,
+        conn = self._vector_memory.get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(query, params)
+                for row in cur.fetchall():
+                    point_id, page_content, meta, vec_str, score = row
+                    if threshold is not None and score < threshold:
+                        continue
+                    # Parse vector from string
+                    vec = [float(x) for x in vec_str.strip("[]").split(",")]
+                    results.append(
+                        (
+                            Document(
+                                page_content=page_content or "",
+                                metadata=meta or {},
+                            ),
+                            float(score),
+                            vec,
+                            point_id,
+                        )
                     )
-                )
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            self._vector_memory.put_connection(conn)
 
         return results
 
@@ -272,84 +326,98 @@ class PostgreSQLVectorMemoryCollection(VectorMemoryCollection):
             return []
 
         placeholders = ",".join(["%s"] * len(ids))
-        with self.connection.cursor() as cur:
-            cur.execute(
-                f"""
-                SELECT id, page_content, metadata, embedding::text
-                FROM {self._table_name}
-                WHERE id IN ({placeholders})
-                """,
-                ids,
-            )
-            results = []
-            for row in cur.fetchall():
-                point_id, page_content, meta, vec_str = row
-                vec = (
-                    [float(x) for x in vec_str.strip("[]").split(",")]
-                    if vec_str
-                    else []
+        conn = self._vector_memory.get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"""
+                    SELECT id, page_content, metadata, embedding::text
+                    FROM {self._table_name}
+                    WHERE id IN ({placeholders})
+                    """,
+                    ids,
                 )
-                results.append(
-                    VectorMemoryPoint(
-                        id=point_id,
-                        vector=vec,
-                        payload={
-                            "page_content": page_content,
-                            "metadata": meta or {},
-                        },
+                results = []
+                for row in cur.fetchall():
+                    point_id, page_content, meta, vec_str = row
+                    vec = (
+                        [float(x) for x in vec_str.strip("[]").split(",")]
+                        if vec_str
+                        else []
                     )
-                )
-            return results
+                    results.append(
+                        VectorMemoryPoint(
+                            id=point_id,
+                            vector=vec,
+                            payload={
+                                "page_content": page_content,
+                                "metadata": meta or {},
+                            },
+                        )
+                    )
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            self._vector_memory.put_connection(conn)
+        return results
 
     def get_all_points(
         self,
         limit: int = 10000,
         offset: Optional[str] = None,
     ) -> Tuple[List[VectorMemoryPoint], Optional[str]]:
-        with self.connection.cursor() as cur:
-            if offset:
-                cur.execute(
-                    f"""
-                    SELECT id, page_content, metadata, embedding::text
-                    FROM {self._table_name}
-                    WHERE id > %s
-                    ORDER BY id
-                    LIMIT %s
-                    """,
-                    (offset, limit),
-                )
-            else:
-                cur.execute(
-                    f"""
-                    SELECT id, page_content, metadata, embedding::text
-                    FROM {self._table_name}
-                    ORDER BY id
-                    LIMIT %s
-                    """,
-                    (limit,),
-                )
-
-            points = []
-            for row in cur.fetchall():
-                point_id, page_content, meta, vec_str = row
-                vec = (
-                    [float(x) for x in vec_str.strip("[]").split(",")]
-                    if vec_str
-                    else []
-                )
-                points.append(
-                    VectorMemoryPoint(
-                        id=point_id,
-                        vector=vec,
-                        payload={
-                            "page_content": page_content,
-                            "metadata": meta or {},
-                        },
+        conn = self._vector_memory.get_connection()
+        try:
+            with conn.cursor() as cur:
+                if offset:
+                    cur.execute(
+                        f"""
+                        SELECT id, page_content, metadata, embedding::text
+                        FROM {self._table_name}
+                        WHERE id > %s
+                        ORDER BY id
+                        LIMIT %s
+                        """,
+                        (offset, limit),
                     )
-                )
+                else:
+                    cur.execute(
+                        f"""
+                        SELECT id, page_content, metadata, embedding::text
+                        FROM {self._table_name}
+                        ORDER BY id
+                        LIMIT %s
+                        """,
+                        (limit,),
+                    )
 
-            next_offset = points[-1].id if len(points) == limit else None
-            return points, next_offset
+                points = []
+                for row in cur.fetchall():
+                    point_id, page_content, meta, vec_str = row
+                    vec = (
+                        [float(x) for x in vec_str.strip("[]").split(",")]
+                        if vec_str
+                        else []
+                    )
+                    points.append(
+                        VectorMemoryPoint(
+                            id=point_id,
+                            vector=vec,
+                            payload={
+                                "page_content": page_content,
+                                "metadata": meta or {},
+                            },
+                        )
+                    )
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            self._vector_memory.put_connection(conn)
+
+        next_offset = points[-1].id if len(points) == limit else None
+        return points, next_offset
 
     def db_is_remote(self) -> bool:
         return True
