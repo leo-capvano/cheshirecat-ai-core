@@ -2,7 +2,9 @@ import psycopg2
 
 from cat.memory.vector_memory import VectorMemory
 from cat.memory.vector_memory_point import CollectionInfo
-from cat.memory.postgresql.pg_vector_memory_collection import PostgreSQLVectorMemoryCollection
+from cat.memory.postgresql.pg_vector_memory_collection import (
+    PostgreSQLVectorMemoryCollection,
+)
 from cat.log import log
 from cat.env import get_env
 
@@ -15,7 +17,8 @@ class PostgreSQLVectorMemory(VectorMemory):
         CCAT_POSTGRESQL_PORT (default: 5432)
         CCAT_POSTGRESQL_USER (default: ccat)
         CCAT_POSTGRESQL_PASSWORD (default: ccat)
-        CCAT_POSTGRESQL_DB   (default: ccat)
+        CCAT_POSTGRESQL_DB     (default: ccat)
+        CCAT_POSTGRESQL_SCHEMA (default: public)
     """
 
     def connect_to_vector_memory(self) -> None:
@@ -24,8 +27,11 @@ class PostgreSQLVectorMemory(VectorMemory):
         user = get_env("CCAT_POSTGRESQL_USER") or "ccat"
         password = get_env("CCAT_POSTGRESQL_PASSWORD") or "ccat"
         dbname = get_env("CCAT_POSTGRESQL_DB") or "ccat"
+        self.schema = get_env("CCAT_POSTGRESQL_SCHEMA") or "public"
 
-        log.info(f"Connecting to PostgreSQL at {host}:{port}/{dbname}")
+        log.info(
+            f"Connecting to PostgreSQL at {host}:{port}/{dbname} (schema: {self.schema})"
+        )
 
         self.connection = psycopg2.connect(
             host=host,
@@ -36,12 +42,22 @@ class PostgreSQLVectorMemory(VectorMemory):
         )
         self.connection.autocommit = False
 
+        # Create schema if it doesn't exist and set search_path
+        safe_schema = "".join(
+            c if c.isalnum() or c == "_" else "_" for c in self.schema
+        )
+        with self.connection.cursor() as cur:
+            cur.execute(f"CREATE SCHEMA IF NOT EXISTS {safe_schema}")
+            cur.execute(f"SET search_path TO {safe_schema}")
+            self.connection.commit()
+
     def _create_collection(self, collection_name, embedder_name, embedder_size):
         return PostgreSQLVectorMemoryCollection(
             connection=self.connection,
             collection_name=collection_name,
             embedder_name=embedder_name,
             embedder_size=embedder_size,
+            schema=self.schema,
         )
 
     def delete_collection(self, collection_name: str):
@@ -49,7 +65,10 @@ class PostgreSQLVectorMemory(VectorMemory):
         safe_name = "".join(
             c if c.isalnum() or c == "_" else "_" for c in collection_name
         )
-        table_name = f"vector_{safe_name}"
+        safe_schema = "".join(
+            c if c.isalnum() or c == "_" else "_" for c in self.schema
+        )
+        table_name = f"{safe_schema}.vector_{safe_name}"
         with self.connection.cursor() as cur:
             cur.execute(f"DROP TABLE IF EXISTS {table_name}")
             self.connection.commit()
@@ -61,7 +80,10 @@ class PostgreSQLVectorMemory(VectorMemory):
         safe_name = "".join(
             c if c.isalnum() or c == "_" else "_" for c in collection_name
         )
-        table_name = f"vector_{safe_name}"
+        safe_schema = "".join(
+            c if c.isalnum() or c == "_" else "_" for c in self.schema
+        )
+        table_name = f"{safe_schema}.vector_{safe_name}"
         with self.connection.cursor() as cur:
             cur.execute(f"SELECT COUNT(*) FROM {table_name}")
             count = cur.fetchone()[0]

@@ -29,12 +29,14 @@ class PostgreSQLVectorMemoryCollection(VectorMemoryCollection):
         collection_name: str,
         embedder_name: str,
         embedder_size: int,
+        schema: str = "public",
     ):
         super().__init__(
             collection_name=collection_name,
             embedder_name=embedder_name,
             embedder_size=embedder_size,
         )
+        self._schema = schema
         self._hnsw_m = int(os.getenv("CCAT_POSTGRESQL_HNSW_M", "16"))
         self._hnsw_ef_construction = int(
             os.getenv("CCAT_POSTGRESQL_HNSW_EF_CONSTRUCTION", "64")
@@ -52,12 +54,14 @@ class PostgreSQLVectorMemoryCollection(VectorMemoryCollection):
 
     @property
     def _table_name(self) -> str:
-        """Sanitized table name for this collection."""
-        # Only allow alphanumeric and underscore
+        """Schema-qualified, sanitized table name for this collection."""
         safe = "".join(
             c if c.isalnum() or c == "_" else "_" for c in self.collection_name
         )
-        return f"vector_{safe}"
+        safe_schema = "".join(
+            c if c.isalnum() or c == "_" else "_" for c in self._schema
+        )
+        return f"{safe_schema}.vector_{safe}"
 
     def create_db_collection_if_not_exists(self):
         """Create the pgvector table if it doesn't exist."""
@@ -77,7 +81,7 @@ class PostgreSQLVectorMemoryCollection(VectorMemoryCollection):
             # HNSW index creation
             cur.execute(
                 f"""
-                CREATE INDEX IF NOT EXISTS idx_{self._table_name}_embedding
+                CREATE INDEX IF NOT EXISTS idx_{self._table_name.split('.')[-1]}_embedding
                 ON {self._table_name}
                 USING hnsw (embedding {self._hnsw_operator_class})
                 WITH (m={self._hnsw_m}, ef_construction={self._hnsw_ef_construction})

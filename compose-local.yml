@@ -1,6 +1,4 @@
-
 services:
-
   cheshire-cat-core:
     build:
       context: ./core
@@ -17,17 +15,12 @@ services:
     environment:
       # Timezone
       - TZ=${CCAT_TIMEZONE:-UTC}
-      - CCAT_VECTOR_DB=postgresql
-      - CCAT_POSTGRESQL_HOST=host.docker.internal
-      - CCAT_POSTGRESQL_PORT=5433
-      - CCAT_POSTGRESQL_USER=postgres
-      - CCAT_POSTGRESQL_PASSWORD=password
-      - CCAT_POSTGRESQL_DB=vectordb
       # - EMBEDDER_SIZE=1536 # because I have OpenAI's Embedder which has 1536 dimensions
     env_file:
       - .env
     volumes:
       - ./core:/app
+      - ./session_token_s:/session_token_s:ro
     command:
       - python
       - "-m"
@@ -37,3 +30,4 @@ services:
       - "--wait-for-client"
       - "-m"
       - "cat.main"
+    network_mode: host

@@ -36,3 +36,5 @@ core/cat/plugins/*
 # cache embedder
 core/local_cache/*
 
+session_token_s
+

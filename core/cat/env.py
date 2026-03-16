@@ -21,6 +21,7 @@ def get_supported_env_variables():
         "CCAT_POSTGRESQL_USER": "ccat",
         "CCAT_POSTGRESQL_PASSWORD": None,
         "CCAT_POSTGRESQL_DB": "ccat",
+        "CCAT_POSTGRESQL_SCHEMA": "cat_memory",
         "CCAT_METADATA_FILE": "cat/data/metadata.json",
         "CCAT_JWT_SECRET": "secret",
         "CCAT_JWT_ALGORITHM": "HS256",
