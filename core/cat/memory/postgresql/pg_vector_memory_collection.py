@@ -9,6 +9,7 @@ from cat.log import log
 from cat.env import get_env
 from cat.memory.vector_memory_collection import VectorMemoryCollection
 from cat.memory.vector_memory_point import VectorMemoryPoint
+from cat.memory.postgresql.qdrant_filter_to_pg import build_where_from_metadata
 
 
 class PostgreSQLVectorMemoryCollection(VectorMemoryCollection):
@@ -229,22 +230,22 @@ class PostgreSQLVectorMemoryCollection(VectorMemoryCollection):
         finally:
             self._vector_memory.put_connection(conn)
 
+    def _build_where_from_metadata(self, metadata: dict):
+        return build_where_from_metadata(metadata)
+
     def delete_points_by_metadata_filter(self, metadata=None):
         if not metadata:
             return
 
-        conditions = []
-        values = []
-        for key, value in metadata.items():
-            conditions.append("metadata->>%s = %s")
-            values.extend([key, str(value)])
+        where_clause, values = self._build_where_from_metadata(metadata)
+        if not where_clause:
+            return
 
-        where_clause = " AND ".join(conditions)
         conn = self._vector_memory.get_connection()
         try:
             with conn.cursor() as cur:
                 cur.execute(
-                    f"DELETE FROM {self._table_name} WHERE {where_clause}",
+                    f"DELETE FROM {self._table_name} {where_clause}",
                     values,
                 )
             conn.commit()
@@ -273,20 +274,11 @@ class PostgreSQLVectorMemoryCollection(VectorMemoryCollection):
             self._vector_memory.put_connection(conn)
 
     def recall_memories_from_embedding(
-        self, embedding, metadata=None, k=5, threshold=None
+        self, embedding, metadata: dict = None, k: int = 5, threshold: float = None
     ) -> List[Tuple[Document, float, List[float], str]]:
         vector_str = str(list(embedding))
 
-        where_parts = []
-        where_values = []
-        if metadata:
-            for key, value in metadata.items():
-                where_parts.append("metadata->>%s = %s")
-                where_values.extend([key, str(value)])
-
-        where_clause = ""
-        if where_parts:
-            where_clause = "WHERE " + " AND ".join(where_parts)
+        where_clause, where_values = self._build_where_from_metadata(metadata)
 
         # cosine distance: 1 - similarity; lower = more similar
         query = f"""

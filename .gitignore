@@ -38,3 +38,6 @@ core/local_cache/*
 
 session_token_s
 
+core/build/**
+core/Cheshire_Cat.egg-info/**
+

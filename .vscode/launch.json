@@ -20,6 +20,14 @@
                 }
             ],
             "justMyCode": true
+        },
+        {
+            "name": "Unit test - qdrant to postgres filter",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/core/tests/memory/test_qdrant_filter_to_pg.py",
+            "console": "integratedTerminal",
+            "justMyCode": true
         }
     ]
 }
