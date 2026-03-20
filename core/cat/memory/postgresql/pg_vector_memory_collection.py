@@ -90,14 +90,6 @@ class PostgreSQLVectorMemoryCollection(VectorMemoryCollection):
                     WITH (m={self._hnsw_m}, ef_construction={self._hnsw_ef_construction})
                     """
                 )
-                # GIN index on metadata for fast JSONB filtering
-                cur.execute(
-                    f"""
-                    CREATE INDEX IF NOT EXISTS idx_{self._table_name.split('.')[-1]}_metadata
-                    ON {self._table_name}
-                    USING gin (metadata)
-                    """
-                )
             conn.commit()
         except Exception:
             conn.rollback()
