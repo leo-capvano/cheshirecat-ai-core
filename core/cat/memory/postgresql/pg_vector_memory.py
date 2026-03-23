@@ -66,11 +66,34 @@ class PostgreSQLVectorMemory(VectorMemory):
             self.pool.putconn(conn)
 
     def get_connection(self):
-        """Get a connection from the pool."""
-        return self.pool.getconn()
+        """Get a healthy connection from the pool.
+
+        Validates the connection before returning it. If the connection
+        is stale (e.g. SSL dropped), it is discarded and a fresh one
+        is obtained.
+        """
+        conn = self.pool.getconn()
+        try:
+            # Quick health check – detects stale / dropped SSL connections
+            conn.cursor().execute("SELECT 1")
+        except Exception:
+            log.warning("Stale PostgreSQL connection detected, replacing it")
+            try:
+                self.pool.putconn(conn, close=True)
+            except Exception:
+                pass
+            conn = self.pool.getconn()
+        return conn
 
     def put_connection(self, conn, close=False):
-        """Return a connection to the pool."""
+        """Return a connection to the pool.
+
+        If *close* is True, the connection is discarded rather than
+        recycled.  Broken connections (``conn.closed != 0``) are
+        always discarded.
+        """
+        if conn.closed:
+            close = True
         self.pool.putconn(conn, close=close)
 
     def close(self):
