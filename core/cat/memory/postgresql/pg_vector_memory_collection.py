@@ -1,6 +1,5 @@
 import uuid
 import json
-import os
 from typing import Any, List, Iterable, Optional, Tuple
 
 from langchain.docstore.document import Document
@@ -38,13 +37,6 @@ class PostgreSQLVectorMemoryCollection(VectorMemoryCollection):
             embedder_size=embedder_size,
         )
         self._schema = schema
-        self._hnsw_m = int(os.getenv("CCAT_POSTGRESQL_HNSW_M", "16"))
-        self._hnsw_ef_construction = int(
-            os.getenv("CCAT_POSTGRESQL_HNSW_EF_CONSTRUCTION", "64")
-        )
-        self._hnsw_operator_class = os.getenv(
-            "CCAT_POSTGRESQL_HNSW_OPERATOR_CLASS", "vector_cosine_ops"
-        )
 
         self._vector_memory = vector_memory
 
@@ -82,14 +74,6 @@ class PostgreSQLVectorMemoryCollection(VectorMemoryCollection):
                     """
                 )
                 # HNSW index creation
-                cur.execute(
-                    f"""
-                    CREATE INDEX IF NOT EXISTS idx_{self._table_name.split('.')[-1]}_embedding
-                    ON {self._table_name}
-                    USING hnsw (embedding {self._hnsw_operator_class})
-                    WITH (m={self._hnsw_m}, ef_construction={self._hnsw_ef_construction})
-                    """
-                )
             conn.commit()
         except Exception as e:
             log.error(f"PostgreSQL error in create_db_collection_if_not_exists: {e}")
