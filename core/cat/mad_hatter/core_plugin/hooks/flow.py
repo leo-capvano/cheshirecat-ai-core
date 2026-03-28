@@ -166,6 +166,12 @@ def before_cat_recalls_episodic_memories(episodic_recall_config: dict, cat) -> d
     to the query in the vector memory (items with score under threshold are not retrieved).
     It also returns the embedded query (embedding) and the conditions on recall (metadata).
 
+    Full-text search keys (PostgreSQL only, ignored by other backends):
+        - ``fts_query``: OR-joined keywords for ``websearch_to_tsquery``.
+        - ``k_fts``: number of FTS results (0 = disabled).
+        - ``fts_threshold``: minimum ``ts_rank_cd`` score.
+        - ``fts_language``: tsquery configuration (default ``simple``).
+
     Parameters
     ----------
     episodic_recall_config : dict
@@ -197,6 +203,12 @@ def before_cat_recalls_declarative_memories(
     to the query in the vector memory (items with score under threshold are not retrieved)
     It also returns the embedded query (embedding) and the conditions on recall (metadata).
 
+    Full-text search keys (PostgreSQL only, ignored by other backends):
+        - ``fts_query``: OR-joined keywords for ``websearch_to_tsquery``.
+        - ``k_fts``: number of FTS results (0 = disabled).
+        - ``fts_threshold``: minimum ``ts_rank_cd`` score.
+        - ``fts_language``: tsquery configuration (default ``simple``).
+
     Parameters
     ----------
     declarative_recall_config: dict
@@ -225,6 +237,12 @@ def before_cat_recalls_procedural_memories(procedural_recall_config: dict, cat) 
     The hook return the values for maximum number (k) of items to retrieve from memory and the score threshold applied
     to the query in the vector memory (items with score under threshold are not retrieved)
     It also returns the embedded query (embedding) and the conditions on recall (metadata).
+
+    Full-text search keys (PostgreSQL only, ignored by other backends):
+        - ``fts_query``: OR-joined keywords for ``websearch_to_tsquery``.
+        - ``k_fts``: number of FTS results (0 = disabled).
+        - ``fts_threshold``: minimum ``ts_rank_cd`` score.
+        - ``fts_language``: tsquery configuration (default ``simple``).
 
     Parameters
     ----------

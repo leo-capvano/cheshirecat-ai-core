@@ -99,6 +99,43 @@ class VectorMemoryCollection(ABC):
         """
         pass
 
+    def recall_memories_hybrid(
+        self,
+        embedding,
+        fts_query: str = "",
+        metadata=None,
+        k: int = 5,
+        threshold: float = None,
+        k_fts: int = 0,
+        fts_threshold: float = 0.0,
+        fts_language: str = "simple",
+    ) -> List[Tuple[Document, float, List[float], str]]:
+        """Retrieve memories using hybrid search (semantic + full-text).
+
+        The default implementation falls back to pure semantic search,
+        ignoring the full-text parameters. Backends that support FTS
+        (e.g. PostgreSQL) override this to run both searches and merge.
+
+        Merge strategy: all semantic results are kept, then FTS results
+        that do NOT already appear in the semantic set are appended.
+
+        Args:
+            embedding: Query embedding vector.
+            fts_query: Full-text search query string (OR-joined keywords).
+            metadata: Optional metadata filter dict.
+            k: Number of semantic results to retrieve.
+            threshold: Minimum cosine-similarity score for semantic results.
+            k_fts: Number of FTS results to retrieve (0 = FTS disabled).
+            fts_threshold: Minimum ts_rank_cd score for FTS results.
+            fts_language: tsquery configuration (default: "simple").
+
+        Returns:
+            List of tuples (Document, score, vector, id).
+        """
+        return self.recall_memories_from_embedding(
+            embedding, metadata=metadata, k=k, threshold=threshold
+        )
+
     @abstractmethod
     def get_points(self, ids: List[str]) -> List[VectorMemoryPoint]:
         """Get points by their IDs."""

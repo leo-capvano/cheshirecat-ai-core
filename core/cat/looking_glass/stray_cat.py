@@ -20,7 +20,9 @@ from cat.convo.messages import CatMessage, UserMessage, MessageWhy, EmbedderMode
 from cat.agents import AgentOutput
 from cat.cache.cache_item import CacheItem
 from cat import utils
+from cat.env import get_env
 from cat.log import log
+from cat.memory.fts_utils import extract_fts_keywords_from
 
 MSG_TYPES = Literal["notification", "chat", "error", "chat_token"]
 
@@ -315,6 +317,12 @@ class StrayCat:
         # hook to do something before recall begins
         self.mad_hatter.execute_hook("before_cat_recalls_memories", cat=self)
 
+        # FTS configuration (disabled by default: CCAT_FTS_K=0)
+        fts_query = extract_fts_keywords_from(recall_query)
+        k_fts = int(get_env("CCAT_FTS_K") or 0)
+        fts_threshold = float(get_env("CCAT_FTS_THRESHOLD") or 0.0)
+        fts_language = get_env("CCAT_FTS_LANGUAGE") or "simple"
+
         # Setting default recall configs for each memory
         # TODO: can these data structures become instances of a RecallSettings class?
         default_episodic_recall_config = {
@@ -322,6 +330,10 @@ class StrayCat:
             "k": 3,
             "threshold": 0.7,
             "metadata": {"source": self.user_id},
+            "fts_query": fts_query,
+            "k_fts": 0, # disabled by default, you can enable it via plugin
+            "fts_threshold": fts_threshold,
+            "fts_language": fts_language,
         }
 
         default_declarative_recall_config = {
@@ -329,6 +341,10 @@ class StrayCat:
             "k": 3,
             "threshold": 0.7,
             "metadata": {},
+            "fts_query": fts_query,
+            "k_fts": k_fts,
+            "fts_threshold": fts_threshold,
+            "fts_language": fts_language,
         }
 
         default_procedural_recall_config = {
@@ -336,6 +352,10 @@ class StrayCat:
             "k": 3,
             "threshold": 0.7,
             "metadata": {},
+            "fts_query": fts_query,
+            "k_fts": 0, # disabled by default, you can enable it via plugin
+            "fts_threshold": fts_threshold,
+            "fts_language": fts_language,
         }
 
         # hooks to change recall configs for each memory
@@ -362,9 +382,9 @@ class StrayCat:
         for config, memory_type in zip(recall_configs, memory_types):
             memory_key = f"{memory_type}_memories"
 
-            # recall relevant memories for collection
+            # recall relevant memories for collection (hybrid if FTS is configured)
             vector_memory = getattr(self.memory.vectors, memory_type)
-            memories = vector_memory.recall_memories_from_embedding(**config)
+            memories = vector_memory.recall_memories_hybrid(**config)
 
             setattr(
                 self.working_memory, memory_key, memories

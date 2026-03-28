@@ -32,6 +32,10 @@ def get_supported_env_variables():
         "CCAT_CACHE_TYPE": "in_memory",
         "CCAT_CACHE_DIR": "/tmp",
         "CCAT_QDRANT_CLIENT_TIMEOUT": None,
+        "CCAT_FTS_K": "0",
+        "CCAT_FTS_THRESHOLD": "0.0",
+        "CCAT_FTS_LANGUAGE": "simple",
+        "CCAT_POSTGRESQL_LOG_QUERIES": "false",
     }
 
 

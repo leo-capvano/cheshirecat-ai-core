@@ -6,6 +6,8 @@ import time
 from cat.auth.permissions import AuthPermission, AuthResource, check_permissions
 from cat.memory.vector_memory import VectorMemory
 from cat.looking_glass.stray_cat import StrayCat
+from cat.env import get_env
+from cat.memory.fts_utils import extract_fts_keywords_from
 from cat.log import log
 
 class MemoryPointBase(BaseModel):
@@ -86,6 +88,12 @@ async def recall_memory_points(
                         description="Flat dictionary where each key-value pair represents a filter." 
                                     "The memory points returned will match the specified metadata criteria."
                         ),
+    fts_query: str = Body(default=None,
+                          description="Full-text search query (OR-joined keywords). "
+                                      "If not provided, keywords are extracted from text automatically."),
+    k_fts: int = Body(default=None,
+                      description="Number of full-text search results to add. "
+                                  "Defaults to CCAT_FTS_K env var (0 = disabled)."),
     cat: StrayCat = check_permissions(AuthResource.MEMORY, AuthPermission.READ),
 ) -> Dict:
     """Search k memories similar to given text with specified metadata criteria.
@@ -139,8 +147,14 @@ async def recall_memory_points(
         else:
             metadata.pop("source", None)
 
-        memories = cat.memory.vectors.collections[c].recall_memories_from_embedding(
-            query_embedding, k=k, metadata=metadata
+        memories = cat.memory.vectors.collections[c].recall_memories_hybrid(
+            query_embedding,
+            fts_query=fts_query if fts_query is not None else extract_fts_keywords_from(text),
+            k=k,
+            metadata=metadata,
+            k_fts=k_fts if k_fts is not None else int(get_env("CCAT_FTS_K") or 0),
+            fts_threshold=float(get_env("CCAT_FTS_THRESHOLD") or 0.0),
+            fts_language=get_env("CCAT_FTS_LANGUAGE") or "simple",
         )
 
         recalled[c] = []
