@@ -309,8 +309,7 @@ class PostgreSQLVectorMemoryCollection(VectorMemoryCollection):
             ORDER BY score DESC
             LIMIT %s
         """
-        # Parameters: where_values + fts_condition params + fts_rank params + limit
-        params = where_values + [fts_language, fts_query] + [fts_language, fts_query] + [k_fts]
+        params = [fts_language, fts_query] + where_values + [fts_language, fts_query] + [k_fts]
 
         results = []
         conn = self._vector_memory.get_connection()
@@ -407,7 +406,7 @@ class PostgreSQLVectorMemoryCollection(VectorMemoryCollection):
             ORDER BY score DESC
             LIMIT %s
         """
-        fts_params = where_values + [fts_language, fts_query] + [fts_language, fts_query] + [k_fts]
+        fts_params = [fts_language, fts_query] + where_values + [fts_language, fts_query] + [k_fts]
 
         # --- combined query using CTEs -----------------------------------
         query = f"""
