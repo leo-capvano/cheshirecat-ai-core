@@ -36,6 +36,12 @@ def get_supported_env_variables():
         "CCAT_FTS_THRESHOLD": "0.0",
         "CCAT_FTS_LANGUAGE": "simple",
         "CCAT_POSTGRESQL_LOG_QUERIES": "false",
+        # Comma-separated list of metadata keys promoted to dedicated columns
+        # in the pgvector tables (e.g. "key1,key2,key3").
+        "CCAT_POSTGRESQL_METADATA_COLS": "",
+        # Comma-separated list of column names comprising the primary key / unique
+        # constraint used for upsert conflict target (e.g. "key1,key2").
+        "CCAT_POSTGRESQL_PRIMARY_KEY_COLS": "id",
     }
 
 

@@ -9,21 +9,17 @@ Run as plain script:
     python tests/memory/test_qdrant_filter_to_pg.py
 """
 
-import sys
-import traceback
 import inspect
 import os
+import sys
+import traceback
 
 # Make `cat` importable when running as a plain script (python tests/memory/...)
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 
 from cat.memory.postgresql.qdrant_filter_to_pg import (
-    build_pg_filter_clause,
-    build_pg_leaf_condition,
-    build_where_from_metadata,
-    parse_qdrant_key_to_jsonb,
-)
-
+    build_pg_filter_clause, build_pg_leaf_condition, build_where_from_metadata,
+    parse_qdrant_key_to_jsonb)
 
 # ------------------------------------------------------------------ #
 #  parse_qdrant_key_to_jsonb
@@ -51,6 +47,13 @@ class TestParseQdrantKeyToJsonb:
         assert sql == "metadata #>> %s"
         assert params == ["{a,b,c}"]
 
+    def test_promoted_key_uses_dedicated_column_when_enabled(self):
+        sql, params = parse_qdrant_key_to_jsonb(
+            "metadata.tenant", promoted_cols={"tenant"}
+        )
+        assert sql == "tenant"
+        assert params == []
+
 
 # ------------------------------------------------------------------ #
 #  build_pg_leaf_condition
@@ -68,6 +71,12 @@ class TestBuildPgLeafCondition:
         cond = {"key": "metadata.count", "match": {"value": 42}}
         sql, params = build_pg_leaf_condition(cond)
         assert params == ["count", "42"]
+
+    def test_promoted_key_uses_dedicated_column_when_enabled(self):
+        cond = {"key": "metadata.item_id", "match": {"value": "doc-123"}}
+        sql, params = build_pg_leaf_condition(cond, promoted_cols={"item_id"})
+        assert sql == "item_id = %s"
+        assert params == ["doc-123"]
 
 
 # ------------------------------------------------------------------ #
@@ -333,6 +342,35 @@ class TestBuildWhereFromMetadata:
         sql, params = build_where_from_metadata(metadata)
         assert sql == ""
         assert params == []
+
+    def test_legacy_flat_metadata_uses_promoted_columns_when_enabled(self):
+        metadata = {"tenant": "tenant-a", "kind": "file", "source": "legacy"}
+        sql, params = build_where_from_metadata(metadata, promoted_cols={"tenant", "kind"})
+        assert (
+            sql
+            == "WHERE (tenant = %s AND kind = %s AND metadata->>%s = %s)"
+        )
+        assert params == ["tenant-a", "file", "source", "legacy"]
+
+    def test_qdrant_filter_uses_promoted_columns_when_enabled(self):
+        metadata = {
+            "qdrant_dict_filter": {
+                "must": [
+                    {"key": "metadata.tenant", "match": {"value": "tenant-a"}},
+                    {
+                        "key": "metadata.kind",
+                        "match": {"value": "sharepoint"},
+                    },
+                    {"key": "metadata.source", "match": {"value": "manual"}},
+                ]
+            }
+        }
+        sql, params = build_where_from_metadata(metadata, promoted_cols={"tenant", "kind"})
+        assert (
+            sql
+            == "WHERE (tenant = %s AND kind = %s AND metadata->>%s = %s)"
+        )
+        assert params == ["tenant-a", "sharepoint", "source", "manual"]
 
 
 # ------------------------------------------------------------------ #
