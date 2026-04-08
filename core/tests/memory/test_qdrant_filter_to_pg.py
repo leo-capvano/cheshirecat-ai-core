@@ -275,6 +275,116 @@ class TestEdgeCases:
         assert sql == "TRUE"
         assert params == []
 
+    def test_unsupported_condition_raises(self):
+        try:
+            build_pg_filter_clause({"must": [{"key": "metadata.foo"}]})
+            assert False, "Expected ValueError for unsupported filter condition"
+        except ValueError as exc:
+            assert "Unsupported Qdrant" in str(exc)
+
+
+# ------------------------------------------------------------------ #
+#  build_pg_leaf_condition – extended conditions
+# ------------------------------------------------------------------ #
+
+
+class TestExtendedLeafConditions:
+    def test_match_any_scalar_jsonb(self):
+        cond = {"key": "metadata.color", "match": {"any": ["black", "yellow"]}}
+        sql, params = build_pg_leaf_condition(cond)
+        assert sql == (
+            "((jsonb_typeof(metadata->%s) = 'array' AND EXISTS ("
+            "SELECT 1 FROM jsonb_array_elements_text(metadata->%s) AS elem(value) "
+            "WHERE elem.value = ANY(%s))) OR (jsonb_typeof(metadata->%s) <> 'array' "
+            "AND metadata->>%s = ANY(%s)))"
+        )
+        assert params[2] == ["black", "yellow"]
+        assert params[-1] == ["black", "yellow"]
+
+    def test_match_any_promoted_column(self):
+        cond = {"key": "metadata.tenant", "match": {"any": ["acme", "globex"]}}
+        sql, params = build_pg_leaf_condition(cond, promoted_cols={"tenant"})
+        assert sql == "tenant = ANY(%s)"
+        assert params == [["acme", "globex"]]
+
+    def test_match_except_scalar_jsonb(self):
+        cond = {"key": "metadata.color", "match": {"except": ["black", "yellow"]}}
+        sql, params = build_pg_leaf_condition(cond)
+        assert sql == (
+            "((jsonb_typeof(metadata->%s) = 'array' AND EXISTS ("
+            "SELECT 1 FROM jsonb_array_elements_text(metadata->%s) AS elem(value) "
+            "WHERE NOT (elem.value = ANY(%s)))) OR (jsonb_typeof(metadata->%s) <> 'array' "
+            "AND metadata->>%s IS NOT NULL AND NOT (metadata->>%s = ANY(%s))))"
+        )
+        assert params[2] == ["black", "yellow"]
+        assert params[-1] == ["black", "yellow"]
+
+    def test_match_text_uses_ilike(self):
+        cond = {"key": "metadata.description", "match": {"text": "good cheap"}}
+        sql, params = build_pg_leaf_condition(cond)
+        assert sql == (
+            "((jsonb_typeof(metadata->%s) = 'array' AND EXISTS ("
+            "SELECT 1 FROM jsonb_array_elements_text(metadata->%s) AS elem(value) "
+            "WHERE elem.value ILIKE %s)) OR (jsonb_typeof(metadata->%s) <> 'array' "
+            "AND metadata->>%s ILIKE %s))"
+        )
+        assert params[2] == "%good cheap%"
+        assert params[-1] == "%good cheap%"
+
+    def test_numeric_range(self):
+        cond = {
+            "key": "metadata.price",
+            "range": {"gt": None, "gte": 100.0, "lt": None, "lte": 450.0},
+        }
+        sql, params = build_pg_leaf_condition(cond)
+        assert sql == (
+            "((CASE WHEN (metadata->>%s) ~ %s THEN (metadata->>%s)::double precision >= %s "
+            "ELSE FALSE END) AND (CASE WHEN (metadata->>%s) ~ %s THEN "
+            "(metadata->>%s)::double precision <= %s ELSE FALSE END))"
+        )
+        assert params[3] == 100.0
+        assert params[7] == 450.0
+
+    def test_datetime_range(self):
+        cond = {
+            "key": "metadata.date",
+            "range": {
+                "gt": "2023-02-08T10:49:00Z",
+                "gte": None,
+                "lt": None,
+                "lte": "2024-01-31 10:14:31Z",
+            },
+        }
+        sql, params = build_pg_leaf_condition(cond)
+        assert sql == (
+            "((CASE WHEN (metadata->>%s) ~ %s THEN (metadata->>%s)::timestamptz > %s::timestamptz "
+            "ELSE FALSE END) AND (CASE WHEN (metadata->>%s) ~ %s THEN "
+            "(metadata->>%s)::timestamptz <= %s::timestamptz ELSE FALSE END))"
+        )
+        assert params[3] == "2023-02-08T10:49:00Z"
+        assert params[7] == "2024-01-31 10:14:31Z"
+
+    def test_is_empty_jsonb(self):
+        cond = {"is_empty": {"key": "metadata.reports"}}
+        sql, params = build_pg_leaf_condition(cond)
+        assert sql == (
+            "(metadata->%s IS NULL OR jsonb_typeof(metadata->%s) = 'null' "
+            "OR metadata->%s = '[]'::jsonb)"
+        )
+        assert params == ["reports", "reports", "reports"]
+
+    def test_is_null_jsonb(self):
+        cond = {"is_null": {"key": "metadata.reports"}}
+        sql, params = build_pg_leaf_condition(cond)
+        assert sql == "jsonb_typeof(metadata->%s) = 'null'"
+        assert params == ["reports"]
+
+    def test_is_empty_promoted_column(self):
+        cond = {"is_empty": {"key": "metadata.tenant"}}
+        sql, params = build_pg_leaf_condition(cond, promoted_cols={"tenant"})
+        assert sql == "tenant IS NULL"
+        assert params == []
+
 
 # ------------------------------------------------------------------ #
 #  build_where_from_metadata
@@ -451,6 +561,7 @@ _TEST_CLASSES = [
     TestCombinedFilter,
     TestNestedGroups,
     TestEdgeCases,
+    TestExtendedLeafConditions,
     TestBuildWhereFromMetadata,
     TestFullExample,
 ]
