@@ -118,13 +118,16 @@ class PostgreSQLVectorMemoryCollection(VectorMemoryCollection):
             values[col] = str(val) if val is not None else None
 
         # If a promoted column participates in the configured PK, it must be present.
+        # Default to "_default" when not provided, so core callers unaware of
+        # multitenancy columns (e.g. embed_procedures, episodic memory) don't crash.
         for pk_col in self._primary_key_cols:
             if pk_col == "id":
                 continue
             if pk_col in values and not values[pk_col]:
-                raise ValueError(
-                    f"PostgreSQL collection requires metadata['{pk_col}'] "
-                    f"because it's part of the primary key ({','.join(self._primary_key_cols)})"
+                values[pk_col] = "_default"
+                log.warning(
+                    f"metadata['{pk_col}'] not provided for collection "
+                    f"'{self.collection_name}', defaulting to '_default'"
                 )
         return values
 
