@@ -44,18 +44,35 @@ class PostgreSQLVectorMemoryCollection(VectorMemoryCollection):
         # Optional: promote metadata keys to dedicated columns.
         # If CCAT_POSTGRESQL_METADATA_COLS is not set/empty, the collection
         # falls back to the legacy single-table behavior (JSONB extraction).
-        self._promoted_metadata_cols = [
+        configured_promoted = [
             c for c in self._parse_csv_env("CCAT_POSTGRESQL_METADATA_COLS") if c != "id"
         ]
 
         # Optional: customize conflict target for upsert.
         # If CCAT_POSTGRESQL_PRIMARY_KEY_COLS is not set/empty, default to (id).
-        self._primary_key_cols = self._parse_csv_env("CCAT_POSTGRESQL_PRIMARY_KEY_COLS")
-        if not self._primary_key_cols:
-            self._primary_key_cols = ["id"]
+        configured_pk = self._parse_csv_env("CCAT_POSTGRESQL_PRIMARY_KEY_COLS")
+        if not configured_pk:
+            configured_pk = ["id"]
 
-        if "id" not in self._primary_key_cols:
+        if "id" not in configured_pk:
             raise ValueError("CCAT_POSTGRESQL_PRIMARY_KEY_COLS must include 'id'")
+
+        # Filter promoted/PK cols to only those that actually exist in the table.
+        # This allows a global env config while tables may have different schemas.
+        actual_cols = self._get_table_columns()
+        if actual_cols is not None:
+            self._promoted_metadata_cols = [c for c in configured_promoted if c in actual_cols]
+            self._primary_key_cols = [c for c in configured_pk if c == "id" or c in actual_cols]
+            skipped = set(configured_promoted) - set(self._promoted_metadata_cols)
+            if skipped:
+                log.info(
+                    f"Collection '{self.collection_name}': skipping promoted columns "
+                    f"not present in table: {skipped}"
+                )
+        else:
+            # Table doesn't exist yet or can't be introspected; use config as-is.
+            self._promoted_metadata_cols = configured_promoted
+            self._primary_key_cols = configured_pk
 
         # If the configured PK references columns besides id, those columns must
         # be promoted so we can route inserts/upserts and build the conflict target.
@@ -80,6 +97,34 @@ class PostgreSQLVectorMemoryCollection(VectorMemoryCollection):
             return []
         # preserve order, strip spaces, drop empties
         return [p.strip() for p in str(raw).split(",") if p.strip()]
+
+    def _get_table_columns(self) -> Optional[set]:
+        """Query information_schema to get the actual columns of this table.
+
+        Returns a set of column names, or None if the table doesn't exist yet.
+        """
+        safe = "".join(c if c.isalnum() or c == "_" else "_" for c in self.collection_name)
+        table_name = f"vector_{safe}"
+        conn = self._vector_memory.get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT column_name
+                    FROM information_schema.columns
+                    WHERE table_schema = %s AND table_name = %s
+                    """,
+                    (self._schema, table_name),
+                )
+                rows = cur.fetchall()
+            if not rows:
+                return None
+            return {row[0] for row in rows}
+        except Exception as e:
+            log.warning(f"Could not introspect columns for '{table_name}': {e}")
+            return None
+        finally:
+            self._vector_memory.put_connection(conn)
 
     def _log_query(self, cur, query: str, params) -> None:
         """Log the fully-rendered SQL query when CCAT_POSTGRESQL_LOG_QUERIES=true.
