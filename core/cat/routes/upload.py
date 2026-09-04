@@ -15,6 +15,7 @@ from fastapi import (
     BackgroundTasks,
     HTTPException,
 )
+from starlette.concurrency import run_in_threadpool
 
 from cat.auth.permissions import AuthPermission, AuthResource, check_permissions
 from cat.log import log
@@ -109,13 +110,19 @@ async def upload_file(
             },
         )
 
+    # format_upload_file() does a blocking read of the uploaded file (disk I/O for
+    # files spooled to temp storage); run it off the event loop so it doesn't stall
+    # every other request (including health checks) while it reads.
+    # It already returns a fresh UploadFile backed by an independent io.BytesIO,
+    # detached from the request's temp file, so no deepcopy is needed to survive
+    # past the response (see https://github.com/tiangolo/fastapi/discussions/10936).
+    detached_file = await run_in_threadpool(format_upload_file, file)
+
     # upload file to long term memory, in the background
     background_tasks.add_task(
-        # we deepcopy the file because FastAPI does not keep the file in memory after the response returns to the client
-        # https://github.com/tiangolo/fastapi/discussions/10936
         cat.rabbit_hole.ingest_file,
         cat,
-        deepcopy(format_upload_file(file)),
+        detached_file,
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
         metadata=json.loads(metadata)
@@ -220,13 +227,15 @@ async def upload_files(
                 },
             )
 
+        # same as upload_file: read off the event loop, no deepcopy needed
+        # (see comment there for why).
+        detached_file = await run_in_threadpool(format_upload_file, file)
+
         # upload file to long term memory, in the background
         background_tasks.add_task(
-            # we deepcopy the file because FastAPI does not keep the file in memory after the response returns to the client
-            # https://github.com/tiangolo/fastapi/discussions/10936
             cat.rabbit_hole.ingest_file,
             cat,
-            deepcopy(format_upload_file(file)),
+            detached_file,
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
             # if file.filename in dictionary pass the metadata otherwise pass empty dictionary 
