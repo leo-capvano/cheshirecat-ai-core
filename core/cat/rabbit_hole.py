@@ -350,45 +350,56 @@ class RabbitHole:
         time_last_notification = time.time()
         time_interval = 10  # a notification every 10 secs
         stored_points = []
-        for d, doc in enumerate(docs):
-            if time.time() - time_last_notification > time_interval:
-                time_last_notification = time.time()
-                perc_read = int(d / len(docs) * 100)
-                read_message = f"Read {perc_read}% of {source}"
-                cat.send_ws_message(read_message)
-                log.info(read_message)
+        try:
+            for d, doc in enumerate(docs):
+                if time.time() - time_last_notification > time_interval:
+                    time_last_notification = time.time()
+                    perc_read = int(d / len(docs) * 100)
+                    read_message = f"Read {perc_read}% of {source}"
+                    cat.send_ws_message(read_message)
+                    log.info(read_message)
 
-            # add default metadata
-            doc.metadata["source"] = source
-            doc.metadata["when"] = time.time()
-            # add custom metadata (sent via endpoint)
-            for k,v in metadata.items():
-                doc.metadata[k] = v
+                # add default metadata
+                doc.metadata["source"] = source
+                doc.metadata["when"] = time.time()
+                # add custom metadata (sent via endpoint)
+                for k,v in metadata.items():
+                    doc.metadata[k] = v
 
-            doc = cat.mad_hatter.execute_hook(
-                "before_rabbithole_insert_memory", doc, cat=cat
-            )
-            inserting_info = f"{d + 1}/{len(docs)}):    {doc.page_content}"
-            if doc.page_content != "":
-                doc_embedding = cat.embedder.embed_documents([doc.page_content])
-                stored_point = cat.memory.vectors.declarative.add_point(
-                    doc.page_content,
-                    doc_embedding[0],
-                    doc.metadata,
+                doc = cat.mad_hatter.execute_hook(
+                    "before_rabbithole_insert_memory", doc, cat=cat
                 )
-                stored_points.append(stored_point)
+                inserting_info = f"{d + 1}/{len(docs)}):    {doc.page_content}"
+                if doc.page_content != "":
+                    doc_embedding = cat.embedder.embed_documents([doc.page_content])
+                    stored_point = cat.memory.vectors.declarative.add_point(
+                        doc.page_content,
+                        doc_embedding[0],
+                        doc.metadata,
+                    )
+                    stored_points.append(stored_point)
 
-                log.info(f"Inserted into memory ({inserting_info})")
-            else:
-                log.info(f"Skipped memory insertion of empty doc ({inserting_info})")
+                    log.info(f"Inserted into memory ({inserting_info})")
+                else:
+                    log.info(f"Skipped memory insertion of empty doc ({inserting_info})")
 
-            # wait a little to avoid APIs rate limit errors
-            time.sleep(0.05)
-
-        # hook the points after they are stored in the vector memory
-        cat.mad_hatter.execute_hook(
-            "after_rabbithole_stored_documents", source, stored_points, cat=cat
-        )
+                # wait a little to avoid APIs rate limit errors
+                time.sleep(0.05)
+        except Exception:
+            log.error(
+                f"store_documents failed for source={source} after storing "
+                f"{len(stored_points)}/{len(docs)} chunks; still running "
+                "after_rabbithole_stored_documents hook so guards/counters relying on it "
+                "(e.g. memory_guard ingestion semaphore) don't leak"
+            )
+            raise
+        finally:
+            # hook the points after they are stored in the vector memory
+            # (always run, even on error, so hooks tracking in-flight ingestion state
+            # - e.g. memory_guard's concurrency semaphore - never leak a permit)
+            cat.mad_hatter.execute_hook(
+                "after_rabbithole_stored_documents", source, stored_points, cat=cat
+            )
 
         # notify client
         finished_reading_message = (
